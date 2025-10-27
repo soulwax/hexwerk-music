@@ -262,4 +262,3 @@ export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
 
 
 
-

@@ -1,4 +1,5 @@
-// src/components/EnhancedTrackCard.tsx
+// File: src/components/EnhancedTrackCard.tsx
+
 "use client";
 
 import { api } from "@/trpc/react";

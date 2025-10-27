@@ -1,3 +1,5 @@
+// File: src/app/page.tsx
+
 "use client";
 
 import EnhancedPlayer from "@/components/EnhancedPlayer";
