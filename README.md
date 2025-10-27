@@ -100,7 +100,7 @@ src/
 
 3. **Visit**
 
-   ```
+   ```plaintext
    http://localhost:3000
    ```
 
