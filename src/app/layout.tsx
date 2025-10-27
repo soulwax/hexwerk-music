@@ -1,32 +1,29 @@
 // File: src/app/layout.tsx
 
-"use client";
-
 import "@/styles/globals.css";
 
-import { SessionProvider } from "next-auth/react";
 import { Geist } from "next/font/google";
+import { type ReactNode } from "react";
 
+import { SessionProvider } from "@/components/SessionProvider";
 import { TRPCReactProvider } from "@/trpc/react";
-
-// Note: Metadata export needs to be in a separate server component
-// For now, we'll handle it differently since we need SessionProvider
 
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-geist-sans",
 });
 
+export const metadata = {
+  title: "HexMusic Stream",
+  description: "Modern music streaming application",
+  icons: [{ rel: "icon", url: "/favicon.ico" }],
+};
+
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
-      <head>
-        <title>HexMusic Stream</title>
-        <meta name="description" content="Modern music streaming application" />
-        <link rel="icon" href="/favicon.ico" />
-      </head>
+    <html lang="en" className={geist.variable} suppressHydrationWarning>
       <body>
         <SessionProvider>
           <TRPCReactProvider>{children}</TRPCReactProvider>
