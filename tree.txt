@@ -3,6 +3,7 @@ hexmusic-stream
 ├───.gitignore
 ├───drizzle.config.ts
 ├───eslint.config.js
+├───LICENSE.md
 ├───next-env.d.ts
 ├───next.config.js
 ├───package-lock.json
@@ -15,6 +16,9 @@ hexmusic-stream
 ├───tree.txt
 ├───tsconfig.json
 ├───tsconfig.tsbuildinfo
+├───.github/
+│   └───assets/
+│       └───emily-the-strange_vivid.png
 ├───public/
 │   └───favicon.ico
 └───src/
@@ -35,7 +39,6 @@ hexmusic-stream
     ├───components/
     │   ├───Player.tsx
     │   └───TrackCard.tsx
-    ├───pages/
     ├───server/
     │   ├───api/
     │   │   ├───root.ts
