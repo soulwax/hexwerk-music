@@ -11,8 +11,10 @@ hexmusic-stream
 ├───prettier.config.js
 ├───README.md
 ├───start-database.sh
+├───tailwind.config.js
 ├───tree.txt
 ├───tsconfig.json
+├───tsconfig.tsbuildinfo
 ├───public/
 │   └───favicon.ico
 └───src/

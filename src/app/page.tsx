@@ -1,3 +1,5 @@
+// File: src/app/page.tsx
+
 import Link from "next/link";
 
 import { LatestPost } from "@/app/_components/post";
