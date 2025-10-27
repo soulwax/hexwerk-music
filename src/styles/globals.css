@@ -1,150 +1,143 @@
 /* File: src/styles/globals.css */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ------------------------------------------------------------
-   🎧 Global Styles for HexMusic
-   Modern flat dark mode with vivid accents
+   🎧 HexMusic – Global Theme (dark, vivid, flat)
 ------------------------------------------------------------- */
 
-@layer base {
-  :root {
-    --color-bg: #0e0e12;
-    --color-surface: #18181f;
-    --color-surface-hover: #232331;
-    --color-accent: #4f46e5; /* Indigo-600 */
-    --color-accent-light: #818cf8;
-    --color-text: #f5f5f5;
-    --color-subtext: #a1a1aa;
-    --color-border: #2a2a33;
-    --radius-lg: 1rem;
-    --radius-md: 0.5rem;
-    --radius-sm: 0.25rem;
-  }
+:root {
+  --color-bg: #0e0e12;
+  --color-surface: #18181f;
+  --color-surface-hover: #232331;
+  --color-accent: #4f46e5;        /* Indigo-600 */
+  --color-accent-light: #818cf8;  /* Indigo-400 */
+  --color-text: #f5f5f5;
+  --color-subtext: #a1a1aa;
+  --color-border: #2a2a33;
 
-  html {
-    scroll-behavior: smooth;
-    background-color: var(--color-bg);
-  }
+  --radius-lg: 1rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.25rem;
 
-  body {
-    @apply text-base font-sans text-[var(--color-text)] bg-[var(--color-bg)];
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  ::selection {
-    background: var(--color-accent);
-    color: white;
-  }
-
-  a {
-    @apply text-[var(--color-accent)] hover:text-[var(--color-accent-light)] transition-colors;
-  }
-
-  input,
-  button {
-    @apply outline-none;
-  }
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
 }
 
-/* ------------------------------------------------------------
-   🎨 Component-level design tokens
-------------------------------------------------------------- */
-
-@layer components {
-  .btn-primary {
-    @apply bg-[var(--color-accent)] text-white px-4 py-2 rounded-md font-semibold
-           hover:bg-[var(--color-accent-light)] active:scale-[0.98] transition-all duration-150;
-  }
-
-  .card {
-    @apply bg-[var(--color-surface)] rounded-lg shadow-md hover:bg-[var(--color-surface-hover)]
-           transition-colors border border-[var(--color-border)];
-  }
-
-  .input-text {
-    @apply w-full px-4 py-2 rounded-md bg-[var(--color-surface)] text-white placeholder-[var(--color-subtext)]
-           focus:ring-2 focus:ring-[var(--color-accent)] border border-[var(--color-border)];
-  }
-
-  .accent-gradient {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
-    background-size: 200% 200%;
-    animation: gradientFlow 6s ease infinite;
-  }
-
-  .text-glow {
-    text-shadow: 0 0 12px rgba(99, 102, 241, 0.8);
-  }
+html {
+  scroll-behavior: smooth;
+  background-color: var(--color-bg);
 }
 
-/* ------------------------------------------------------------
-   🌈 Utilities
-------------------------------------------------------------- */
-
-@layer utilities {
-  .fade-in {
-    animation: fadeIn 0.4s ease-in-out forwards;
-  }
-
-  .slide-up {
-    animation: slideUp 0.3s ease-out forwards;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(10px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes gradientFlow {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-}
-
-/* ------------------------------------------------------------
-   💡 Custom Scrollbar (flat neon)
-------------------------------------------------------------- */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
+body {
+  margin: 0;
+  color: var(--color-text);
   background: var(--color-bg);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color .15s ease;
+}
+a:hover { color: var(--color-accent-light); }
+
+input, button { outline: none; }
+
+/* ------------------------------------------------------------
+   Components (keine @apply → v4-sicher)
+------------------------------------------------------------- */
+
+.btn-primary {
+  background-color: var(--color-accent);
+  color: #fff;
+  padding: 0.5rem 1rem;            /* px-4 py-2 */
+  border: 0;
+  border-radius: 0.5rem;           /* rounded-md */
+  font-weight: 600;
+  transition: all .15s ease;
+  cursor: pointer;
+}
+.btn-primary:hover { background-color: var(--color-accent-light); }
+.btn-primary:active { transform: scale(0.98); }
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;          /* rounded-lg */
+  box-shadow: var(--shadow-md);
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.card:hover {
+  background: var(--color-surface-hover);
+}
+
+.input-text {
+  width: 100%;
+  padding: 0.5rem 1rem;            /* px-4 py-2 */
+  border-radius: 0.5rem;           /* rounded-md */
+  background: var(--color-surface);
+  color: #fff;
+  border: 1px solid var(--color-border);
+  transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+}
+.input-text::placeholder { color: var(--color-subtext); }
+.input-text:focus {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 40%, transparent);
+  border-color: var(--color-accent);
+}
+
+/* Animated gradient title (used by .accent-gradient) */
+.accent-gradient {
+  background-image: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+  background-size: 200% 200%;
+  animation: gradientFlow 6s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Subtle neon text glow (optional helper) */
+.text-glow {
+  text-shadow: 0 0 12px rgba(99,102,241,0.8);
+}
+
+/* ------------------------------------------------------------
+   Simple motion helpers used by your pages
+------------------------------------------------------------- */
+
+.fade-in { animation: fadeIn .4s ease-in-out forwards; }
+.slide-up { animation: slideUp .3s ease-out forwards; }
+
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ------------------------------------------------------------
+   Flat Neon Scrollbar
+------------------------------------------------------------- */
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
 ::-webkit-scrollbar-thumb {
   background: var(--color-accent);
   border-radius: 4px;
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent-light);
-}
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent-light); }
