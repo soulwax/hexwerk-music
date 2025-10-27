@@ -108,3 +108,158 @@ export const verificationTokens = createTable(
   }),
   (t) => [primaryKey({ columns: [t.identifier, t.token] })],
 );
+
+// ============================================
+// MUSIC LIBRARY TABLES
+// ============================================
+
+export const favorites = createTable(
+  "favorite",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    trackId: d.integer().notNull(),
+    trackData: d.jsonb().notNull(), // Store full track object for offline access
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }),
+  (t) => [
+    index("favorite_user_idx").on(t.userId),
+    index("favorite_track_idx").on(t.trackId),
+    index("favorite_user_track_idx").on(t.userId, t.trackId),
+  ],
+);
+
+export const playlists = createTable(
+  "playlist",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: d.varchar({ length: 256 }).notNull(),
+    description: d.text(),
+    coverImage: d.varchar({ length: 512 }),
+    isPublic: d.boolean().default(false).notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("playlist_user_idx").on(t.userId),
+    index("playlist_created_idx").on(t.createdAt),
+  ],
+);
+
+export const playlistTracks = createTable(
+  "playlist_track",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    playlistId: d
+      .integer()
+      .notNull()
+      .references(() => playlists.id, { onDelete: "cascade" }),
+    trackId: d.integer().notNull(),
+    trackData: d.jsonb().notNull(),
+    position: d.integer().notNull(),
+    addedAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }),
+  (t) => [
+    index("playlist_track_playlist_idx").on(t.playlistId),
+    index("playlist_track_position_idx").on(t.playlistId, t.position),
+  ],
+);
+
+export const listeningHistory = createTable(
+  "listening_history",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    trackId: d.integer().notNull(),
+    trackData: d.jsonb().notNull(),
+    playedAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    duration: d.integer(), // seconds actually played
+  }),
+  (t) => [
+    index("history_user_idx").on(t.userId),
+    index("history_played_idx").on(t.playedAt),
+    index("history_user_played_idx").on(t.userId, t.playedAt),
+  ],
+);
+
+export const searchHistory = createTable(
+  "search_history",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    query: d.varchar({ length: 512 }).notNull(),
+    searchedAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }),
+  (t) => [
+    index("search_user_idx").on(t.userId),
+    index("search_query_idx").on(t.query),
+  ],
+);
+
+// Relations
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  user: one(users, { fields: [favorites.userId], references: [users.id] }),
+}));
+
+export const playlistsRelations = relations(playlists, ({ one, many }) => ({
+  user: one(users, { fields: [playlists.userId], references: [users.id] }),
+  tracks: many(playlistTracks),
+}));
+
+export const playlistTracksRelations = relations(playlistTracks, ({ one }) => ({
+  playlist: one(playlists, {
+    fields: [playlistTracks.playlistId],
+    references: [playlists.id],
+  }),
+}));
+
+export const listeningHistoryRelations = relations(
+  listeningHistory,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [listeningHistory.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [searchHistory.userId],
+    references: [users.id],
+  }),
+}));
+
+
+
+
+
+
