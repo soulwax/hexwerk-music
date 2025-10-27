@@ -1,4 +1,5 @@
-// src/components/EnhancedPlayer.tsx
+// File: src/components/EnhancedPlayer.tsx
+
 "use client";
 
 import type { Track } from "@/types";

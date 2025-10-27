@@ -1,4 +1,5 @@
-// src/app/playlists/page.tsx
+// File: src/app/playlists/page.tsx
+
 "use client";
 
 import { api } from "@/trpc/react";

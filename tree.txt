@@ -17,6 +17,7 @@ hexmusic-stream
 ├───tsconfig.json
 ├───tsconfig.tsbuildinfo
 ├───.github/
+│   ├───IMPLEMENTATION_GUIDE.md
 │   └───assets/
 │       └───emily-the-strange_vivid.png
 ├───public/
@@ -29,14 +30,22 @@ hexmusic-stream
     │   ├───page.tsx
     │   ├───_components/
     │   │   └───post.tsx
-    │   └───api/
-    │       ├───auth/
-    │       │   └───[...nextauth]/
-    │       │       └───route.ts
-    │       └───trpc/
-    │           └───[trpc]/
-    │               └───route.ts
+    │   ├───api/
+    │   │   ├───auth/
+    │   │   │   └───[...nextauth]/
+    │   │   │       └───route.ts
+    │   │   └───trpc/
+    │   │       └───[trpc]/
+    │   │           └───route.ts
+    │   ├───library/
+    │   │   └───page.tsx
+    │   └───playlists/
+    │       ├───page.tsx
+    │       └───[id]/
+    │           └───page.tsx
     ├───components/
+    │   ├───EnhancedPlayer.tsx
+    │   ├───EnhancedTrackCard.tsx
     │   ├───Player.tsx
     │   └───TrackCard.tsx
     ├───server/
@@ -44,6 +53,7 @@ hexmusic-stream
     │   │   ├───root.ts
     │   │   ├───trpc.ts
     │   │   └───routers/
+    │   │       ├───music.ts
     │   │       └───post.ts
     │   ├───auth/
     │   │   ├───config.ts

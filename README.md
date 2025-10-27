@@ -65,7 +65,7 @@ STREAMING_KEY="your-secure-stream-key"
 
 ### 🧩 Directory Structure
 
-```
+```plaintext
 src/
  ├── app/
  │    ├── layout.tsx        # App Router layout
@@ -154,7 +154,7 @@ HexMusic Stream **requires** a backend API that:
 ### 🛠 Example API Integration
 
 ```ts
-// src/utils/api.ts
+// File: src/utils/api.ts
 import { env } from "@/env";
 import type { SearchResponse, Track } from "@/types";
 

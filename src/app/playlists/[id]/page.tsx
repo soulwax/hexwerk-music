@@ -1,4 +1,5 @@
-// src/app/playlists/[id]/page.tsx
+// File: src/app/playlists/[id]/page.tsx
+
 "use client";
 
 import EnhancedPlayer from "@/components/EnhancedPlayer";
