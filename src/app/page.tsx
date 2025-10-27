@@ -10,16 +10,24 @@ import { getStreamUrl, searchTracks } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function HomePage() {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
+  const [predictions, setPredictions] = useState<Track[]>([]);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const [selectedPredictionIndex, setSelectedPredictionIndex] = useState(-1);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [queue, setQueue] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingPredictions, setLoadingPredictions] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  
+  const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const addSearchQuery = api.music.addSearchQuery.useMutation();
   const addToHistory = api.music.addToHistory.useMutation();
@@ -28,11 +36,63 @@ export default function HomePage() {
     { enabled: !!session },
   );
 
+  // Close predictions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowPredictions(false);
+        setSelectedPredictionIndex(-1);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch predictions with debouncing
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    const trimmedQuery = query.trim();
+    
+    if (!trimmedQuery || trimmedQuery.length < 2) {
+      setPredictions([]);
+      setShowPredictions(false);
+      return;
+    }
+
+    setLoadingPredictions(true);
+
+    debounceTimerRef.current = setTimeout(() => {
+      searchTracks(trimmedQuery)
+        .then((data) => {
+          setPredictions(data.slice(0, 6));
+          setShowPredictions(true);
+          setLoadingPredictions(false);
+        })
+        .catch(() => {
+          setPredictions([]);
+          setLoadingPredictions(false);
+        });
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [query]);
+
   const handleSearch = async (searchQuery?: string) => {
     const q = searchQuery ?? query;
     if (!q.trim()) return;
 
+    setShowPredictions(false);
+    setSelectedPredictionIndex(-1);
     setLoading(true);
+    
     try {
       const data = await searchTracks(q);
       setResults(data);
@@ -43,6 +103,50 @@ export default function HomePage() {
       console.error("Search failed:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePredictionClick = (track: Track) => {
+    setQuery(track.title);
+    setShowPredictions(false);
+    setSelectedPredictionIndex(-1);
+    void handleSearch(track.title);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showPredictions || predictions.length === 0) {
+      if (e.key === "Enter") {
+        void handleSearch();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedPredictionIndex((prev) =>
+          prev < predictions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedPredictionIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (selectedPredictionIndex >= 0) {
+          const selected = predictions[selectedPredictionIndex];
+          if (selected) {
+            handlePredictionClick(selected);
+          }
+        } else {
+          void handleSearch();
+        }
+        break;
+      case "Escape":
+        setShowPredictions(false);
+        setSelectedPredictionIndex(-1);
+        break;
     }
   };
 
@@ -69,7 +173,6 @@ export default function HomePage() {
   };
 
   const handlePrevious = () => {
-    // Simple implementation - could be enhanced with history
     if (results.length > 0) {
       const currentIndex = results.findIndex((t) => t.id === currentTrack?.id);
       if (currentIndex > 0) {
@@ -150,21 +253,85 @@ export default function HomePage() {
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         {/* Search Section */}
         <div className="card slide-up mb-8 w-full p-6">
-          <div className="mb-4 flex gap-3">
-            <input
-              className="input-text flex-1"
-              placeholder="Search for songs, artists, or albums..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            />
-            <button
-              className="btn-primary px-8"
-              onClick={() => handleSearch()}
-              disabled={loading}
-            >
-              {loading ? "Searching..." : "Search"}
-            </button>
+          <div ref={searchRef} className="relative mb-4">
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  ref={inputRef}
+                  className="input-text"
+                  placeholder="Search for songs, artists, or albums..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => {
+                    if (predictions.length > 0) {
+                      setShowPredictions(true);
+                    }
+                  }}
+                />
+                
+                {/* Predictions Dropdown */}
+                {showPredictions && (predictions.length > 0 || loadingPredictions) && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-2 max-h-96 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+                    {loadingPredictions ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-accent"></div>
+                      </div>
+                    ) : (
+                      predictions.map((track, idx) => (
+                        <button
+                          key={track.id}
+                          onClick={() => handlePredictionClick(track)}
+                          onMouseEnter={() => setSelectedPredictionIndex(idx)}
+                          className={`flex w-full items-center gap-3 border-b border-gray-800 p-3 text-left transition last:border-b-0 ${
+                            selectedPredictionIndex === idx
+                              ? "bg-gray-800"
+                              : "hover:bg-gray-800"
+                          }`}
+                        >
+                          <Image
+                            src={track.album.cover_small}
+                            alt={track.title}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 flex-shrink-0 rounded"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-white">
+                              {track.title}
+                            </p>
+                            <p className="truncate text-sm text-gray-400">
+                              {track.artist.name} • {track.album.title}
+                            </p>
+                          </div>
+                          <svg
+                            className="h-5 w-5 flex-shrink-0 text-gray-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                          </svg>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <button
+                className="btn-primary px-8"
+                onClick={() => handleSearch()}
+                disabled={loading}
+              >
+                {loading ? "Searching..." : "Search"}
+              </button>
+            </div>
           </div>
 
           {/* Recent Searches */}
