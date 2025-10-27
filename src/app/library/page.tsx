@@ -2,8 +2,9 @@
 
 "use client";
 
-import EnhancedPlayer from "@/components/EnhancedPlayer";
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
+import MaturePlayer from "@/components/Player";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getStreamUrl } from "@/utils/api";
@@ -14,8 +15,6 @@ type TabType = "favorites" | "history";
 
 export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState<TabType>("favorites");
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [queue, setQueue] = useState<Track[]>([]);
 
   const { data: favorites, isLoading: favoritesLoading } =
     api.music.getFavorites.useQuery(
@@ -31,52 +30,46 @@ export default function LibraryPage() {
 
   const addToHistory = api.music.addToHistory.useMutation();
 
-  const handlePlay = (track: Track) => {
-    setCurrentTrack(track);
-    addToHistory.mutate({ track });
-  };
+  const player = useAudioPlayer({
+    onTrackChange: (track) => {
+      if (track) {
+        addToHistory.mutate({ track });
+      }
+    },
+  });
 
-  const handleAddToQueue = (track: Track) => {
-    setQueue((prev) => [...prev, track]);
+  const handlePlay = (track: Track) => {
+    const streamUrl = getStreamUrl(track.title);
+    player.loadTrack(track, streamUrl);
+    void player.play();
   };
 
   const handleNext = () => {
-    if (queue.length > 0) {
-      const [nextTrack, ...remainingQueue] = queue;
-      setCurrentTrack(nextTrack!);
-      setQueue(remainingQueue);
-      if (nextTrack) {
-        addToHistory.mutate({ track: nextTrack });
-      }
+    const nextTrack = player.playNext();
+    if (nextTrack) {
+      const streamUrl = getStreamUrl(nextTrack.title);
+      player.loadTrack(nextTrack, streamUrl);
+      void player.play();
     }
   };
 
   const handlePrevious = () => {
-    const tracks = activeTab === "favorites" 
-      ? favorites?.map(f => f.track) ?? []
-      : history?.map(h => h.track) ?? [];
-    
-    const currentIndex = tracks.findIndex((t) => t.id === currentTrack?.id);
-    if (currentIndex > 0) {
-      const prevTrack = tracks[currentIndex - 1];
-      if (prevTrack) {
-        handlePlay(prevTrack);
-      }
+    const prevTrack = player.playPrevious();
+    if (prevTrack) {
+      const streamUrl = getStreamUrl(prevTrack.title);
+      player.loadTrack(prevTrack, streamUrl);
+      void player.play();
     }
   };
 
-  const handleTrackEnd = () => {
-    handleNext();
-  };
-
   return (
-    <div className="min-h-screen flex flex-col pb-32">
+    <div className="flex min-h-screen flex-col pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-lg border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
+        <div className="mx-auto max-w-7xl px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold accent-gradient text-glow">
+              <h1 className="accent-gradient text-glow text-2xl font-bold">
                 🎧 HexMusic
               </h1>
             </Link>
@@ -84,19 +77,16 @@ export default function LibraryPage() {
             <nav className="flex items-center gap-4">
               <Link
                 href="/"
-                className="text-gray-300 hover:text-white transition"
+                className="text-gray-300 transition hover:text-white"
               >
                 Home
               </Link>
-              <Link
-                href="/library"
-                className="text-white font-semibold"
-              >
+              <Link href="/library" className="font-semibold text-white">
                 Library
               </Link>
               <Link
                 href="/playlists"
-                className="text-gray-300 hover:text-white transition"
+                className="text-gray-300 transition hover:text-white"
               >
                 Playlists
               </Link>
@@ -106,14 +96,14 @@ export default function LibraryPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8 text-white">Your Library</h1>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+        <h1 className="mb-8 text-3xl font-bold text-white">Your Library</h1>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-800">
+        <div className="mb-8 flex gap-4 border-b border-gray-800">
           <button
             onClick={() => setActiveTab("favorites")}
-            className={`pb-4 px-2 font-medium transition relative ${
+            className={`relative px-2 pb-4 font-medium transition ${
               activeTab === "favorites"
                 ? "text-white"
                 : "text-gray-400 hover:text-white"
@@ -121,12 +111,12 @@ export default function LibraryPage() {
           >
             Favorites
             {activeTab === "favorites" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
+              <div className="bg-accent absolute right-0 bottom-0 left-0 h-0.5" />
             )}
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`pb-4 px-2 font-medium transition relative ${
+            className={`relative px-2 pb-4 font-medium transition ${
               activeTab === "history"
                 ? "text-white"
                 : "text-gray-400 hover:text-white"
@@ -134,7 +124,7 @@ export default function LibraryPage() {
           >
             Listening History
             {activeTab === "history" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
+              <div className="bg-accent absolute right-0 bottom-0 left-0 h-0.5" />
             )}
           </button>
         </div>
@@ -143,8 +133,8 @@ export default function LibraryPage() {
         {activeTab === "favorites" && (
           <div>
             {favoritesLoading ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+              <div className="py-12 text-center">
+                <div className="border-accent inline-block h-8 w-8 animate-spin rounded-full border-b-2"></div>
               </div>
             ) : favorites && favorites.length > 0 ? (
               <div className="grid gap-3">
@@ -153,14 +143,14 @@ export default function LibraryPage() {
                     key={fav.id}
                     track={fav.track}
                     onPlay={handlePlay}
-                    onAddToQueue={handleAddToQueue}
+                    onAddToQueue={player.addToQueue}
                   />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
+              <div className="py-12 text-center">
                 <svg
-                  className="w-16 h-16 mx-auto text-gray-600 mb-4"
+                  className="mx-auto mb-4 h-16 w-16 text-gray-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -172,7 +162,7 @@ export default function LibraryPage() {
                     d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                   />
                 </svg>
-                <p className="text-gray-400 mb-2">No favorites yet</p>
+                <p className="mb-2 text-gray-400">No favorites yet</p>
                 <Link href="/" className="text-accent hover:underline">
                   Search for music to add favorites
                 </Link>
@@ -184,8 +174,8 @@ export default function LibraryPage() {
         {activeTab === "history" && (
           <div>
             {historyLoading ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+              <div className="py-12 text-center">
+                <div className="border-accent inline-block h-8 w-8 animate-spin rounded-full border-b-2"></div>
               </div>
             ) : history && history.length > 0 ? (
               <div className="grid gap-3">
@@ -194,14 +184,14 @@ export default function LibraryPage() {
                     key={item.id}
                     track={item.track}
                     onPlay={handlePlay}
-                    onAddToQueue={handleAddToQueue}
+                    onAddToQueue={player.addToQueue}
                   />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
+              <div className="py-12 text-center">
                 <svg
-                  className="w-16 h-16 mx-auto text-gray-600 mb-4"
+                  className="mx-auto mb-4 h-16 w-16 text-gray-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -213,7 +203,7 @@ export default function LibraryPage() {
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <p className="text-gray-400 mb-2">No listening history yet</p>
+                <p className="mb-2 text-gray-400">No listening history yet</p>
                 <Link href="/" className="text-accent hover:underline">
                   Start listening to music
                 </Link>
@@ -223,14 +213,30 @@ export default function LibraryPage() {
         )}
       </main>
 
-      {/* Enhanced Player */}
-      <EnhancedPlayer
-        currentTrack={currentTrack}
-        queue={queue}
+      {/* Mature Player */}
+      <MaturePlayer
+        currentTrack={player.currentTrack}
+        queue={player.queue}
+        isPlaying={player.isPlaying}
+        currentTime={player.currentTime}
+        duration={player.duration}
+        volume={player.volume}
+        isMuted={player.isMuted}
+        isShuffled={player.isShuffled}
+        repeatMode={player.repeatMode}
+        playbackRate={player.playbackRate}
+        isLoading={player.isLoading}
+        onPlayPause={player.togglePlay}
         onNext={handleNext}
         onPrevious={handlePrevious}
-        onTrackEnd={handleTrackEnd}
-        streamUrl={currentTrack ? getStreamUrl(currentTrack.title) : null}
+        onSeek={player.seek}
+        onVolumeChange={player.setVolume}
+        onToggleMute={() => player.setIsMuted(!player.isMuted)}
+        onToggleShuffle={player.toggleShuffle}
+        onCycleRepeat={player.cycleRepeatMode}
+        onPlaybackRateChange={player.setPlaybackRate}
+        onSkipForward={player.skipForward}
+        onSkipBackward={player.skipBackward}
       />
     </div>
   );

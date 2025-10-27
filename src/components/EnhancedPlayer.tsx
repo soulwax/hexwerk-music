@@ -39,7 +39,7 @@ export default function EnhancedPlayer({
     if (isPlaying) {
       audioRef.current.play().catch(() => setIsPlaying(false));
     }
-  }, [streamUrl]);
+  }, [streamUrl, isPlaying, volume]);
 
   useEffect(() => {
     if (!audioRef.current) return;

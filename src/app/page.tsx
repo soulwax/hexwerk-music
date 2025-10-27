@@ -2,32 +2,23 @@
 
 "use client";
 
-import EnhancedPlayer from "@/components/EnhancedPlayer";
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
+import MaturePlayer from "@/components/Player";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getStreamUrl, searchTracks } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export default function HomePage() {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
-  const [predictions, setPredictions] = useState<Track[]>([]);
-  const [showPredictions, setShowPredictions] = useState(false);
-  const [selectedPredictionIndex, setSelectedPredictionIndex] = useState(-1);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [queue, setQueue] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingPredictions, setLoadingPredictions] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
-  
-  const searchRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const addSearchQuery = api.music.addSearchQuery.useMutation();
   const addToHistory = api.music.addToHistory.useMutation();
@@ -36,63 +27,19 @@ export default function HomePage() {
     { enabled: !!session },
   );
 
-  // Close predictions when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowPredictions(false);
-        setSelectedPredictionIndex(-1);
+  const player = useAudioPlayer({
+    onTrackChange: (track) => {
+      if (track && session) {
+        addToHistory.mutate({ track });
       }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Fetch predictions with debouncing
-  useEffect(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    const trimmedQuery = query.trim();
-    
-    if (!trimmedQuery || trimmedQuery.length < 2) {
-      setPredictions([]);
-      setShowPredictions(false);
-      return;
-    }
-
-    setLoadingPredictions(true);
-
-    debounceTimerRef.current = setTimeout(() => {
-      searchTracks(trimmedQuery)
-        .then((data) => {
-          setPredictions(data.slice(0, 6));
-          setShowPredictions(true);
-          setLoadingPredictions(false);
-        })
-        .catch(() => {
-          setPredictions([]);
-          setLoadingPredictions(false);
-        });
-    }, 300);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [query]);
+    },
+  });
 
   const handleSearch = async (searchQuery?: string) => {
     const q = searchQuery ?? query;
     if (!q.trim()) return;
 
-    setShowPredictions(false);
-    setSelectedPredictionIndex(-1);
     setLoading(true);
-    
     try {
       const data = await searchTracks(q);
       setResults(data);
@@ -106,87 +53,28 @@ export default function HomePage() {
     }
   };
 
-  const handlePredictionClick = (track: Track) => {
-    setQuery(track.title);
-    setShowPredictions(false);
-    setSelectedPredictionIndex(-1);
-    void handleSearch(track.title);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showPredictions || predictions.length === 0) {
-      if (e.key === "Enter") {
-        void handleSearch();
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setSelectedPredictionIndex((prev) =>
-          prev < predictions.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setSelectedPredictionIndex((prev) => (prev > 0 ? prev - 1 : -1));
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (selectedPredictionIndex >= 0) {
-          const selected = predictions[selectedPredictionIndex];
-          if (selected) {
-            handlePredictionClick(selected);
-          }
-        } else {
-          void handleSearch();
-        }
-        break;
-      case "Escape":
-        setShowPredictions(false);
-        setSelectedPredictionIndex(-1);
-        break;
-    }
-  };
-
   const handlePlay = (track: Track) => {
-    setCurrentTrack(track);
-    if (session) {
-      addToHistory.mutate({ track });
-    }
-  };
-
-  const handleAddToQueue = (track: Track) => {
-    setQueue((prev) => [...prev, track]);
+    const streamUrl = getStreamUrl(track.title);
+    player.loadTrack(track, streamUrl);
+    void player.play();
   };
 
   const handleNext = () => {
-    if (queue.length > 0) {
-      const [nextTrack, ...remainingQueue] = queue;
-      setCurrentTrack(nextTrack!);
-      setQueue(remainingQueue);
-      if (session && nextTrack) {
-        addToHistory.mutate({ track: nextTrack });
-      }
+    const nextTrack = player.playNext();
+    if (nextTrack) {
+      const streamUrl = getStreamUrl(nextTrack.title);
+      player.loadTrack(nextTrack, streamUrl);
+      void player.play();
     }
   };
 
   const handlePrevious = () => {
-    if (results.length > 0) {
-      const currentIndex = results.findIndex((t) => t.id === currentTrack?.id);
-      if (currentIndex > 0) {
-        handlePlay(results[currentIndex - 1]!);
-      }
+    const prevTrack = player.playPrevious();
+    if (prevTrack) {
+      const streamUrl = getStreamUrl(prevTrack.title);
+      player.loadTrack(prevTrack, streamUrl);
+      void player.play();
     }
-  };
-
-  const handleTrackEnd = () => {
-    handleNext();
-  };
-
-  const removeFromQueue = (index: number) => {
-    setQueue((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -221,9 +109,9 @@ export default function HomePage() {
                     className="relative text-gray-300 transition hover:text-white"
                   >
                     Queue
-                    {queue.length > 0 && (
+                    {player.queue.length > 0 && (
                       <span className="bg-accent absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white">
-                        {queue.length}
+                        {player.queue.length}
                       </span>
                     )}
                   </button>
@@ -253,85 +141,21 @@ export default function HomePage() {
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         {/* Search Section */}
         <div className="card slide-up mb-8 w-full p-6">
-          <div ref={searchRef} className="relative mb-4">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <input
-                  ref={inputRef}
-                  className="input-text"
-                  placeholder="Search for songs, artists, or albums..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onFocus={() => {
-                    if (predictions.length > 0) {
-                      setShowPredictions(true);
-                    }
-                  }}
-                />
-                
-                {/* Predictions Dropdown */}
-                {showPredictions && (predictions.length > 0 || loadingPredictions) && (
-                  <div className="absolute top-full left-0 right-0 z-50 mt-2 max-h-96 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
-                    {loadingPredictions ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="inline-block h-6 w-6 animate-spin rounded-full border-b-2 border-accent"></div>
-                      </div>
-                    ) : (
-                      predictions.map((track, idx) => (
-                        <button
-                          key={track.id}
-                          onClick={() => handlePredictionClick(track)}
-                          onMouseEnter={() => setSelectedPredictionIndex(idx)}
-                          className={`flex w-full items-center gap-3 border-b border-gray-800 p-3 text-left transition last:border-b-0 ${
-                            selectedPredictionIndex === idx
-                              ? "bg-gray-800"
-                              : "hover:bg-gray-800"
-                          }`}
-                        >
-                          <Image
-                            src={track.album.cover_small}
-                            alt={track.title}
-                            width={48}
-                            height={48}
-                            className="h-12 w-12 flex-shrink-0 rounded"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-white">
-                              {track.title}
-                            </p>
-                            <p className="truncate text-sm text-gray-400">
-                              {track.artist.name} • {track.album.title}
-                            </p>
-                          </div>
-                          <svg
-                            className="h-5 w-5 flex-shrink-0 text-gray-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                          </svg>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              <button
-                className="btn-primary px-8"
-                onClick={() => handleSearch()}
-                disabled={loading}
-              >
-                {loading ? "Searching..." : "Search"}
-              </button>
-            </div>
+          <div className="mb-4 flex gap-3">
+            <input
+              className="input-text flex-1"
+              placeholder="Search for songs, artists, or albums..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+            <button
+              className="btn-primary px-8"
+              onClick={() => handleSearch()}
+              disabled={loading}
+            >
+              {loading ? "Searching..." : "Search"}
+            </button>
           </div>
 
           {/* Recent Searches */}
@@ -354,6 +178,47 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* Keyboard Shortcuts Help */}
+        <div className="card mb-6 p-4">
+          <details className="text-sm text-gray-400">
+            <summary className="cursor-pointer font-medium text-white hover:text-accent">
+              Keyboard Shortcuts
+            </summary>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">Space</kbd> Play/Pause
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">→</kbd> Skip Forward
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">←</kbd> Skip Backward
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">Shift+→</kbd> Next Track
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">Shift+←</kbd> Previous Track
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">↑</kbd> Volume Up
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">↓</kbd> Volume Down
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">M</kbd> Mute
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">S</kbd> Shuffle
+              </div>
+              <div>
+                <kbd className="rounded bg-gray-800 px-2 py-1">R</kbd> Repeat
+              </div>
+            </div>
+          </details>
+        </div>
+
         {/* Results and Queue Split View */}
         <div className="flex gap-8">
           {/* Search Results */}
@@ -369,7 +234,7 @@ export default function HomePage() {
                       key={track.id}
                       track={track}
                       onPlay={handlePlay}
-                      onAddToQueue={handleAddToQueue}
+                      onAddToQueue={player.addToQueue}
                       showActions={!!session}
                     />
                   ))}
@@ -403,11 +268,11 @@ export default function HomePage() {
               <div className="card sticky top-24 p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-white">
-                    Queue ({queue.length})
+                    Queue ({player.queue.length})
                   </h2>
-                  {queue.length > 0 && (
+                  {player.queue.length > 0 && (
                     <button
-                      onClick={() => setQueue([])}
+                      onClick={player.clearQueue}
                       className="text-sm text-gray-400 transition hover:text-white"
                     >
                       Clear
@@ -415,9 +280,9 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {queue.length > 0 ? (
+                {player.queue.length > 0 ? (
                   <div className="max-h-[600px] space-y-2 overflow-y-auto">
-                    {queue.map((track, idx) => (
+                    {player.queue.map((track, idx) => (
                       <div
                         key={`${track.id}-${idx}`}
                         className="group flex items-center gap-3 rounded-lg bg-gray-800 p-2"
@@ -441,7 +306,7 @@ export default function HomePage() {
                           </p>
                         </div>
                         <button
-                          onClick={() => removeFromQueue(idx)}
+                          onClick={() => player.removeFromQueue(idx)}
                           className="text-gray-400 opacity-0 transition group-hover:opacity-100 hover:text-white"
                         >
                           <svg
@@ -470,14 +335,30 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Enhanced Player */}
-      <EnhancedPlayer
-        currentTrack={currentTrack}
-        queue={queue}
+      {/* Mature Player */}
+      <MaturePlayer
+        currentTrack={player.currentTrack}
+        queue={player.queue}
+        isPlaying={player.isPlaying}
+        currentTime={player.currentTime}
+        duration={player.duration}
+        volume={player.volume}
+        isMuted={player.isMuted}
+        isShuffled={player.isShuffled}
+        repeatMode={player.repeatMode}
+        playbackRate={player.playbackRate}
+        isLoading={player.isLoading}
+        onPlayPause={player.togglePlay}
         onNext={handleNext}
         onPrevious={handlePrevious}
-        onTrackEnd={handleTrackEnd}
-        streamUrl={currentTrack ? getStreamUrl(currentTrack.title) : null}
+        onSeek={player.seek}
+        onVolumeChange={player.setVolume}
+        onToggleMute={() => player.setIsMuted(!player.isMuted)}
+        onToggleShuffle={player.toggleShuffle}
+        onCycleRepeat={player.cycleRepeatMode}
+        onPlaybackRateChange={player.setPlaybackRate}
+        onSkipForward={player.skipForward}
+        onSkipBackward={player.skipBackward}
       />
     </div>
   );
