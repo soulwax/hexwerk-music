@@ -19,6 +19,7 @@ hexmusic-stream
 │   └───favicon.ico
 └───src/
     ├───env.js
+    ├───global.d.ts
     ├───app/
     │   ├───layout.tsx
     │   ├───page.tsx
@@ -35,7 +36,6 @@ hexmusic-stream
     │   ├───Player.tsx
     │   └───TrackCard.tsx
     ├───pages/
-    │   └───index.tsx
     ├───server/
     │   ├───api/
     │   │   ├───root.ts
