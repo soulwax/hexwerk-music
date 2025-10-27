@@ -6,7 +6,9 @@ export default function Player({ src, title }: { src: string; title: string }) {
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.load();
-      audioRef.current.play().catch(() => {});
+      void audioRef.current.play().catch(() => {
+        // Ignore autoplay errors - browser may block autoplay
+      });
     }
   }, [src]);
 
