@@ -1,0 +1,58 @@
+hexmusic-stream
+├───.env.example
+├───.gitignore
+├───drizzle.config.ts
+├───eslint.config.js
+├───next-env.d.ts
+├───next.config.js
+├───package-lock.json
+├───package.json
+├───postcss.config.js
+├───prettier.config.js
+├───README.md
+├───start-database.sh
+├───tree.txt
+├───tsconfig.json
+├───public/
+│   └───favicon.ico
+└───src/
+    ├───env.js
+    ├───app/
+    │   ├───layout.tsx
+    │   ├───page.tsx
+    │   ├───_components/
+    │   │   └───post.tsx
+    │   └───api/
+    │       ├───auth/
+    │       │   └───[...nextauth]/
+    │       │       └───route.ts
+    │       └───trpc/
+    │           └───[trpc]/
+    │               └───route.ts
+    ├───components/
+    │   ├───Player.tsx
+    │   └───TrackCard.tsx
+    ├───pages/
+    │   └───index.tsx
+    ├───server/
+    │   ├───api/
+    │   │   ├───root.ts
+    │   │   ├───trpc.ts
+    │   │   └───routers/
+    │   │       └───post.ts
+    │   ├───auth/
+    │   │   ├───config.ts
+    │   │   └───index.ts
+    │   └───db/
+    │       ├───index.ts
+    │       └───schema.ts
+    ├───styles/
+    │   └───globals.css
+    ├───trpc/
+    │   ├───query-client.ts
+    │   ├───react.tsx
+    │   └───server.ts
+    ├───types/
+    │   └───index.ts
+    └───utils/
+        └───api.ts
