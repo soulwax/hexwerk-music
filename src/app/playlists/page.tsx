@@ -234,7 +234,7 @@ export default function PlaylistsPage() {
                   value={newPlaylistName}
                   onChange={(e) => setNewPlaylistName(e.target.value)}
                   className="input-text"
-                  placeholder="My Awesome Playlist"
+                  placeholder="My New Playlist"
                   autoFocus
                 />
               </div>

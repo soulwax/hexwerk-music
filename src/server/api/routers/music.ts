@@ -5,11 +5,11 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
-    favorites,
-    listeningHistory,
-    playlists,
-    playlistTracks,
-    searchHistory,
+  favorites,
+  listeningHistory,
+  playlists,
+  playlistTracks,
+  searchHistory,
 } from "@/server/db/schema";
 import type { Track } from "@/types";
 
