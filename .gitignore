@@ -49,3 +49,6 @@ yarn-error.log*
 # Certs
 certs/
 ca.pem
+
+# db credentials
+drizzle.env.js
