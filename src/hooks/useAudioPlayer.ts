@@ -99,16 +99,17 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   useEffect(() => {
     if (!currentTrack || typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
 
+    // TODO: address proper typing according to api response
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.artist.name,
       album: currentTrack.album.title,
       artwork: [
-        { src: currentTrack.album.cover_small, sizes: "56x56", type: "image/jpeg" },
-        { src: currentTrack.album.cover_medium, sizes: "250x250", type: "image/jpeg" },
-        { src: currentTrack.album.cover_big, sizes: "500x500", type: "image/jpeg" },
-        { src: currentTrack.album.cover_xl, sizes: "1000x1000", type: "image/jpeg" },
-      ],
+        currentTrack.album.cover_small ? { src: currentTrack.album.cover_small, sizes: "56x56", type: "image/jpeg" } : undefined,
+        currentTrack.album.cover_medium ? { src: currentTrack.album.cover_medium, sizes: "250x250", type: "image/jpeg" } : undefined,
+        currentTrack.album.cover_big ? { src: currentTrack.album.cover_big, sizes: "500x500", type: "image/jpeg" } : undefined,
+        currentTrack.album.cover_xl ? { src: currentTrack.album.cover_xl, sizes: "1000x1000", type: "image/jpeg" } : undefined,
+      ].filter((artwork): artwork is MediaImage => artwork !== undefined),
     });
   }, [currentTrack]);
 
