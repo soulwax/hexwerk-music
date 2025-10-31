@@ -61,7 +61,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       audioRef.current.volume = volume;
       audioRef.current.playbackRate = playbackRate;
     }
-  }, []);
+  }, [volume, playbackRate]);
 
   // Update audio element properties
   useEffect(() => {
@@ -109,7 +109,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
         currentTrack.album.cover_medium ? { src: currentTrack.album.cover_medium, sizes: "250x250", type: "image/jpeg" } : undefined,
         currentTrack.album.cover_big ? { src: currentTrack.album.cover_big, sizes: "500x500", type: "image/jpeg" } : undefined,
         currentTrack.album.cover_xl ? { src: currentTrack.album.cover_xl, sizes: "1000x1000", type: "image/jpeg" } : undefined,
-      ].filter((artwork): artwork is MediaImage => artwork !== undefined),
+      ].filter((artwork): artwork is NonNullable<typeof artwork> => artwork !== undefined),
     });
   }, [currentTrack]);
 
