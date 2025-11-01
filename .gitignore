@@ -45,3 +45,10 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# Certs
+certs/
+ca.pem
+
+# db credentials
+drizzle.env.js

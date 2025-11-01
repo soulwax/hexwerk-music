@@ -29,8 +29,8 @@ export default function HomePage() {
 
   const player = useAudioPlayer({
     onTrackChange: (track) => {
-      if (track && session) {
-        addToHistory.mutate({ track });
+      if (track && session && track.title_short && track.title_version && track.md5_image && track.artist.link) {
+        addToHistory.mutate({ track: track as typeof track & { title_short: string; title_version: string; md5_image: string; artist: { link: string } } });
       }
     },
   });

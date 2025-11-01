@@ -5,7 +5,6 @@
 <h1 align="center">🎧 HexMusic Stream</h1>
 <p align="center"><em>An attempt at amodern full-stack music search & streaming interface.</em></p>
 
-
 ## 🎧 **HexMusic Stream**
 
 *A modern full-stack music search & streaming interface.*
@@ -53,6 +52,31 @@ DATABASE_URL="postgres://user:password@host:port/dbname?sslmode=require"
 API_URL="https://your-music-api.com/"
 STREAMING_KEY="your-secure-stream-key"
 ```
+
+#### Create a drizzle.env.ts file for database credentials
+
+```ts
+// File: drizzle.env.ts
+import "dotenv/config";
+
+const required = (key: string) => {
+  const val = process.env[key];
+  if (!val) throw new Error(`Missing required env var: ${key}`);
+  return val;
+};
+
+const config = {
+  DB_HOST: required("DB_HOST"),
+  DB_PORT: required("DB_PORT"),
+  DB_ADMIN_USER: required("DB_ADMIN_USER"),
+  DB_ADMIN_PASSWORD: required("DB_ADMIN_PASSWORD"),
+  DB_NAME: required("DB_NAME"),
+};
+
+export default config;
+```
+
+This way you can keep your database credentials separate and out of version control.
 
 > ✅ **Tip:**
 > You can generate a secret for NextAuth with:

@@ -1,20 +1,17 @@
 // File: src/server/db/index.ts
 
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-
-import { env } from "@/env";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { readFileSync } from "fs";
+import path from "path";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
-/**
- * Cache the database connection in development. This avoids creating a new connection on every HMR
- * update.
- */
-const globalForDb = globalThis as unknown as {
-  conn: postgres.Sql | undefined;
-};
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+  ssl: {
+    rejectUnauthorized: true,
+    ca: readFileSync(path.join(process.cwd(), "certs/ca.pem")).toString(),
+  },
+});
 
-const conn = globalForDb.conn ?? postgres(env.DATABASE_URL);
-if (env.NODE_ENV !== "production") globalForDb.conn = conn;
-
-export const db = drizzle(conn, { schema });
+export const db = drizzle(pool, { schema });
