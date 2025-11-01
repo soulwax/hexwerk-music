@@ -9,13 +9,19 @@ export interface TrackCardProps {
 }
 
 export default function TrackCard({ track, onPlay }: TrackCardProps) {
+  const coverImage =
+    track.album.cover_medium ??
+    track.album.cover_small ??
+    track.album.cover ??
+    "/placeholder.png";
+
   return (
     <div
       onClick={() => onPlay(track)}
-      className="flex cursor-pointer items-center gap-4 rounded-xl bg-gray-800 p-4 hover:bg-gray-700"
+      className="flex cursor-pointer items-center gap-4 rounded-xl bg-gray-800 p-4 transition hover:bg-gray-700"
     >
       <Image
-        src={track.album.cover_medium}
+        src={coverImage}
         alt={track.title}
         width={80}
         height={80}
