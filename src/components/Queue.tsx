@@ -1,3 +1,5 @@
+// File: src/components/Queue.tsx
+
 import type { QueueItem } from '@/types';
 import { Trash2, X } from 'lucide-react';
 import Image from 'next/image';

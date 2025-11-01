@@ -1,4 +1,4 @@
-// File: src/components/MaturePlayer.tsx
+// File: src/components/Player.tsx
 
 "use client";
 

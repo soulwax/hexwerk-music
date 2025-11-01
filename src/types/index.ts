@@ -1,6 +1,5 @@
 // File: src/types/index.ts
 
-// Data models
 export interface Artist {
   id: number;
   name: string;
