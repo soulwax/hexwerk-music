@@ -9,7 +9,6 @@ import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getStreamUrl, searchTracks } from "@/utils/api";
 import { useSession } from "next-auth/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -29,8 +28,8 @@ export default function HomePage() {
 
   const player = useAudioPlayer({
     onTrackChange: (track) => {
-      if (track && session && track.title_short && track.title_version && track.md5_image && track.artist.link) {
-        addToHistory.mutate({ track: track as typeof track & { title_short: string; title_version: string; md5_image: string; artist: { link: string } } });
+      if (track && session) {
+        addToHistory.mutate({ track: track as any });
       }
     },
   });
@@ -79,7 +78,6 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col pb-32">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
         <div className="mx-auto max-w-7xl px-4 py-4">
           <div className="flex items-center justify-between">
@@ -110,7 +108,7 @@ export default function HomePage() {
                   >
                     Queue
                     {player.queue.length > 0 && (
-                      <span className="bg-accent absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white">
+                      <span className="bg-accent absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white">
                         {player.queue.length}
                       </span>
                     )}
@@ -137,9 +135,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
-        {/* Search Section */}
         <div className="card slide-up mb-8 w-full p-6">
           <div className="mb-4 flex gap-3">
             <input
@@ -147,82 +143,35 @@ export default function HomePage() {
               placeholder="Search for songs, artists, or albums..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
             />
             <button
               className="btn-primary px-8"
-              onClick={() => handleSearch()}
+              onClick={() => void handleSearch()}
               disabled={loading}
             >
               {loading ? "Searching..." : "Search"}
             </button>
           </div>
 
-          {/* Recent Searches */}
-          {session && recentSearches && recentSearches.length > 0 && !query && (
+          {session && recentSearches && recentSearches.length > 0 && (
             <div className="flex flex-wrap gap-2">
               <span className="text-sm text-gray-400">Recent:</span>
-              {recentSearches.map((search, idx) => (
+              {recentSearches.map((search) => (
                 <button
-                  key={idx}
-                  onClick={() => {
-                    setQuery(search);
-                    void handleSearch(search);
-                  }}
-                  className="rounded-full bg-gray-700 px-3 py-1 text-sm text-gray-300 transition hover:bg-gray-600"
+                  key={search.id}
+                  onClick={() => void handleSearch(search.query)}
+                  className="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-300 transition hover:bg-gray-700"
                 >
-                  {search}
+                  {search.query}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Keyboard Shortcuts Help */}
-        <div className="card mb-6 p-4">
-          <details className="text-sm text-gray-400">
-            <summary className="cursor-pointer font-medium text-white hover:text-accent">
-              Keyboard Shortcuts
-            </summary>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">Space</kbd> Play/Pause
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">→</kbd> Skip Forward
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">←</kbd> Skip Backward
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">Shift+→</kbd> Next Track
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">Shift+←</kbd> Previous Track
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">↑</kbd> Volume Up
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">↓</kbd> Volume Down
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">M</kbd> Mute
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">S</kbd> Shuffle
-              </div>
-              <div>
-                <kbd className="rounded bg-gray-800 px-2 py-1">R</kbd> Repeat
-              </div>
-            </div>
-          </details>
-        </div>
-
-        {/* Results and Queue Split View */}
-        <div className="flex gap-8">
-          {/* Search Results */}
-          <div className={`flex-1 ${showQueue ? "lg:w-2/3" : "w-full"}`}>
+        <div className="flex gap-6">
+          <div className={`${showQueue ? "w-full lg:w-2/3" : "w-full"}`}>
             {results.length > 0 ? (
               <>
                 <h2 className="mb-4 text-xl font-semibold text-white">
@@ -262,7 +211,6 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Queue Sidebar */}
           {showQueue && (
             <div className="hidden w-1/3 lg:block">
               <div className="card sticky top-24 p-6">
@@ -281,22 +229,13 @@ export default function HomePage() {
                 </div>
 
                 {player.queue.length > 0 ? (
-                  <div className="max-h-[600px] space-y-2 overflow-y-auto">
+                  <div className="space-y-2">
                     {player.queue.map((track, idx) => (
                       <div
                         key={`${track.id}-${idx}`}
-                        className="group flex items-center gap-3 rounded-lg bg-gray-800 p-2"
+                        className="flex items-center gap-2 rounded bg-gray-800/50 p-2"
                       >
-                        <span className="w-6 text-sm text-gray-500">
-                          {idx + 1}
-                        </span>
-                        <Image
-                          src={track.album.cover_small}
-                          alt={track.title}
-                          width={40}
-                          height={40}
-                          className="h-10 w-10 rounded"
-                        />
+                        <span className="text-sm text-gray-500">{idx + 1}</span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm text-white">
                             {track.title}
@@ -305,27 +244,11 @@ export default function HomePage() {
                             {track.artist.name}
                           </p>
                         </div>
-                        <button
-                          onClick={() => player.removeFromQueue(idx)}
-                          className="text-gray-400 opacity-0 transition group-hover:opacity-100 hover:text-white"
-                        >
-                          <svg
-                            className="h-4 w-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="py-8 text-center text-sm text-gray-400">
+                  <p className="py-8 text-center text-sm text-gray-500">
                     No tracks in queue
                   </p>
                 )}
@@ -335,7 +258,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Mature Player */}
       <MaturePlayer
         currentTrack={player.currentTrack}
         queue={player.queue}

@@ -12,6 +12,7 @@ import {
   users,
   verificationTokens,
 } from "@/server/db/schema";
+
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
@@ -19,38 +20,11 @@ declare module "next-auth" {
     } & DefaultSession["user"];
   }
 }
-/**
- * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
- * object and keep type safety.
- *
- * @see https://next-auth.js.org/getting-started/typescript#module-augmentation
- */
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-      // ...other properties
-      // role: UserRole;
-    } & DefaultSession["user"];
-  }
-
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
-}
-
-/**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
- *
- * @see https://next-auth.js.org/configuration/options
- */
-
 export const authConfig = {
   providers: [
     DiscordProvider({
-      clientId: env.AUTH_DISCORD_ID ?? "",
-      clientSecret: env.AUTH_DISCORD_SECRET ?? "",
+      clientId: env.AUTH_DISCORD_ID,
+      clientSecret: env.AUTH_DISCORD_SECRET,
     }),
   ],
   adapter: DrizzleAdapter(db, {
@@ -69,3 +43,9 @@ export const authConfig = {
     }),
   },
 } satisfies NextAuthConfig;
+
+
+
+
+
+

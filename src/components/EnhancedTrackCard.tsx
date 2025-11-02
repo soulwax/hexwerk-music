@@ -1,7 +1,5 @@
 // File: src/components/EnhancedTrackCard.tsx
 
-"use client";
-
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import Image from "next/image";
@@ -72,18 +70,22 @@ export default function EnhancedTrackCard({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const coverImage =
+    track.album.cover_medium ??
+    track.album.cover_small ??
+    track.album.cover ??
+    "/placeholder.png";
+
   return (
     <div className="group relative flex items-center gap-4 rounded-xl bg-gray-800 p-4 transition hover:bg-gray-700">
-      {/* Album Art */}
       <div className="relative flex-shrink-0">
         <Image
-          src={track.album.cover_medium}
+          src={coverImage}
           alt={track.title}
           width={64}
           height={64}
           className="rounded-lg"
         />
-        {/* Play overlay on hover */}
         <button
           onClick={() => onPlay(track)}
           className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition group-hover:opacity-100"
@@ -102,7 +104,6 @@ export default function EnhancedTrackCard({
         </button>
       </div>
 
-      {/* Track Info */}
       <div className="min-w-0 flex-1">
         <h3
           className="cursor-pointer truncate font-semibold text-white hover:underline"
@@ -114,15 +115,12 @@ export default function EnhancedTrackCard({
         <p className="truncate text-xs text-gray-500">{track.album.title}</p>
       </div>
 
-      {/* Duration */}
       <div className="hidden flex-shrink-0 text-sm text-gray-400 sm:block">
         {formatDuration(track.duration)}
       </div>
 
-      {/* Actions */}
       {showActions && (
         <div className="flex flex-shrink-0 items-center gap-2">
-          {/* Favorite Button */}
           <button
             onClick={toggleFavorite}
             className={`rounded-full p-2 transition ${
@@ -157,7 +155,6 @@ export default function EnhancedTrackCard({
             )}
           </button>
 
-          {/* Add to Queue */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -181,7 +178,6 @@ export default function EnhancedTrackCard({
             </svg>
           </button>
 
-          {/* More Options Menu */}
           <div className="relative">
             <button
               onClick={(e) => {
@@ -202,18 +198,15 @@ export default function EnhancedTrackCard({
                   onClick={() => setShowMenu(false)}
                 />
                 <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg">
-                  <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase">
+                  <div className="px-4 py-2 text-xs font-semibold uppercase text-gray-400">
                     Add to Playlist
                   </div>
                   {playlists && playlists.length > 0 ? (
                     playlists.map((playlist) => (
                       <button
                         key={playlist.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToPlaylist(playlist.id);
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-white transition hover:bg-gray-800"
+                        onClick={() => handleAddToPlaylist(playlist.id)}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-300 transition hover:bg-gray-800 hover:text-white"
                         disabled={addToPlaylist.isPending}
                       >
                         {playlist.name}

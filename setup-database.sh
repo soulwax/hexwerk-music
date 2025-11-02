@@ -1,5 +1,5 @@
 #!/bin/bash
-# Quick Database Setup for HexMusic
+# File: setup-database.sh
 
 set -e
 
@@ -85,4 +85,3 @@ echo "   • Studio:      npm run db:studio"
 echo ""  -e POSTGRES_DB="$DB_NAME" \
   -p "$PORT:5432" \
   postgres:16-alpine > /dev/null
-

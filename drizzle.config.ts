@@ -1,4 +1,5 @@
-// drizzle.config.ts
+// File: drizzle.config.ts
+
 import { defineConfig } from "drizzle-kit";
 import { readFileSync } from "fs";
 import path from "path";
