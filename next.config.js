@@ -7,6 +7,21 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn-images.dzcdn.net",
+        pathname: "/images/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.deezer.com",
+        pathname: "/**",
+      },
+    ],
+  },
+};
 
 export default config;
