@@ -11,12 +11,14 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev --turbo --port 3222",
+    "pm2": "next build && pm2 start npm --name hexmusic-stream -- start",
+    "pm2:watch": "next build && pm2 start npm --name hexmusic-stream -- start --watch",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
-    "start": "next start",
+    "start": "next start --port 3222",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

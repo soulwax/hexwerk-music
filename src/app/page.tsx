@@ -3,11 +3,10 @@
 "use client";
 
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
-import MaturePlayer from "@/components/Player";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
-import { getStreamUrl, searchTracks } from "@/utils/api";
+import { searchTracks } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
@@ -19,20 +18,14 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
 
+  // Use global player instead of local state
+  const player = useGlobalPlayer();
+
   const addSearchQuery = api.music.addSearchQuery.useMutation();
-  const addToHistory = api.music.addToHistory.useMutation();
   const { data: recentSearches } = api.music.getRecentSearches.useQuery(
     { limit: 5 },
     { enabled: !!session },
   );
-
-  const player = useAudioPlayer({
-    onTrackChange: (track) => {
-      if (track && session) {
-        addToHistory.mutate({ track: track as any });
-      }
-    },
-  });
 
   const handleSearch = async (searchQuery?: string) => {
     const q = searchQuery ?? query;
@@ -52,32 +45,8 @@ export default function HomePage() {
     }
   };
 
-  const handlePlay = (track: Track) => {
-    const streamUrl = getStreamUrl(track.title);
-    player.loadTrack(track, streamUrl);
-    void player.play();
-  };
-
-  const handleNext = () => {
-    const nextTrack = player.playNext();
-    if (nextTrack) {
-      const streamUrl = getStreamUrl(nextTrack.title);
-      player.loadTrack(nextTrack, streamUrl);
-      void player.play();
-    }
-  };
-
-  const handlePrevious = () => {
-    const prevTrack = player.playPrevious();
-    if (prevTrack) {
-      const streamUrl = getStreamUrl(prevTrack.title);
-      player.loadTrack(prevTrack, streamUrl);
-      void player.play();
-    }
-  };
-
   return (
-    <div className="flex min-h-screen flex-col pb-32">
+    <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
         <div className="mx-auto max-w-7xl px-4 py-4">
           <div className="flex items-center justify-between">
@@ -159,11 +128,11 @@ export default function HomePage() {
               <span className="text-sm text-gray-400">Recent:</span>
               {recentSearches.map((search) => (
                 <button
-                  key={search.id}
-                  onClick={() => void handleSearch(search.query)}
+                  key={search}
+                  onClick={() => void handleSearch(search)}
                   className="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-300 transition hover:bg-gray-700"
                 >
-                  {search.query}
+                  {search}
                 </button>
               ))}
             </div>
@@ -182,7 +151,7 @@ export default function HomePage() {
                     <EnhancedTrackCard
                       key={track.id}
                       track={track}
-                      onPlay={handlePlay}
+                      onPlay={player.play}
                       onAddToQueue={player.addToQueue}
                       showActions={!!session}
                     />
@@ -257,31 +226,6 @@ export default function HomePage() {
           )}
         </div>
       </main>
-
-      <MaturePlayer
-        currentTrack={player.currentTrack}
-        queue={player.queue}
-        isPlaying={player.isPlaying}
-        currentTime={player.currentTime}
-        duration={player.duration}
-        volume={player.volume}
-        isMuted={player.isMuted}
-        isShuffled={player.isShuffled}
-        repeatMode={player.repeatMode}
-        playbackRate={player.playbackRate}
-        isLoading={player.isLoading}
-        onPlayPause={player.togglePlay}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onSeek={player.seek}
-        onVolumeChange={player.setVolume}
-        onToggleMute={() => player.setIsMuted(!player.isMuted)}
-        onToggleShuffle={player.toggleShuffle}
-        onCycleRepeat={player.cycleRepeatMode}
-        onPlaybackRateChange={player.setPlaybackRate}
-        onSkipForward={player.skipForward}
-        onSkipBackward={player.skipBackward}
-      />
     </div>
   );
 }

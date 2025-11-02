@@ -5,7 +5,9 @@ import "@/styles/globals.css";
 import { Geist } from "next/font/google";
 import { type ReactNode } from "react";
 
+import PersistentPlayer from "@/components/PersistentPlayer";
 import { SessionProvider } from "@/components/SessionProvider";
+import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { TRPCReactProvider } from "@/trpc/react";
 
 const geist = Geist({
@@ -26,7 +28,14 @@ export default function RootLayout({
     <html lang="en" className={geist.variable} suppressHydrationWarning>
       <body>
         <SessionProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <TRPCReactProvider>
+            <AudioPlayerProvider>
+              {/* Main content with bottom padding for player */}
+              <div className="pb-24">{children}</div>
+              {/* Persistent player - stays on all pages */}
+              <PersistentPlayer />
+            </AudioPlayerProvider>
+          </TRPCReactProvider>
         </SessionProvider>
       </body>
     </html>

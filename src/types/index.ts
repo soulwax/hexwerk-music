@@ -79,6 +79,30 @@ export interface QueueItem {
   addedAt: Date;
 }
 
+// Playlist types
+
+export type Playlist = {
+  id: number;
+  ownerId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlaylistTrack = {
+  id: number;
+  playlistId: number;
+  trackId: string;
+  position: number;
+  addedAt: string;
+};
+
+export type ReorderPayload = {
+  playlistId: number;
+  order: { trackId: string; position: number }[];
+};
+
+
 // Utility type guards
 
 export function isTrack(obj: unknown): obj is Track {
@@ -100,3 +124,5 @@ export function isSearchResponse(obj: unknown): obj is SearchResponse {
     Array.isArray((obj as SearchResponse).data)
   );
 }
+
+

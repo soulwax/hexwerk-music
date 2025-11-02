@@ -3,11 +3,8 @@
 "use client";
 
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
-import MaturePlayer from "@/components/Player";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
-import type { Track } from "@/types";
-import { getStreamUrl } from "@/utils/api";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -15,6 +12,9 @@ type TabType = "favorites" | "history";
 
 export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState<TabType>("favorites");
+
+  // Use global player instead of local state
+  const player = useGlobalPlayer();
 
   const { data: favorites, isLoading: favoritesLoading } =
     api.music.getFavorites.useQuery(
@@ -28,42 +28,8 @@ export default function LibraryPage() {
       { enabled: activeTab === "history" },
     );
 
-  const addToHistory = api.music.addToHistory.useMutation();
-
-  const player = useAudioPlayer({
-    onTrackChange: (track) => {
-      if (track) {
-        addToHistory.mutate({ track });
-      }
-    },
-  });
-
-  const handlePlay = (track: Track) => {
-    const streamUrl = getStreamUrl(track.title);
-    player.loadTrack(track, streamUrl);
-    void player.play();
-  };
-
-  const handleNext = () => {
-    const nextTrack = player.playNext();
-    if (nextTrack) {
-      const streamUrl = getStreamUrl(nextTrack.title);
-      player.loadTrack(nextTrack, streamUrl);
-      void player.play();
-    }
-  };
-
-  const handlePrevious = () => {
-    const prevTrack = player.playPrevious();
-    if (prevTrack) {
-      const streamUrl = getStreamUrl(prevTrack.title);
-      player.loadTrack(prevTrack, streamUrl);
-      void player.play();
-    }
-  };
-
   return (
-    <div className="flex min-h-screen flex-col pb-32">
+    <div className="flex min-h-screen flex-col">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
         <div className="mx-auto max-w-7xl px-4 py-4">
@@ -142,7 +108,7 @@ export default function LibraryPage() {
                   <EnhancedTrackCard
                     key={fav.id}
                     track={fav.track}
-                    onPlay={handlePlay}
+                    onPlay={player.play}
                     onAddToQueue={player.addToQueue}
                   />
                 ))}
@@ -183,7 +149,7 @@ export default function LibraryPage() {
                   <EnhancedTrackCard
                     key={item.id}
                     track={item.track}
-                    onPlay={handlePlay}
+                    onPlay={player.play}
                     onAddToQueue={player.addToQueue}
                   />
                 ))}
@@ -212,32 +178,6 @@ export default function LibraryPage() {
           </div>
         )}
       </main>
-
-      {/* Mature Player */}
-      <MaturePlayer
-        currentTrack={player.currentTrack}
-        queue={player.queue}
-        isPlaying={player.isPlaying}
-        currentTime={player.currentTime}
-        duration={player.duration}
-        volume={player.volume}
-        isMuted={player.isMuted}
-        isShuffled={player.isShuffled}
-        repeatMode={player.repeatMode}
-        playbackRate={player.playbackRate}
-        isLoading={player.isLoading}
-        onPlayPause={player.togglePlay}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onSeek={player.seek}
-        onVolumeChange={player.setVolume}
-        onToggleMute={() => player.setIsMuted(!player.isMuted)}
-        onToggleShuffle={player.toggleShuffle}
-        onCycleRepeat={player.cycleRepeatMode}
-        onPlaybackRateChange={player.setPlaybackRate}
-        onSkipForward={player.skipForward}
-        onSkipBackward={player.skipBackward}
-      />
     </div>
   );
 }

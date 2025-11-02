@@ -13,7 +13,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     /* Bundled projects */
     "lib": [
       "dom",
