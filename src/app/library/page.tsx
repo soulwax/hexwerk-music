@@ -70,7 +70,7 @@ export default function LibraryPage() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <h1 className="accent-gradient text-glow text-2xl font-bold">
-                🎧 HexMusic
+                ðŸŽ§ HexMusic
               </h1>
             </Link>
 
