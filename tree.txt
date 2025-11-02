@@ -1,4 +1,4 @@
-hexmusic-stream
+hexmusic-frontend
 ├───.env.example
 ├───.gitignore
 ├───drizzle.config.ts
