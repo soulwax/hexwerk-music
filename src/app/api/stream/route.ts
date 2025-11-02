@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     const response = await fetch(url.toString(), {
       headers: {
-        'Range': req.headers.get('Range') || '',
+        'Range': req.headers.get('Range') ?? '',
       },
     });
 
