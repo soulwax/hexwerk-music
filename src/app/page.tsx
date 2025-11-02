@@ -29,7 +29,7 @@ export default function HomePage() {
   const player = useAudioPlayer({
     onTrackChange: (track) => {
       if (track && session) {
-        addToHistory.mutate({ track: track as any });
+        addToHistory.mutate({ track });
       }
     },
   });
@@ -159,11 +159,11 @@ export default function HomePage() {
               <span className="text-sm text-gray-400">Recent:</span>
               {recentSearches.map((search) => (
                 <button
-                  key={search.id}
-                  onClick={() => void handleSearch(search.query)}
+                  key={search}
+                  onClick={() => void handleSearch(search)}
                   className="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-300 transition hover:bg-gray-700"
                 >
-                  {search.query}
+                  {search}
                 </button>
               ))}
             </div>
