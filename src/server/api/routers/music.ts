@@ -349,11 +349,16 @@ export const musicRouter = createTRPCRouter({
   getRecentSearches: protectedProcedure
     .input(z.object({ limit: z.number().min(1).max(20).default(10) }))
     .query(async ({ ctx, input }) => {
+      // Get unique queries with their most recent search time
       const items = await ctx.db
-        .selectDistinct({ query: searchHistory.query })
+        .selectDistinct({
+          query: searchHistory.query,
+          searchedAt: sql<Date>`MAX(${searchHistory.searchedAt})`,
+        })
         .from(searchHistory)
         .where(eq(searchHistory.userId, ctx.session.user.id))
-        .orderBy(desc(searchHistory.searchedAt))
+        .groupBy(searchHistory.query)
+        .orderBy(desc(sql`MAX(${searchHistory.searchedAt})`))
         .limit(input.limit);
 
       return items.map((item) => item.query);
