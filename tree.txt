@@ -1,5 +1,6 @@
 hexmusic-frontend
 ├───.env.example
+├───.env.production
 ├───.gitignore
 ├───drizzle.config.ts
 ├───drizzle.env.ts
@@ -55,10 +56,13 @@ hexmusic-frontend
     ├───components/
     │   ├───EnhancedPlayer.tsx
     │   ├───EnhancedTrackCard.tsx
+    │   ├───PersistentPlayer.tsx
     │   ├───Player.tsx
     │   ├───Queue.tsx
     │   ├───SessionProvider.tsx
     │   └───TrackCard.tsx
+    ├───contexts/
+    │   └───AudioPlayerContext.tsx
     ├───hooks/
     │   ├───useAudioPlayer.ts
     │   └───useKeyboardShortcuts.ts
