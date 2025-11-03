@@ -9,10 +9,14 @@ import type { Track } from "@/types";
 import { searchTracks } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 export default function HomePage() {
   const { data: session } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,6 +24,7 @@ export default function HomePage() {
   const [showQueue, setShowQueue] = useState(false);
   const [currentQuery, setCurrentQuery] = useState("");
   const [total, setTotal] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const player = useGlobalPlayer();
 
@@ -29,20 +34,19 @@ export default function HomePage() {
     { enabled: !!session },
   );
 
-  const handleSearch = async (searchQuery?: string) => {
-    const q = searchQuery ?? query;
-    if (!q.trim()) return;
+  const performSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
 
     setLoading(true);
-    setCurrentQuery(q);
-    
+    setCurrentQuery(searchQuery);
+
     try {
-      const response = await searchTracks(q, 0);
+      const response = await searchTracks(searchQuery, 0);
       setResults(response.data);
       setTotal(response.total);
-      
+
       if (session) {
-        addSearchQuery.mutate({ query: q });
+        addSearchQuery.mutate({ query: searchQuery });
       }
     } catch (error) {
       console.error("Search failed:", error);
@@ -51,6 +55,36 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  }, [session, addSearchQuery]);
+
+  // Initialize from URL on mount
+  useEffect(() => {
+    const urlQuery = searchParams.get("q");
+    if (urlQuery && !isInitialized) {
+      setQuery(urlQuery);
+      setIsInitialized(true);
+      void performSearch(urlQuery);
+    } else {
+      setIsInitialized(true);
+    }
+  }, [searchParams, isInitialized, performSearch]);
+
+  const updateURL = (searchQuery: string) => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) {
+      params.set("q", searchQuery);
+      router.push(`?${params.toString()}`, { scroll: false });
+    } else {
+      router.push("/", { scroll: false });
+    }
+  };
+
+  const handleSearch = async (searchQuery?: string) => {
+    const q = searchQuery ?? query;
+    if (!q.trim()) return;
+
+    updateURL(q);
+    await performSearch(q);
   };
 
   const handleLoadMore = async () => {
@@ -63,7 +97,7 @@ export default function HomePage() {
 
     try {
       const response = await searchTracks(currentQuery, nextOffset);
-      setResults(prev => [...prev, ...response.data]);
+      setResults((prev) => [...prev, ...response.data]);
     } catch (error) {
       console.error("Load more failed:", error);
     } finally {
@@ -105,7 +139,7 @@ export default function HomePage() {
                   >
                     Queue
                     {player.queue.length > 0 && (
-                      <span className="bg-accent absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white">
+                      <span className="bg-accent absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white">
                         {player.queue.length}
                       </span>
                     )}
@@ -173,7 +207,11 @@ export default function HomePage() {
               <>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-white">
-                    Search Results ({results.length.toLocaleString()}{total > results.length ? ` of ${total.toLocaleString()}` : ""})
+                    Search Results ({results.length.toLocaleString()}
+                    {total > results.length
+                      ? ` of ${total.toLocaleString()}`
+                      : ""}
+                    )
                   </h2>
                 </div>
                 <div className="grid gap-3">
@@ -187,7 +225,7 @@ export default function HomePage() {
                     />
                   ))}
                 </div>
-                
+
                 {hasMore && (
                   <div className="mt-6 flex justify-center">
                     <button
@@ -195,7 +233,9 @@ export default function HomePage() {
                       disabled={loadingMore}
                       className="btn-primary px-8"
                     >
-                      {loadingMore ? "Loading..." : `Load More (${(total - results.length).toLocaleString()} remaining)`}
+                      {loadingMore
+                        ? "Loading..."
+                        : `Load More (${(total - results.length).toLocaleString()} remaining)`}
                     </button>
                   </div>
                 )}

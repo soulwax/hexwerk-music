@@ -92,7 +92,7 @@ export const favorites = createTable(
       .varchar({ length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    trackId: d.integer().notNull(),
+    trackId: d.bigint({ mode: "number" }).notNull(),
     trackData: d.jsonb().notNull(), // Store full track object for offline access
     createdAt: d
       .timestamp({ withTimezone: true })
@@ -138,7 +138,7 @@ export const playlistTracks = createTable(
       .integer()
       .notNull()
       .references(() => playlists.id, { onDelete: "cascade" }),
-    trackId: d.integer().notNull(),
+    trackId: d.bigint({ mode: "number" }).notNull(),
     trackData: d.jsonb().notNull(),
     position: d.integer().notNull(),
     addedAt: d
@@ -160,7 +160,7 @@ export const listeningHistory = createTable(
       .varchar({ length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    trackId: d.integer().notNull(),
+    trackId: d.bigint({ mode: "number" }).notNull(),
     trackData: d.jsonb().notNull(),
     playedAt: d
       .timestamp({ withTimezone: true })

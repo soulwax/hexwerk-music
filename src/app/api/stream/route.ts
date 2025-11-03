@@ -28,11 +28,13 @@ export async function GET(req: NextRequest) {
     const url = new URL("music/stream", apiUrl);
     url.searchParams.set("key", env.STREAMING_KEY);
 
-    if (query) {
-      url.searchParams.set("q", query);
-    }
+    // Prioritize ID over query - ID is more specific and accurate
     if (id) {
       url.searchParams.set("id", id);
+      console.log("Streaming by ID:", id);
+    } else if (query) {
+      url.searchParams.set("q", query);
+      console.log("Streaming by query:", query);
     }
 
     console.log("Fetching stream from:", url.toString().replace(env.STREAMING_KEY, '***'));
