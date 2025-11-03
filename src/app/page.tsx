@@ -16,9 +16,11 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [currentQuery, setCurrentQuery] = useState("");
+  const [total, setTotal] = useState(0);
 
-  // Use global player instead of local state
   const player = useGlobalPlayer();
 
   const addSearchQuery = api.music.addSearchQuery.useMutation();
@@ -32,18 +34,44 @@ export default function HomePage() {
     if (!q.trim()) return;
 
     setLoading(true);
+    setCurrentQuery(q);
+    
     try {
-      const data = await searchTracks(q);
-      setResults(data);
+      const response = await searchTracks(q, 0);
+      setResults(response.data);
+      setTotal(response.total);
+      
       if (session) {
         addSearchQuery.mutate({ query: q });
       }
     } catch (error) {
       console.error("Search failed:", error);
+      setResults([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleLoadMore = async () => {
+    if (!currentQuery.trim() || loadingMore) return;
+
+    const nextOffset = results.length;
+    if (nextOffset >= total) return;
+
+    setLoadingMore(true);
+
+    try {
+      const response = await searchTracks(currentQuery, nextOffset);
+      setResults(prev => [...prev, ...response.data]);
+    } catch (error) {
+      console.error("Load more failed:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const hasMore = results.length < total;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -143,9 +171,11 @@ export default function HomePage() {
           <div className={`${showQueue ? "w-full lg:w-2/3" : "w-full"}`}>
             {results.length > 0 ? (
               <>
-                <h2 className="mb-4 text-xl font-semibold text-white">
-                  Search Results ({results.length})
-                </h2>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-white">
+                    Search Results ({results.length.toLocaleString()}{total > results.length ? ` of ${total.toLocaleString()}` : ""})
+                  </h2>
+                </div>
                 <div className="grid gap-3">
                   {results.map((track) => (
                     <EnhancedTrackCard
@@ -157,6 +187,18 @@ export default function HomePage() {
                     />
                   ))}
                 </div>
+                
+                {hasMore && (
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      onClick={() => void handleLoadMore()}
+                      disabled={loadingMore}
+                      className="btn-primary px-8"
+                    >
+                      {loadingMore ? "Loading..." : `Load More (${(total - results.length).toLocaleString()} remaining)`}
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="py-12 text-center">

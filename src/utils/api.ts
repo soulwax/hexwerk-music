@@ -1,18 +1,23 @@
 // File: src/utils/api.ts
 
 import { env } from "@/env";
-import type { SearchResponse, Track } from "@/types";
+import type { SearchResponse } from "@/types";
 
 /**
  * Search for tracks using the backend API.
  * @param query Search query string.
- * @returns A list of Track objects.
+ * @param offset Optional result offset for pagination (default: 0).
+ * @returns SearchResponse with tracks, total count, and next page info.
  */
-export async function searchTracks(query: string): Promise<Track[]> {
-  const res = await fetch(`${env.NEXT_PUBLIC_API_URL}music/search?q=${encodeURIComponent(query)}`);
+export async function searchTracks(query: string, offset = 0): Promise<SearchResponse> {
+  const url = new URL(`${env.NEXT_PUBLIC_API_URL}music/search`);
+  url.searchParams.set("q", query);
+  if (offset > 0) {
+    url.searchParams.set("offset", offset.toString());
+  }
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Search failed (${res.status})`);
-  const json = await res.json() as SearchResponse;
-  return json.data satisfies Track[];
+  return await res.json() as SearchResponse;
 }
 
 /**
