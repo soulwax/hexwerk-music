@@ -104,7 +104,7 @@ module.exports = {
   deploy: {
     production: {
       user: 'node',
-      host: ['hex.madtec.org'],
+      host: ['hex.madtec.org', 'music.soulwax.dev'],
       ref: 'origin/main',
       repo: 'git@github.com:soulwax/hexwerk-music.git',
       path: '/var/www/hexmusic',
