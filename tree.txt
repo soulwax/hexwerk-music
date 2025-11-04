@@ -18,15 +18,21 @@ hexmusic-frontend
 ├───tailwind.config.js
 ├───tree.txt
 ├───tsconfig.json
-├───tsconfig.tsbuildinfo
 ├───.github/
-│   ├───IMPLEMENTATION_GUIDE.md
-│   └───assets/
-│       └───emily-the-strange_vivid.png
+│   ├───assets/
+│   │   └───emily-the-strange_vivid.png
+│   └───docs/
+│       ├───IMPLEMENTATION_GUIDE.md
+│       ├───INTEGRATION_GUIDE.md
+│       └───PLAYER_IMPROVEMENTS.md
+├───certs/
+│   └───ca.pem
 ├───drizzle/
 │   ├───0000_eager_gideon.sql
+│   ├───0001_strange_warlock.sql
 │   └───meta/
 │       ├───0000_snapshot.json
+│       ├───0001_snapshot.json
 │       └───_journal.json
 ├───public/
 │   └───favicon.ico
@@ -54,18 +60,26 @@ hexmusic-frontend
     │       └───[id]/
     │           └───page.tsx
     ├───components/
+    │   ├───AudioVisualizer.tsx
     │   ├───EnhancedPlayer.tsx
+    │   ├───EnhancedQueue.tsx
     │   ├───EnhancedTrackCard.tsx
+    │   ├───Equalizer.tsx
     │   ├───PersistentPlayer.tsx
     │   ├───Player.tsx
     │   ├───Queue.tsx
     │   ├───SessionProvider.tsx
+    │   ├───Toast.tsx
     │   └───TrackCard.tsx
     ├───contexts/
-    │   └───AudioPlayerContext.tsx
+    │   ├───AudioPlayerContext.tsx
+    │   └───ToastContext.tsx
     ├───hooks/
     │   ├───useAudioPlayer.ts
-    │   └───useKeyboardShortcuts.ts
+    │   ├───useAudioVisualizer.ts
+    │   ├───useEqualizer.ts
+    │   ├───useKeyboardShortcuts.ts
+    │   └───useQueuePersistence.ts
     ├───server/
     │   ├───api/
     │   │   ├───root.ts
