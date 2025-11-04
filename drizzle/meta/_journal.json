@@ -15,6 +15,13 @@
       "when": 1762209104815,
       "tag": "0001_strange_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762273361698,
+      "tag": "0002_stiff_the_phantom",
+      "breakpoints": true
     }
   ]
 }

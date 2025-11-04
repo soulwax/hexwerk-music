@@ -195,6 +195,133 @@ export const searchHistory = createTable(
   ],
 );
 
+// ============================================
+// PLAYER & PREFERENCES TABLES
+// ============================================
+
+export const userPreferences = createTable(
+  "user_preferences",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .unique()
+      .references(() => users.id, { onDelete: "cascade" }),
+    volume: d.real().default(0.7).notNull(),
+    playbackRate: d.real().default(1.0).notNull(),
+    repeatMode: d.varchar({ length: 20 }).default("none").notNull(), // 'none' | 'one' | 'all'
+    shuffleEnabled: d.boolean().default(false).notNull(),
+    equalizerEnabled: d.boolean().default(false).notNull(),
+    equalizerPreset: d.varchar({ length: 50 }).default("Flat"),
+    equalizerBands: d.jsonb(), // Array of band gain values
+    visualizerType: d.varchar({ length: 20 }).default("bars"), // 'bars' | 'wave' | 'circular'
+    visualizerEnabled: d.boolean().default(true).notNull(),
+    compactMode: d.boolean().default(false).notNull(),
+    theme: d.varchar({ length: 20 }).default("dark"), // 'dark' | 'light'
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [index("user_preferences_user_idx").on(t.userId)],
+);
+
+export const playerSessions = createTable(
+  "player_session",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    deviceId: d.varchar({ length: 255 }).notNull(),
+    deviceName: d.varchar({ length: 255 }),
+    userAgent: d.text(),
+    lastActive: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    isActive: d.boolean().default(true).notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }),
+  (t) => [
+    index("session_user_idx").on(t.userId),
+    index("session_device_idx").on(t.deviceId),
+    index("session_active_idx").on(t.isActive, t.lastActive),
+    index("session_user_device_idx").on(t.userId, t.deviceId),
+  ],
+);
+
+export const playbackState = createTable(
+  "playback_state",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sessionId: d
+      .integer()
+      .references(() => playerSessions.id, { onDelete: "set null" }),
+    currentTrack: d.jsonb(), // Track object
+    currentPosition: d.integer().default(0), // seconds
+    queue: d.jsonb(), // Array of Track objects
+    history: d.jsonb(), // Array of Track objects
+    isShuffled: d.boolean().default(false).notNull(),
+    repeatMode: d.varchar({ length: 20 }).default("none").notNull(),
+    originalQueueOrder: d.jsonb(), // For unshuffle
+    lastUpdated: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }),
+  (t) => [
+    index("playback_user_idx").on(t.userId),
+    index("playback_session_idx").on(t.sessionId),
+    index("playback_updated_idx").on(t.lastUpdated),
+  ],
+);
+
+export const listeningAnalytics = createTable(
+  "listening_analytics",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    trackId: d.bigint({ mode: "number" }).notNull(),
+    trackData: d.jsonb().notNull(),
+    sessionId: d
+      .integer()
+      .references(() => playerSessions.id, { onDelete: "set null" }),
+    playedAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    duration: d.integer(), // seconds actually played
+    totalDuration: d.integer(), // track total length
+    completionPercentage: d.real(), // 0-100
+    skipped: d.boolean().default(false).notNull(),
+    playContext: d.varchar({ length: 50 }), // 'playlist', 'search', 'favorites', 'queue', 'album', 'artist'
+    contextId: d.integer(), // playlist ID, album ID, etc.
+    deviceId: d.varchar({ length: 255 }),
+  }),
+  (t) => [
+    index("analytics_user_idx").on(t.userId),
+    index("analytics_track_idx").on(t.trackId),
+    index("analytics_played_idx").on(t.playedAt),
+    index("analytics_session_idx").on(t.sessionId),
+    index("analytics_context_idx").on(t.playContext, t.contextId),
+    index("analytics_skipped_idx").on(t.skipped),
+  ],
+);
+
 // Relations
 export const favoritesRelations = relations(favorites, ({ one }) => ({
   user: one(users, { fields: [favorites.userId], references: [users.id] }),
@@ -228,6 +355,53 @@ export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const userPreferencesRelations = relations(
+  userPreferences,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userPreferences.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const playerSessionsRelations = relations(
+  playerSessions,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [playerSessions.userId],
+      references: [users.id],
+    }),
+    playbackStates: many(playbackState),
+    analytics: many(listeningAnalytics),
+  }),
+);
+
+export const playbackStateRelations = relations(playbackState, ({ one }) => ({
+  user: one(users, {
+    fields: [playbackState.userId],
+    references: [users.id],
+  }),
+  session: one(playerSessions, {
+    fields: [playbackState.sessionId],
+    references: [playerSessions.id],
+  }),
+}));
+
+export const listeningAnalyticsRelations = relations(
+  listeningAnalytics,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [listeningAnalytics.userId],
+      references: [users.id],
+    }),
+    session: one(playerSessions, {
+      fields: [listeningAnalytics.sessionId],
+      references: [playerSessions.id],
+    }),
+  }),
+);
 
 export const accounts = createTable(
   "account",

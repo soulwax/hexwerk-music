@@ -6,10 +6,14 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import {
   favorites,
+  listeningAnalytics,
   listeningHistory,
+  playbackState,
+  playerSessions,
   playlists,
   playlistTracks,
   searchHistory,
+  userPreferences,
 } from "@/server/db/schema";
 import type { Track } from "@/types";
 
@@ -433,5 +437,400 @@ export const musicRouter = createTRPCRouter({
         .limit(input.limit);
 
       return items.map((item) => item.query);
+    }),
+
+  // ============================================
+  // USER PREFERENCES
+  // ============================================
+
+  getUserPreferences: protectedProcedure.query(async ({ ctx }) => {
+    let prefs = await ctx.db.query.userPreferences.findFirst({
+      where: eq(userPreferences.userId, ctx.session.user.id),
+    });
+
+    // Create default preferences if they don't exist
+    if (!prefs) {
+      const [newPrefs] = await ctx.db
+        .insert(userPreferences)
+        .values({ userId: ctx.session.user.id })
+        .returning();
+      prefs = newPrefs;
+    }
+
+    return prefs;
+  }),
+
+  updatePreferences: protectedProcedure
+    .input(
+      z.object({
+        volume: z.number().min(0).max(1).optional(),
+        playbackRate: z.number().min(0.5).max(2).optional(),
+        repeatMode: z.enum(["none", "one", "all"]).optional(),
+        shuffleEnabled: z.boolean().optional(),
+        equalizerEnabled: z.boolean().optional(),
+        equalizerPreset: z.string().optional(),
+        equalizerBands: z.array(z.number()).optional(),
+        visualizerType: z.enum(["bars", "wave", "circular"]).optional(),
+        visualizerEnabled: z.boolean().optional(),
+        compactMode: z.boolean().optional(),
+        theme: z.enum(["dark", "light"]).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure preferences exist
+      const existing = await ctx.db.query.userPreferences.findFirst({
+        where: eq(userPreferences.userId, ctx.session.user.id),
+      });
+
+      if (!existing) {
+        await ctx.db.insert(userPreferences).values({
+          userId: ctx.session.user.id,
+          ...input,
+        });
+      } else {
+        await ctx.db
+          .update(userPreferences)
+          .set(input)
+          .where(eq(userPreferences.userId, ctx.session.user.id));
+      }
+
+      return { success: true };
+    }),
+
+  resetPreferences: protectedProcedure.mutation(async ({ ctx }) => {
+    await ctx.db
+      .delete(userPreferences)
+      .where(eq(userPreferences.userId, ctx.session.user.id));
+
+    return { success: true };
+  }),
+
+  // ============================================
+  // PLAYER SESSIONS
+  // ============================================
+
+  createSession: protectedProcedure
+    .input(
+      z.object({
+        deviceId: z.string(),
+        deviceName: z.string().optional(),
+        userAgent: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if session already exists for this device
+      const existing = await ctx.db.query.playerSessions.findFirst({
+        where: and(
+          eq(playerSessions.userId, ctx.session.user.id),
+          eq(playerSessions.deviceId, input.deviceId),
+        ),
+      });
+
+      if (existing) {
+        // Update last active
+        await ctx.db
+          .update(playerSessions)
+          .set({
+            lastActive: new Date(),
+            isActive: true,
+            deviceName: input.deviceName ?? existing.deviceName,
+            userAgent: input.userAgent ?? existing.userAgent,
+          })
+          .where(eq(playerSessions.id, existing.id));
+
+        return { sessionId: existing.id, isNew: false };
+      }
+
+      // Create new session
+      const [newSession] = await ctx.db
+        .insert(playerSessions)
+        .values({
+          userId: ctx.session.user.id,
+          deviceId: input.deviceId,
+          deviceName: input.deviceName,
+          userAgent: input.userAgent,
+        })
+        .returning();
+
+      return { sessionId: newSession!.id, isNew: true };
+    }),
+
+  updateSession: protectedProcedure
+    .input(z.object({ sessionId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(playerSessions)
+        .set({ lastActive: new Date() })
+        .where(
+          and(
+            eq(playerSessions.id, input.sessionId),
+            eq(playerSessions.userId, ctx.session.user.id),
+          ),
+        );
+
+      return { success: true };
+    }),
+
+  endSession: protectedProcedure
+    .input(z.object({ sessionId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(playerSessions)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(playerSessions.id, input.sessionId),
+            eq(playerSessions.userId, ctx.session.user.id),
+          ),
+        );
+
+      return { success: true };
+    }),
+
+  getActiveSessions: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.query.playerSessions.findMany({
+      where: and(
+        eq(playerSessions.userId, ctx.session.user.id),
+        eq(playerSessions.isActive, true),
+      ),
+      orderBy: [desc(playerSessions.lastActive)],
+    });
+  }),
+
+  // ============================================
+  // PLAYBACK STATE
+  // ============================================
+
+  savePlaybackState: protectedProcedure
+    .input(
+      z.object({
+        sessionId: z.number().optional(),
+        currentTrack: trackSchema.optional(),
+        currentPosition: z.number().min(0).optional(),
+        queue: z.array(trackSchema).optional(),
+        history: z.array(trackSchema).optional(),
+        isShuffled: z.boolean().optional(),
+        repeatMode: z.enum(["none", "one", "all"]).optional(),
+        originalQueueOrder: z.array(trackSchema).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if playback state exists
+      const existing = await ctx.db.query.playbackState.findFirst({
+        where: eq(playbackState.userId, ctx.session.user.id),
+      });
+
+      const stateData = {
+        sessionId: input.sessionId,
+        currentTrack: input.currentTrack as unknown as Record<string, unknown> | undefined,
+        currentPosition: input.currentPosition,
+        queue: input.queue as unknown as Record<string, unknown>[] | undefined,
+        history: input.history as unknown as Record<string, unknown>[] | undefined,
+        isShuffled: input.isShuffled,
+        repeatMode: input.repeatMode,
+        originalQueueOrder: input.originalQueueOrder as unknown as Record<string, unknown>[] | undefined,
+        lastUpdated: new Date(),
+      };
+
+      if (!existing) {
+        await ctx.db.insert(playbackState).values({
+          userId: ctx.session.user.id,
+          ...stateData,
+        });
+      } else {
+        await ctx.db
+          .update(playbackState)
+          .set(stateData)
+          .where(eq(playbackState.userId, ctx.session.user.id));
+      }
+
+      return { success: true };
+    }),
+
+  getPlaybackState: protectedProcedure.query(async ({ ctx }) => {
+    const state = await ctx.db.query.playbackState.findFirst({
+      where: eq(playbackState.userId, ctx.session.user.id),
+      orderBy: [desc(playbackState.lastUpdated)],
+    });
+
+    if (!state) {
+      return null;
+    }
+
+    return {
+      ...state,
+      currentTrack: state.currentTrack as Track | null,
+      queue: (state.queue as Track[]) ?? [],
+      history: (state.history as Track[]) ?? [],
+      originalQueueOrder: (state.originalQueueOrder as Track[]) ?? [],
+    };
+  }),
+
+  clearPlaybackState: protectedProcedure.mutation(async ({ ctx }) => {
+    await ctx.db
+      .delete(playbackState)
+      .where(eq(playbackState.userId, ctx.session.user.id));
+
+    return { success: true };
+  }),
+
+  // ============================================
+  // LISTENING ANALYTICS
+  // ============================================
+
+  logPlay: protectedProcedure
+    .input(
+      z.object({
+        track: trackSchema,
+        sessionId: z.number().optional(),
+        duration: z.number().optional(),
+        totalDuration: z.number(),
+        skipped: z.boolean().default(false),
+        playContext: z.enum(["playlist", "search", "favorites", "queue", "album", "artist"]).optional(),
+        contextId: z.number().optional(),
+        deviceId: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const completionPercentage = input.duration
+        ? (input.duration / input.totalDuration) * 100
+        : 0;
+
+      await ctx.db.insert(listeningAnalytics).values({
+        userId: ctx.session.user.id,
+        trackId: input.track.id,
+        trackData: input.track as unknown as Record<string, unknown>,
+        sessionId: input.sessionId,
+        duration: input.duration,
+        totalDuration: input.totalDuration,
+        completionPercentage,
+        skipped: input.skipped,
+        playContext: input.playContext,
+        contextId: input.contextId,
+        deviceId: input.deviceId,
+      });
+
+      return { success: true };
+    }),
+
+  getListeningStats: protectedProcedure
+    .input(
+      z.object({
+        days: z.number().min(1).max(365).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const since = new Date();
+      since.setDate(since.getDate() - input.days);
+
+      const stats = await ctx.db
+        .select({
+          totalPlays: sql<number>`COUNT(*)`,
+          totalDuration: sql<number>`SUM(${listeningAnalytics.duration})`,
+          completedPlays: sql<number>`COUNT(*) FILTER (WHERE ${listeningAnalytics.skipped} = false)`,
+          skippedPlays: sql<number>`COUNT(*) FILTER (WHERE ${listeningAnalytics.skipped} = true)`,
+          avgCompletion: sql<number>`AVG(${listeningAnalytics.completionPercentage})`,
+        })
+        .from(listeningAnalytics)
+        .where(
+          and(
+            eq(listeningAnalytics.userId, ctx.session.user.id),
+            sql`${listeningAnalytics.playedAt} >= ${since}`,
+          ),
+        );
+
+      return stats[0] ?? {
+        totalPlays: 0,
+        totalDuration: 0,
+        completedPlays: 0,
+        skippedPlays: 0,
+        avgCompletion: 0,
+      };
+    }),
+
+  getTopTracks: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(10),
+        days: z.number().min(1).max(365).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const since = new Date();
+      since.setDate(since.getDate() - input.days);
+
+      const topTracks = await ctx.db
+        .select({
+          trackId: listeningAnalytics.trackId,
+          trackData: listeningAnalytics.trackData,
+          playCount: sql<number>`COUNT(*)`,
+          totalDuration: sql<number>`SUM(${listeningAnalytics.duration})`,
+        })
+        .from(listeningAnalytics)
+        .where(
+          and(
+            eq(listeningAnalytics.userId, ctx.session.user.id),
+            sql`${listeningAnalytics.playedAt} >= ${since}`,
+          ),
+        )
+        .groupBy(listeningAnalytics.trackId, listeningAnalytics.trackData)
+        .orderBy(desc(sql`COUNT(*)`))
+        .limit(input.limit);
+
+      return topTracks.map((item) => ({
+        track: item.trackData as Track,
+        playCount: item.playCount,
+        totalDuration: item.totalDuration,
+      }));
+    }),
+
+  getTopArtists: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(10),
+        days: z.number().min(1).max(365).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const since = new Date();
+      since.setDate(since.getDate() - input.days);
+
+      const items = await ctx.db
+        .select({
+          trackData: listeningAnalytics.trackData,
+        })
+        .from(listeningAnalytics)
+        .where(
+          and(
+            eq(listeningAnalytics.userId, ctx.session.user.id),
+            sql`${listeningAnalytics.playedAt} >= ${since}`,
+          ),
+        );
+
+      // Group by artist in memory (since artist is nested in JSON)
+      const artistCounts = new Map<number, { name: string; count: number; artistData: Track["artist"] }>();
+
+      for (const item of items) {
+        const track = item.trackData as Track;
+        const artistId = track.artist.id;
+
+        if (!artistCounts.has(artistId)) {
+          artistCounts.set(artistId, {
+            name: track.artist.name,
+            count: 0,
+            artistData: track.artist,
+          });
+        }
+
+        artistCounts.get(artistId)!.count++;
+      }
+
+      return Array.from(artistCounts.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, input.limit)
+        .map((item) => ({
+          artist: item.artistData,
+          playCount: item.count,
+        }));
     }),
 });
