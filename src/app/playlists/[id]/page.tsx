@@ -198,7 +198,7 @@ export default function PlaylistDetailPage() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <h1 className="accent-gradient text-glow text-2xl font-bold">
-                🎧 HexMusic
+                🌟 Starchild Music
               </h1>
             </Link>
 

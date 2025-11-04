@@ -3,7 +3,7 @@
 @import "tailwindcss";
 
 /* ------------------------------------------------------------
-   🎧 HexMusic – Global Theme (dark, vivid, flat)
+   🌟 Starchild Music – Global Theme (dark, vivid, flat)
 ------------------------------------------------------------- */
 
 :root {
@@ -97,7 +97,7 @@ input, button { outline: none; }
 
 /* Animated gradient title (used by .accent-gradient) */
 .accent-gradient {
-  background-image: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+  background-image: linear-gradient(135deg, #f1b900, #71ff89, #b3088d);
   background-size: 200% 200%;
   animation: gradientFlow 6s ease infinite;
   -webkit-background-clip: text;
