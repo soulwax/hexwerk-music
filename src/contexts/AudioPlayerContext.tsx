@@ -31,11 +31,14 @@ interface AudioPlayerContextType {
   // Actions
   play: (track: Track) => void;
   togglePlay: () => Promise<void>;
-  addToQueue: (track: Track) => void;
+  addToQueue: (track: Track | Track[], checkDuplicates?: boolean) => void;
+  addToPlayNext: (track: Track | Track[]) => void;
   playNext: () => void;
   playPrevious: () => void;
+  playFromQueue: (index: number) => void;
   clearQueue: () => void;
   removeFromQueue: (index: number) => void;
+  reorderQueue: (oldIndex: number, newIndex: number) => void;
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
   setIsMuted: (muted: boolean) => void;
@@ -89,6 +92,18 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [player]);
 
+  const playFromQueue = useCallback(
+    (index: number) => {
+      const track = player.playFromQueue(index);
+      if (track) {
+        const streamUrl = getStreamUrlById(track.id.toString());
+        player.loadTrack(track, streamUrl);
+        void player.play();
+      }
+    },
+    [player],
+  );
+
   const value: AudioPlayerContextType = {
     // State
     currentTrack: player.currentTrack,
@@ -107,10 +122,13 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     play,
     togglePlay: player.togglePlay,
     addToQueue: player.addToQueue,
+    addToPlayNext: player.addToPlayNext,
     playNext,
     playPrevious,
+    playFromQueue,
     clearQueue: player.clearQueue,
     removeFromQueue: player.removeFromQueue,
+    reorderQueue: player.reorderQueue,
     seek: player.seek,
     setVolume: player.setVolume,
     setIsMuted: player.setIsMuted,

@@ -3,6 +3,7 @@
 "use client";
 
 import type { Track } from "@/types";
+import { loadPersistedQueueState } from "./useQueuePersistence";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type RepeatMode = "none" | "one" | "all";
@@ -10,10 +11,12 @@ type RepeatMode = "none" | "one" | "all";
 interface UseAudioPlayerOptions {
   onTrackChange?: (track: Track | null) => void;
   onTrackEnd?: (track: Track) => void;
+  onDuplicateTrack?: (track: Track) => void;
 }
 
 const VOLUME_STORAGE_KEY = "hexmusic_volume";
 const PLAYBACK_RATE_KEY = "hexmusic_playback_rate";
+const QUEUE_STORAGE_KEY = "hexmusic_queue_state";
 
 export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -29,14 +32,26 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("none");
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [originalQueueOrder, setOriginalQueueOrder] = useState<Track[]>([]);
 
-  // Load persisted settings
+  // Load persisted settings and queue state
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedVolume = localStorage.getItem(VOLUME_STORAGE_KEY);
       const savedRate = localStorage.getItem(PLAYBACK_RATE_KEY);
       if (savedVolume) setVolume(parseFloat(savedVolume));
       if (savedRate) setPlaybackRate(parseFloat(savedRate));
+
+      // Load persisted queue state
+      const persistedState = loadPersistedQueueState();
+      if (persistedState) {
+        setQueue(persistedState.queue);
+        setHistory(persistedState.history);
+        setCurrentTrack(persistedState.currentTrack);
+        setIsShuffled(persistedState.isShuffled);
+        setRepeatMode(persistedState.repeatMode);
+        // Don't auto-restore currentTime to avoid unexpected jumps
+      }
     }
   }, []);
 
@@ -53,6 +68,21 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       localStorage.setItem(PLAYBACK_RATE_KEY, playbackRate.toString());
     }
   }, [playbackRate]);
+
+  // Persist queue state
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const queueState = {
+        queue,
+        history,
+        currentTrack,
+        currentTime,
+        isShuffled,
+        repeatMode,
+      };
+      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queueState));
+    }
+  }, [queue, history, currentTrack, currentTime, isShuffled, repeatMode]);
 
   // Initialize audio element
   useEffect(() => {
@@ -211,9 +241,37 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     return prevTrack;
   }, [history, currentTrack]);
 
-  const addToQueue = useCallback((track: Track | Track[]) => {
+  const addToQueue = useCallback((track: Track | Track[], checkDuplicates = true) => {
     const tracks = Array.isArray(track) ? track : [track];
-    setQueue((prev) => [...prev, ...tracks]);
+
+    if (checkDuplicates) {
+      const duplicates = tracks.filter((t) =>
+        queue.some((q) => q.id === t.id) ||
+        (currentTrack && currentTrack.id === t.id)
+      );
+
+      if (duplicates.length > 0 && options.onDuplicateTrack) {
+        duplicates.forEach((dup) => options.onDuplicateTrack?.(dup));
+      }
+
+      // Only add non-duplicate tracks
+      const uniqueTracks = tracks.filter((t) =>
+        !queue.some((q) => q.id === t.id) &&
+        (!currentTrack || currentTrack.id !== t.id)
+      );
+
+      if (uniqueTracks.length > 0) {
+        setQueue((prev) => [...prev, ...uniqueTracks]);
+      }
+    } else {
+      setQueue((prev) => [...prev, ...tracks]);
+    }
+  }, [queue, currentTrack, options]);
+
+  const addToPlayNext = useCallback((track: Track | Track[]) => {
+    const tracks = Array.isArray(track) ? track : [track];
+    // Insert at the front of the queue
+    setQueue((prev) => [...tracks, ...prev]);
   }, []);
 
   const removeFromQueue = useCallback((index: number) => {
@@ -222,6 +280,97 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
   const clearQueue = useCallback(() => {
     setQueue([]);
+  }, []);
+
+  const reorderQueue = useCallback((oldIndex: number, newIndex: number) => {
+    setQueue((prev) => {
+      const newQueue = [...prev];
+      const [removed] = newQueue.splice(oldIndex, 1);
+      if (removed) {
+        newQueue.splice(newIndex, 0, removed);
+      }
+      return newQueue;
+    });
+  }, []);
+
+  const playFromQueue = useCallback((index: number) => {
+    if (index < 0 || index >= queue.length) return null;
+
+    const selectedTrack = queue[index];
+    if (!selectedTrack) return null;
+
+    // Remove tracks before the selected index and move current track to history
+    const remainingQueue = queue.slice(index + 1);
+    const skippedTracks = queue.slice(0, index);
+
+    if (currentTrack) {
+      setHistory((prev) => [...prev, currentTrack, ...skippedTracks]);
+    } else {
+      setHistory((prev) => [...prev, ...skippedTracks]);
+    }
+
+    setQueue(remainingQueue);
+    return selectedTrack;
+  }, [queue, currentTrack]);
+
+  const smartShuffle = useCallback(() => {
+    setQueue((prev) => {
+      if (prev.length <= 1) return prev;
+
+      const shuffled = [...prev];
+      const artists = new Map<number, Track[]>();
+
+      // Group tracks by artist
+      shuffled.forEach((track) => {
+        const artistId = track.artist.id;
+        if (!artists.has(artistId)) {
+          artists.set(artistId, []);
+        }
+        artists.get(artistId)!.push(track);
+      });
+
+      const result: Track[] = [];
+      const artistIds = Array.from(artists.keys());
+
+      // Fisher-Yates shuffle for artist order
+      for (let i = artistIds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [artistIds[i], artistIds[j]] = [artistIds[j]!, artistIds[i]!];
+      }
+
+      // Distribute tracks to avoid consecutive same-artist tracks
+      let lastArtistId: number | null = null;
+      const tempPool = [...shuffled];
+
+      while (tempPool.length > 0) {
+        let foundDifferent = false;
+
+        // Try to find a track from a different artist
+        for (let i = 0; i < tempPool.length; i++) {
+          const track = tempPool[i];
+          if (!track) continue;
+
+          if (!lastArtistId || track.artist.id !== lastArtistId) {
+            result.push(track);
+            lastArtistId = track.artist.id;
+            tempPool.splice(i, 1);
+            foundDifferent = true;
+            break;
+          }
+        }
+
+        // If all remaining tracks are from the same artist, just add them
+        if (!foundDifferent && tempPool.length > 0) {
+          const track = tempPool.shift();
+          if (track) {
+            result.push(track);
+            lastArtistId = track.artist.id;
+          }
+        }
+      }
+
+      return result;
+    });
   }, []);
 
   const shuffleQueue = useCallback(() => {
@@ -237,10 +386,21 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
   const toggleShuffle = useCallback(() => {
     setIsShuffled((prev) => {
-      if (!prev) shuffleQueue();
-      return !prev;
+      const newShuffleState = !prev;
+      if (newShuffleState) {
+        // Save original order before shuffling
+        setOriginalQueueOrder([...queue]);
+        smartShuffle();
+      } else {
+        // Restore original order
+        if (originalQueueOrder.length > 0) {
+          setQueue(originalQueueOrder);
+          setOriginalQueueOrder([]);
+        }
+      }
+      return newShuffleState;
     });
-  }, [shuffleQueue]);
+  }, [queue, originalQueueOrder, smartShuffle]);
 
   const cycleRepeatMode = useCallback(() => {
     setRepeatMode((prev) => {
@@ -285,11 +445,23 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     pause,
     togglePlay,
     seek,
-    playNext,
+    playNext: useCallback(() => {
+      if (queue.length === 0) return null;
+
+      const [nextTrack, ...remainingQueue] = queue;
+      if (currentTrack) {
+        setHistory((prev) => [...prev, currentTrack]);
+      }
+      setQueue(remainingQueue);
+      return nextTrack!;
+    }, [queue, currentTrack]),
     playPrevious,
     addToQueue,
+    addToPlayNext,
     removeFromQueue,
     clearQueue,
+    reorderQueue,
+    playFromQueue,
     toggleShuffle,
     cycleRepeatMode,
     setVolume,
