@@ -25,7 +25,7 @@ module.exports = {
       // ============================================
       // CLUSTER & PERFORMANCE
       // ============================================
-      instances: 4, // 4 instances (leaving 2 cores for system/DB)
+      instances: 2, // 2 instances (leaving 2 cores for system/DB)
       exec_mode: 'cluster', // Enable load balancing
 
       // ============================================
@@ -95,50 +95,6 @@ module.exports = {
       // ============================================
       // PM2 will send SIGINT for graceful shutdown
       // Next.js handles this automatically
-    },
-
-    // ============================================
-    // DEVELOPMENT CONFIGURATION (Optional)
-    // ============================================
-    {
-      name: 'hexmusic-dev',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'dev --port 3333',
-
-      instances: 1, // Single instance for development
-      exec_mode: 'fork',
-
-      autorestart: true,
-      watch: [
-        'src',
-        'public',
-        '.env',
-        '.env.local',
-      ],
-      ignore_watch: [
-        'node_modules',
-        'logs',
-        '.next',
-        '*.log',
-        '.git',
-      ],
-      watch_options: {
-        followSymlinks: false,
-        usePolling: false, // More efficient than polling
-      },
-
-      env: {
-        NODE_ENV: 'development',
-        PORT: 3222,
-      },
-
-      // Faster restarts in development
-      max_memory_restart: '1G',
-      kill_timeout: 2000,
-
-      error_file: './logs/pm2/dev-error.log',
-      out_file: './logs/pm2/dev-out.log',
-      log_date_format: 'HH:mm:ss',
     },
   ],
 
