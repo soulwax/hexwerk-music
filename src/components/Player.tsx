@@ -30,6 +30,8 @@ interface PlayerProps {
   onPlaybackRateChange: (rate: number) => void;
   onSkipForward: () => void;
   onSkipBackward: () => void;
+  onToggleQueue?: () => void;
+  onToggleEqualizer?: () => void;
 }
 
 export default function MaturePlayer({
@@ -55,6 +57,8 @@ export default function MaturePlayer({
   onPlaybackRateChange,
   onSkipForward,
   onSkipBackward,
+  onToggleQueue,
+  onToggleEqualizer,
 }: PlayerProps) {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
@@ -436,6 +440,42 @@ export default function MaturePlayer({
               />
             </div>
           </div>
+
+          {/* Queue Button */}
+          {onToggleQueue && (
+            <button
+              onClick={onToggleQueue}
+              className="hidden text-gray-400 transition hover:text-white md:block"
+              title="Queue (Q)"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+          )}
+
+          {/* Equalizer Button */}
+          {onToggleEqualizer && (
+            <button
+              onClick={onToggleEqualizer}
+              className="hidden text-gray-400 transition hover:text-white md:block"
+              title="Equalizer (E)"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>

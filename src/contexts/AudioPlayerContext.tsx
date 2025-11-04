@@ -28,6 +28,9 @@ interface AudioPlayerContextType {
   playbackRate: number;
   isLoading: boolean;
 
+  // Audio element reference for visualizer and equalizer
+  audioElement: HTMLAudioElement | null;
+
   // Actions
   play: (track: Track) => void;
   togglePlay: () => Promise<void>;
@@ -117,6 +120,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     repeatMode: player.repeatMode,
     playbackRate: player.playbackRate,
     isLoading: player.isLoading,
+
+    // Audio element reference
+    audioElement: player.audioRef.current,
 
     // Actions
     play,
