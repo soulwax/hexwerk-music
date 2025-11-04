@@ -20,21 +20,33 @@ export default function PlaylistDetailPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Fetch playlist (works for both public and private if user has access)
-  const { data: playlist, isLoading } =
+  // Try authenticated query first if user is logged in
+  const { data: privatePlaylist, isLoading: isLoadingPrivate } =
     api.music.getPlaylist.useQuery(
       { id: playlistId },
-      { enabled: !isNaN(playlistId), retry: false },
+      { enabled: !!session && !isNaN(playlistId), retry: false },
     );
 
+  // Fall back to public query if not authenticated
+  const { data: publicPlaylist, isLoading: isLoadingPublic } =
+    api.music.getPublicPlaylist.useQuery(
+      { id: playlistId },
+      { enabled: !session && !isNaN(playlistId), retry: false },
+    );
+
+  // Use private playlist if available, otherwise use public playlist
+  const playlist = privatePlaylist ?? publicPlaylist;
+  const isLoading = isLoadingPrivate || isLoadingPublic;
+
   // Check if the current user owns this playlist
-  const isOwner: boolean = !!session && !!playlist;
+  const isOwner: boolean = !!session && !!privatePlaylist;
 
   const utils = api.useUtils();
   const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
     onSuccess: async () => {
       try {
         await utils.music.getPlaylist.invalidate({ id: playlistId });
+        await utils.music.getPublicPlaylist.invalidate({ id: playlistId });
       } catch (error) {
         console.error("Failed to invalidate playlist cache:", error);
       }
@@ -49,6 +61,7 @@ export default function PlaylistDetailPage() {
     onSuccess: async () => {
       try {
         await utils.music.getPlaylist.invalidate({ id: playlistId });
+        await utils.music.getPublicPlaylist.invalidate({ id: playlistId });
       } catch (error) {
         console.error("Failed to invalidate playlist cache:", error);
       }
