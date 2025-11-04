@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🎧 HexMusic - Database Setup"
+echo "🌟 Starchild Music - Database Setup"
 echo "=============================="
 echo ""
 

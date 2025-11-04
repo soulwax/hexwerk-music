@@ -1,11 +1,11 @@
 <p align="center">
-  <img src=".github/assets/emily-the-strange_vivid.png" alt="HexMusic Stream Banner" width="640" />
+  <img src=".github/assets/emily-the-strange_vivid.png" alt="Starchild Music Stream Banner" width="640" />
 </p>
 
-<h1 align="center">🎧 HexMusic Stream</h1>
+<h1 align="center">� Starchild Music Stream</h1>
 <p align="center"><em>An attempt at amodern full-stack music search & streaming interface.</em></p>
 
-## 🎧 **HexMusic Stream**
+## 🌟 **Starchild Music Stream**
 
 *A modern full-stack music search & streaming interface.*
 
@@ -13,7 +13,7 @@
 
 ### 🪄 Overview
 
-**HexMusic Stream** is a sleek **Next.js (T3 Stack)** web application for exploring and streaming music.
+**Starchild Music Stream** is a sleek **Next.js (T3 Stack)** web application for exploring and streaming music.
 It provides a minimal, neon-flat design built with **TailwindCSS**, **TypeScript**, and **App Router** architecture.
 
 Users can:
@@ -145,7 +145,7 @@ See `src/styles/globals.css` for design tokens and animations.
 
 ### 🔑 API Requirements
 
-HexMusic Stream **requires** a backend API that:
+Starchild Music Stream **requires** a backend API that:
 
 * Provides **legal access** to music metadata and audio previews.
 * Implements endpoints similar to:

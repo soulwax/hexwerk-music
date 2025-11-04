@@ -1,4 +1,4 @@
-# PM2 Production Guide for HexMusic
+# PM2 Production Guide for Starchild Music
 
 ## Quick Start
 
@@ -375,7 +375,7 @@ pm2 link <secret> <public>
 ## Useful Aliases (Add to ~/.bashrc or ~/.zshrc)
 
 ```bash
-# PM2 shortcuts for HexMusic
+# PM2 shortcuts for Starchild Music
 alias pm2-start='npm run build && pm2 start ecosystem.config.cjs --env production'
 alias pm2-reload='npm run build && pm2 reload ecosystem.config.cjs --env production'
 alias pm2-logs='pm2 logs hexmusic-prod'

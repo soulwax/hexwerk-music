@@ -2,14 +2,17 @@ hexmusic-frontend
 ├───.env.example
 ├───.env.production
 ├───.gitignore
+├───.pm2ignore
 ├───drizzle.config.ts
 ├───drizzle.env.ts
+├───ecosystem.config.cjs
 ├───eslint.config.js
 ├───LICENSE.md
 ├───next-env.d.ts
 ├───next.config.js
 ├───package-lock.json
 ├───package.json
+├───pm2-setup.sh
 ├───postcss.config.js
 ├───prettier.config.js
 ├───README.md
@@ -18,22 +21,38 @@ hexmusic-frontend
 ├───tailwind.config.js
 ├───tree.txt
 ├───tsconfig.json
+├───.claude/
+│   └───settings.local.json
 ├───.github/
 │   ├───assets/
 │   │   └───emily-the-strange_vivid.png
 │   └───docs/
 │       ├───IMPLEMENTATION_GUIDE.md
-│       ├───INTEGRATION_GUIDE.md
-│       └───PLAYER_IMPROVEMENTS.md
+│       ├───PM2_GUIDE.md
+│       └───PM2_QUICK_REFERENCE.md
 ├───certs/
 │   └───ca.pem
 ├───drizzle/
 │   ├───0000_eager_gideon.sql
 │   ├───0001_strange_warlock.sql
+│   ├───0002_stiff_the_phantom.sql
 │   └───meta/
 │       ├───0000_snapshot.json
 │       ├───0001_snapshot.json
+│       ├───0002_snapshot.json
 │       └───_journal.json
+├───logs/
+│   └───pm2/
+│       ├───.gitkeep
+│       ├───combined.log
+│       ├───dev-error-14.log
+│       ├───dev-error-5.log
+│       ├───dev-error-9.log
+│       ├───dev-out-14.log
+│       ├───dev-out-5.log
+│       ├───dev-out-9.log
+│       ├───error.log
+│       └───out.log
 ├───public/
 │   └───favicon.ico
 └───src/
