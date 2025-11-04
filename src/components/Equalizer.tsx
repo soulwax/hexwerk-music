@@ -139,8 +139,9 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
                         disabled={!equalizer.isEnabled}
                         className="absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer vertical-slider"
                         style={{
-                          writingMode: "bt-lr",
-                          WebkitAppearance: "slider-vertical",
+                          writingMode: "vertical-lr" as React.CSSProperties["writingMode"],
+                          WebkitAppearance: "slider-vertical" as React.CSSProperties["WebkitAppearance"],
+                          transform: "rotate(180deg)",
                         }}
                       />
 
