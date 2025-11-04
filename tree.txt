@@ -84,6 +84,7 @@ hexmusic-frontend
     │   ├───EnhancedQueue.tsx
     │   ├───EnhancedTrackCard.tsx
     │   ├───Equalizer.tsx
+    │   ├───Footer.tsx
     │   ├───PersistentPlayer.tsx
     │   ├───Player.tsx
     │   ├───Queue.tsx
