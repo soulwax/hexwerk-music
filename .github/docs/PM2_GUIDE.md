@@ -3,6 +3,7 @@
 ## Quick Start
 
 ### Production Mode
+
 ```bash
 # Build and start with ecosystem config
 npm run build
@@ -13,6 +14,7 @@ npm run pm2:start
 ```
 
 ### Development Mode
+
 ```bash
 # Start with hot-reload watching
 pm2 start ecosystem.config.cjs --only hexmusic-dev
@@ -75,12 +77,14 @@ pm2 show hexmusic-prod
 ## Performance Optimization
 
 ### 1. Cluster Mode Benefits
+
 - **4 instances** running across CPU cores
 - Automatic load balancing
 - Zero-downtime deployments with `pm2 reload`
 - Fault tolerance (if one instance crashes, others continue)
 
 ### 2. Memory Management
+
 - Auto-restart at **2GB per instance** (prevents memory leaks)
 - Total memory usage: ~8GB for all instances (33% of available RAM)
 - Leaves plenty of room for PostgreSQL, caching, and system
@@ -126,6 +130,7 @@ pm2 save
 ```
 
 To disable:
+
 ```bash
 pm2 unstartup
 ```
@@ -251,12 +256,14 @@ psql $DATABASE_URL
 ## Environment Variables
 
 PM2 loads environment variables in this order:
+
 1. `.env.production` (if exists)
 2. `.env` (if exists)
 3. `env_production` block in ecosystem.config.cjs
 4. System environment variables
 
 To update environment variables:
+
 ```bash
 # 1. Update .env.production
 # 2. Reload with update-env flag
@@ -266,15 +273,18 @@ pm2 reload hexmusic-prod --update-env
 ## Best Practices
 
 ### 1. Always Build Before Starting
+
 ```bash
 npm run build && pm2 reload ecosystem.config.cjs --env production
 ```
 
 ### 2. Use Reload, Not Restart
+
 - **Reload**: Zero-downtime (waits for new instances to be ready)
 - **Restart**: Brief downtime (kills all instances first)
 
 ### 3. Monitor Logs Regularly
+
 ```bash
 # Set up log monitoring
 pm2 logs --lines 100 --format
@@ -283,6 +293,7 @@ pm2 logs --lines 100 --format
 ```
 
 ### 4. Regular Maintenance
+
 ```bash
 # Weekly log cleanup
 pm2 flush
@@ -296,6 +307,7 @@ pm2 save
 ```
 
 ### 5. Load Testing
+
 ```bash
 # Install load testing tool
 npm install -g autocannon
@@ -318,7 +330,9 @@ Edit `ecosystem.config.cjs` based on your needs:
 ## Next.js Specific Optimizations
 
 ### 1. Static Generation
+
 Ensure static pages are pre-generated during build:
+
 ```json
 // next.config.mjs
 export default {
@@ -327,19 +341,24 @@ export default {
 ```
 
 ### 2. Cache Headers
+
 Next.js automatically sets cache headers. Verify with:
+
 ```bash
 curl -I http://localhost:3222/_next/static/...
 ```
 
 ### 3. Image Optimization
+
 Next.js Image component is already optimized, but consider:
+
 - Setting up external image optimization service
 - Using CloudFront/CDN for static assets
 
 ## Advanced: PM2 Plus Integration
 
 For production monitoring:
+
 ```bash
 # 1. Sign up at https://pm2.io
 # 2. Link your PM2
