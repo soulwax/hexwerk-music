@@ -1,10 +1,10 @@
 #!/bin/bash
-# PM2 Setup Script for HexMusic
+# PM2 Setup Script for Starchild Music
 # This script sets up PM2 with optimal configuration for production
 
 set -e  # Exit on error
 
-echo "🎧 HexMusic PM2 Setup Script"
+echo "🌟 Starchild Music PM2 Setup Script"
 echo "============================"
 echo ""
 
