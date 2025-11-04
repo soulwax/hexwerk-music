@@ -1,5 +1,6 @@
 // File: src/components/EnhancedTrackCard.tsx
 
+import { useToast } from "@/contexts/ToastContext";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import Image from "next/image";
@@ -19,7 +20,9 @@ export default function EnhancedTrackCard({
   showActions = true,
 }: EnhancedTrackCardProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [isHeartAnimating, setIsHeartAnimating] = useState(false);
   const utils = api.useUtils();
+  const { showToast } = useToast();
 
   const { data: favoriteData } = api.music.isFavorite.useQuery(
     { trackId: track.id },
@@ -30,6 +33,10 @@ export default function EnhancedTrackCard({
     onSuccess: async () => {
       await utils.music.isFavorite.invalidate({ trackId: track.id });
       await utils.music.getFavorites.invalidate();
+      showToast(`Added "${track.title}" to favorites`, "success");
+    },
+    onError: (error) => {
+      showToast(`Failed to add to favorites: ${error.message}`, "error");
     },
   });
 
@@ -37,6 +44,10 @@ export default function EnhancedTrackCard({
     onSuccess: async () => {
       await utils.music.isFavorite.invalidate({ trackId: track.id });
       await utils.music.getFavorites.invalidate();
+      showToast(`Removed "${track.title}" from favorites`, "info");
+    },
+    onError: (error) => {
+      showToast(`Failed to remove from favorites: ${error.message}`, "error");
     },
   });
 
@@ -45,19 +56,37 @@ export default function EnhancedTrackCard({
   });
 
   const addToPlaylist = api.music.addToPlaylist.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (_, variables) => {
       await utils.music.getPlaylists.invalidate();
+      const playlistName =
+        playlists?.find((p) => p.id === variables.playlistId)?.name ??
+        "playlist";
+      showToast(`Added "${track.title}" to ${playlistName}`, "success");
       setShowMenu(false);
+    },
+    onError: (error) => {
+      showToast(`Failed to add to playlist: ${error.message}`, "error");
     },
   });
 
   const toggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Trigger heart animation
+    setIsHeartAnimating(true);
+    setTimeout(() => setIsHeartAnimating(false), 600);
+
     if (favoriteData?.isFavorite) {
       removeFavorite.mutate({ trackId: track.id });
     } else {
       addFavorite.mutate({ track });
     }
+  };
+
+  const handleAddToQueue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAddToQueue(track);
+    showToast(`Added "${track.title}" to queue`, "success");
   };
 
   const handleAddToPlaylist = (playlistId: number) => {
@@ -123,7 +152,7 @@ export default function EnhancedTrackCard({
         <div className="flex flex-shrink-0 items-center gap-2">
           <button
             onClick={toggleFavorite}
-            className={`rounded-full p-2 transition ${
+            className={`rounded-full p-2 transition-colors ${
               favoriteData?.isFavorite
                 ? "text-red-500 hover:text-red-400"
                 : "text-gray-400 hover:text-white"
@@ -131,7 +160,13 @@ export default function EnhancedTrackCard({
             disabled={addFavorite.isPending || removeFavorite.isPending}
           >
             {favoriteData?.isFavorite ? (
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <svg
+                className={`h-5 w-5 ${
+                  isHeartAnimating ? "animate-heart-pulse" : ""
+                }`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
                 <path
                   fillRule="evenodd"
                   d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
@@ -140,7 +175,9 @@ export default function EnhancedTrackCard({
               </svg>
             ) : (
               <svg
-                className="h-5 w-5"
+                className={`h-5 w-5 ${
+                  isHeartAnimating ? "animate-heart-pulse" : ""
+                }`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -156,11 +193,8 @@ export default function EnhancedTrackCard({
           </button>
 
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddToQueue(track);
-            }}
-            className="rounded-full p-2 text-gray-400 transition hover:text-white"
+            onClick={handleAddToQueue}
+            className="rounded-full p-2 text-gray-400 transition hover:text-white hover:scale-110"
             title="Add to queue"
           >
             <svg

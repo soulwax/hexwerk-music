@@ -8,6 +8,7 @@ import { type ReactNode } from "react";
 import PersistentPlayer from "@/components/PersistentPlayer";
 import { SessionProvider } from "@/components/SessionProvider";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import { TRPCReactProvider } from "@/trpc/react";
 
 const geist = Geist({
@@ -29,12 +30,14 @@ export default function RootLayout({
       <body>
         <SessionProvider>
           <TRPCReactProvider>
-            <AudioPlayerProvider>
-              {/* Main content with bottom padding for player */}
-              <div className="pb-24">{children}</div>
-              {/* Persistent player - stays on all pages */}
-              <PersistentPlayer />
-            </AudioPlayerProvider>
+            <ToastProvider>
+              <AudioPlayerProvider>
+                {/* Main content with bottom padding for player */}
+                <div className="pb-24">{children}</div>
+                {/* Persistent player - stays on all pages */}
+                <PersistentPlayer />
+              </AudioPlayerProvider>
+            </ToastProvider>
           </TRPCReactProvider>
         </SessionProvider>
       </body>
