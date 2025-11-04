@@ -5,7 +5,7 @@
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
-import { getStreamUrl } from "@/utils/api";
+import { getStreamUrlById } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import {
     createContext,
@@ -64,7 +64,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const play = useCallback(
     (track: Track) => {
-      const streamUrl = getStreamUrl(track.title);
+      const streamUrl = getStreamUrlById(track.id.toString());
       player.loadTrack(track, streamUrl);
       void player.play();
     },
@@ -74,7 +74,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const playNext = useCallback(() => {
     const nextTrack = player.playNext();
     if (nextTrack) {
-      const streamUrl = getStreamUrl(nextTrack.title);
+      const streamUrl = getStreamUrlById(nextTrack.id.toString());
       player.loadTrack(nextTrack, streamUrl);
       void player.play();
     }
@@ -83,7 +83,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const playPrevious = useCallback(() => {
     const prevTrack = player.playPrevious();
     if (prevTrack) {
-      const streamUrl = getStreamUrl(prevTrack.title);
+      const streamUrl = getStreamUrlById(prevTrack.id.toString());
       player.loadTrack(prevTrack, streamUrl);
       void player.play();
     }
