@@ -20,22 +20,6 @@ const PERSIST_DEBOUNCE_MS = 500;
 let persistTimer: NodeJS.Timeout | null = null;
 
 export function useQueuePersistence(state: QueueState) {
-  // Load persisted queue state on mount
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const saved = localStorage.getItem(QUEUE_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as QueueState;
-        return parsed;
-      }
-    } catch (error) {
-      console.error("Failed to load queue state:", error);
-    }
-    return null;
-  }, []);
-
   // Persist queue state on changes (debounced)
   useEffect(() => {
     if (typeof window === "undefined") return;
