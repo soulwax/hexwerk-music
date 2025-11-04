@@ -3,6 +3,7 @@
 "use client";
 
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
+import Footer from "@/components/Footer";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
@@ -307,6 +308,7 @@ function SearchPageContent() {
             </div>
           )}
         </div>
+        <Footer />
       </main>
     </div>
   );
