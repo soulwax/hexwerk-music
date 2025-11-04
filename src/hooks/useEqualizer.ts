@@ -58,10 +58,14 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
     try {
       const saved = localStorage.getItem(EQ_STORAGE_KEY);
       if (saved) {
-        const { bands: savedBands, preset, enabled } = JSON.parse(saved);
-        if (savedBands) setBands(savedBands);
-        if (preset) setCurrentPreset(preset);
-        if (typeof enabled === "boolean") setIsEnabled(enabled);
+        const parsed = JSON.parse(saved) as {
+          bands?: EqualizerBand[];
+          preset?: string;
+          enabled?: boolean;
+        };
+        if (parsed.bands) setBands(parsed.bands);
+        if (parsed.preset) setCurrentPreset(parsed.preset);
+        if (typeof parsed.enabled === "boolean") setIsEnabled(parsed.enabled);
       }
     } catch (error) {
       console.error("Failed to load EQ settings:", error);
@@ -88,7 +92,8 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
 
     try {
       const AudioContext =
-        window.AudioContext || (window as any).webkitAudioContext;
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
       if (!AudioContext) {
         console.error("Web Audio API is not supported");
         return;
@@ -138,8 +143,9 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
       });
 
       // Update filter node
-      if (filtersRef.current[index]) {
-        filtersRef.current[index]!.gain.value = gain;
+      const filter = filtersRef.current[index];
+      if (filter) {
+        filter.gain.value = gain;
       }
 
       // Clear preset selection when manually adjusting
@@ -221,7 +227,7 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
       filtersRef.current = [];
 
       if (audioContextRef.current) {
-        audioContextRef.current.close();
+        void audioContextRef.current.close();
         audioContextRef.current = null;
       }
 

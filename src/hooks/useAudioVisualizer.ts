@@ -39,7 +39,8 @@ export function useAudioVisualizer(
     try {
       // Create audio context
       const AudioContext =
-        window.AudioContext || (window as any).webkitAudioContext;
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
       if (!AudioContext) {
         console.error("Web Audio API is not supported in this browser");
         return;
@@ -166,7 +167,7 @@ export function useAudioVisualizer(
       stopVisualization();
 
       if (audioContextRef.current) {
-        audioContextRef.current.close();
+        void audioContextRef.current.close();
         audioContextRef.current = null;
       }
 

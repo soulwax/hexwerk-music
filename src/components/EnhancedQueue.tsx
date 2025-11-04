@@ -13,7 +13,6 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -291,7 +290,7 @@ export function EnhancedQueue({
               strategy={verticalListSortingStrategy}
             >
               <div className="divide-y divide-gray-800">
-                {filteredQueue.map((track, index) => {
+                {filteredQueue.map((track) => {
                   // Find the real index in the unfiltered queue
                   const realIndex = queue.indexOf(track);
                   return (

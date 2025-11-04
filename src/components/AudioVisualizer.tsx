@@ -3,7 +3,7 @@
 "use client";
 
 import { useAudioVisualizer } from "@/hooks/useAudioVisualizer";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface AudioVisualizerProps {
   audioElement: HTMLAudioElement | null;
@@ -27,7 +27,6 @@ export function AudioVisualizer({
   type = "bars",
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isReady, setIsReady] = useState(false);
 
   const visualizer = useAudioVisualizer(audioElement, {
     fftSize: 256,
@@ -39,7 +38,6 @@ export function AudioVisualizer({
     if (audioElement && !visualizer.isInitialized) {
       const handleUserInteraction = () => {
         visualizer.initialize();
-        setIsReady(true);
       };
 
       // Initialize on first interaction
@@ -52,110 +50,119 @@ export function AudioVisualizer({
   }, [audioElement, visualizer]);
 
   // Render bars visualization
-  const renderBars = (
-    ctx: CanvasRenderingContext2D,
-    data: Uint8Array,
-    canvas: HTMLCanvasElement
-  ) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const renderBars = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      data: Uint8Array,
+      canvas: HTMLCanvasElement
+    ) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const barWidth = (canvas.width - barGap * (barCount - 1)) / barCount;
-    const dataStep = Math.floor(data.length / barCount);
+      const barWidth = (canvas.width - barGap * (barCount - 1)) / barCount;
+      const dataStep = Math.floor(data.length / barCount);
 
-    for (let i = 0; i < barCount; i++) {
-      const dataIndex = i * dataStep;
-      const value = data[dataIndex] ?? 0;
-      const barHeight = (value / 255) * canvas.height;
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = i * dataStep;
+        const value = data[dataIndex] ?? 0;
+        const barHeight = (value / 255) * canvas.height;
 
-      const x = i * (barWidth + barGap);
-      const y = canvas.height - barHeight;
+        const x = i * (barWidth + barGap);
+        const y = canvas.height - barHeight;
 
-      // Create gradient
-      const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
-      gradient.addColorStop(0, barColor);
-      gradient.addColorStop(1, barColor.replace("0.8", "0.4"));
+        // Create gradient
+        const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
+        gradient.addColorStop(0, barColor);
+        gradient.addColorStop(1, barColor.replace("0.8", "0.4"));
 
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, barWidth, barHeight);
 
-      // Add glow effect
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = barColor;
-      ctx.fillRect(x, y, barWidth, barHeight);
-      ctx.shadowBlur = 0;
-    }
-  };
+        // Add glow effect
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = barColor;
+        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.shadowBlur = 0;
+      }
+    },
+    [barCount, barGap, barColor]
+  );
 
   // Render wave visualization
-  const renderWave = (
-    ctx: CanvasRenderingContext2D,
-    data: Uint8Array,
-    canvas: HTMLCanvasElement
-  ) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const renderWave = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      data: Uint8Array,
+      canvas: HTMLCanvasElement
+    ) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = barColor;
-    ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = barColor;
+      ctx.beginPath();
 
-    const sliceWidth = canvas.width / data.length;
-    let x = 0;
+      const sliceWidth = canvas.width / data.length;
+      let x = 0;
 
-    for (let i = 0; i < data.length; i++) {
-      const value = (data[i] ?? 128) / 128.0;
-      const y = (value * canvas.height) / 2;
+      for (let i = 0; i < data.length; i++) {
+        const value = (data[i] ?? 128) / 128.0;
+        const y = (value * canvas.height) / 2;
 
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+
+        x += sliceWidth;
       }
 
-      x += sliceWidth;
-    }
-
-    ctx.lineTo(canvas.width, canvas.height / 2);
-    ctx.stroke();
-  };
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+    },
+    [barColor]
+  );
 
   // Render circular visualization
-  const renderCircular = (
-    ctx: CanvasRenderingContext2D,
-    data: Uint8Array,
-    canvas: HTMLCanvasElement
-  ) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const renderCircular = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      data: Uint8Array,
+      canvas: HTMLCanvasElement
+    ) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(canvas.width, canvas.height) / 3;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(canvas.width, canvas.height) / 3;
 
-    const barAngle = (Math.PI * 2) / barCount;
-    const dataStep = Math.floor(data.length / barCount);
+      const barAngle = (Math.PI * 2) / barCount;
+      const dataStep = Math.floor(data.length / barCount);
 
-    for (let i = 0; i < barCount; i++) {
-      const dataIndex = i * dataStep;
-      const value = data[dataIndex] ?? 0;
-      const barLength = (value / 255) * radius;
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = i * dataStep;
+        const value = data[dataIndex] ?? 0;
+        const barLength = (value / 255) * radius;
 
-      const angle = i * barAngle - Math.PI / 2;
-      const x1 = centerX + Math.cos(angle) * radius;
-      const y1 = centerY + Math.sin(angle) * radius;
-      const x2 = centerX + Math.cos(angle) * (radius + barLength);
-      const y2 = centerY + Math.sin(angle) * (radius + barLength);
+        const angle = i * barAngle - Math.PI / 2;
+        const x1 = centerX + Math.cos(angle) * radius;
+        const y1 = centerY + Math.sin(angle) * radius;
+        const x2 = centerX + Math.cos(angle) * (radius + barLength);
+        const y2 = centerY + Math.sin(angle) * (radius + barLength);
 
-      const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-      gradient.addColorStop(0, barColor.replace("0.8", "0.3"));
-      gradient.addColorStop(1, barColor);
+        const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+        gradient.addColorStop(0, barColor.replace("0.8", "0.3"));
+        gradient.addColorStop(1, barColor);
 
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
-  };
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    },
+    [barCount, barColor]
+  );
 
   // Start/stop visualization based on playing state
   useEffect(() => {
@@ -166,7 +173,7 @@ export function AudioVisualizer({
     if (!ctx) return;
 
     if (isPlaying) {
-      visualizer.resumeContext();
+      void visualizer.resumeContext();
 
       const renderFrame = (data: Uint8Array) => {
         switch (type) {
@@ -197,9 +204,9 @@ export function AudioVisualizer({
     isPlaying,
     visualizer,
     type,
-    barCount,
-    barColor,
-    barGap,
+    renderBars,
+    renderWave,
+    renderCircular,
   ]);
 
   if (!visualizer.isInitialized) {

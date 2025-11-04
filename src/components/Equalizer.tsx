@@ -4,7 +4,7 @@
 
 import { useEqualizer } from "@/hooks/useEqualizer";
 import { Power, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 interface EqualizerProps {
   audioElement: HTMLAudioElement | null;
@@ -13,13 +13,11 @@ interface EqualizerProps {
 
 export function Equalizer({ audioElement, onClose }: EqualizerProps) {
   const equalizer = useEqualizer(audioElement);
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (audioElement && !equalizer.isInitialized) {
       const handleInteraction = () => {
         equalizer.initialize();
-        setIsReady(true);
       };
 
       document.addEventListener("click", handleInteraction, { once: true });
