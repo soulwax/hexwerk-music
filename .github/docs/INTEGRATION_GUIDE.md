@@ -13,12 +13,14 @@ The new features have been built as modular additions to your existing player sy
 Update your [Player.tsx](src/components/Player.tsx) to include the new features:
 
 ### Step 1: Add State for Panels
+
 ```typescript
 const [showQueue, setShowQueue] = useState(false);
 const [showEqualizer, setShowEqualizer] = useState(false);
 ```
 
 ### Step 2: Import New Components
+
 ```typescript
 import { EnhancedQueue } from "./EnhancedQueue";
 import { AudioVisualizer } from "./AudioVisualizer";
@@ -26,12 +28,14 @@ import { Equalizer } from "./Equalizer";
 ```
 
 ### Step 3: Get Audio Element Reference
+
 ```typescript
 // In useAudioPlayer hook, export the audioRef
 // Then pass it through context and props to the Player component
 ```
 
 ### Step 4: Add Buttons to Open Panels
+
 ```typescript
 {/* In your existing right controls section */}
 <button
@@ -52,6 +56,7 @@ import { Equalizer } from "./Equalizer";
 ```
 
 ### Step 5: Render Panels Conditionally
+
 ```typescript
 {/* At the end of your component, outside the main player container */}
 {showQueue && (
@@ -295,6 +300,7 @@ interface PlayerProps {
 If you're currently using [Queue.tsx](src/components/Queue.tsx), here's how to migrate:
 
 ### Old Implementation
+
 ```typescript
 <Queue
   queue={queueItems}
@@ -305,6 +311,7 @@ If you're currently using [Queue.tsx](src/components/Queue.tsx), here's how to m
 ```
 
 ### New Implementation
+
 ```typescript
 <EnhancedQueue
   queue={player.queue}
@@ -319,6 +326,7 @@ If you're currently using [Queue.tsx](src/components/Queue.tsx), here's how to m
 ```
 
 **Key Differences:**
+
 - `EnhancedQueue` works with `Track[]` directly (no need for `QueueItem` wrapper)
 - `onRemove` uses array index instead of ID
 - Added `onReorder` for drag-and-drop
@@ -367,6 +375,7 @@ const player = useAudioPlayer({
 ## Styling Considerations
 
 ### Ensure Proper Z-Index Layering
+
 ```css
 /* Player: z-50 */
 /* Queue Panel: z-50 */
@@ -375,7 +384,9 @@ const player = useAudioPlayer({
 ```
 
 ### Mobile Responsiveness
+
 The components are built mobile-first, but you may want to:
+
 - Hide visualizer on mobile (use `hidden lg:block`)
 - Full-width panels on mobile
 - Bottom sheet style for mobile queue
@@ -385,6 +396,7 @@ The components are built mobile-first, but you may want to:
 ## Testing Integration
 
 ### Checklist
+
 - [ ] Queue opens/closes smoothly
 - [ ] Drag-and-drop reordering works
 - [ ] Search filters queue correctly
@@ -401,21 +413,25 @@ The components are built mobile-first, but you may want to:
 ## Troubleshooting
 
 ### Visualizer Not Working
+
 - Check that user has clicked somewhere (Web Audio API requirement)
 - Ensure audioRef is correctly passed
 - Check browser console for errors
 
 ### Equalizer Not Affecting Audio
+
 - Only one MediaElementSourceNode can exist per audio element
 - If visualizer and EQ both need audio, they must share the same AudioContext
 - Consider creating a shared Web Audio pipeline
 
 ### Queue Not Persisting
+
 - Check localStorage is enabled
 - Check browser storage limits
 - Verify queue state is being saved (check Network tab)
 
 ### Drag-and-Drop Not Working
+
 - Ensure @dnd-kit packages are installed
 - Check that DndContext is properly wrapping SortableContext
 - Verify unique IDs for each sortable item
@@ -425,6 +441,7 @@ The components are built mobile-first, but you may want to:
 ## Performance Tips
 
 1. **Lazy Load Components**
+
 ```typescript
 const EnhancedQueue = lazy(() => import("./EnhancedQueue"));
 const Equalizer = lazy(() => import("./Equalizer"));
@@ -437,6 +454,7 @@ Already implemented in EnhancedQueue, but you can adjust the debounce time if ne
 The visualizer uses requestAnimationFrame which is already optimized, but you can reduce barCount for better performance on slower devices.
 
 4. **Memoize Heavy Computations**
+
 ```typescript
 const filteredQueue = useMemo(() =>
   queue.filter(track =>
@@ -463,6 +481,7 @@ const filteredQueue = useMemo(() =>
 ## Need Help?
 
 Refer to:
+
 - [PLAYER_IMPROVEMENTS.md](PLAYER_IMPROVEMENTS.md) - Full feature documentation
 - Component source code for implementation details
 - Type definitions in each file for prop requirements

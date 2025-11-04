@@ -1,0 +1,65 @@
+# PM2 Ignore File - Improves watch performance
+# Prevents PM2 from watching unnecessary files
+
+# Dependencies
+node_modules
+.npm
+.pnpm-store
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files (PM2 will load them but won't watch)
+.env*
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Database
+*.sqlite
+*.db
+prisma/db.sqlite*
+
+# Documentation
+*.md
+docs
+
+# Certificates
+certs
+*.pem
+
+# Config files that don't affect runtime
+.eslintrc*
+.prettierrc*
+tsconfig.json
+tailwind.config.*
+postcss.config.*
+next.config.*
