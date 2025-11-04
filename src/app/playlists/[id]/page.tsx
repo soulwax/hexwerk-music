@@ -5,15 +5,32 @@
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
+import type { Track } from "@/types";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
+type PlaylistTrack = {
+  id: number;
+  track: Track;
+  position: number;
+  addedAt: Date;
+};
+
+type Playlist = {
+  id: number;
+  name: string;
+  description: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  tracks: PlaylistTrack[];
+};
+
 export default function PlaylistDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const playlistId = parseInt(params.id as string);
+  const playlistId = parseInt(params.id);
   const player = useGlobalPlayer();
   const { data: session } = useSession();
 
@@ -21,33 +38,51 @@ export default function PlaylistDetailPage() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Try authenticated query first if user is logged in
-  const { data: privatePlaylist, isLoading: isLoadingPrivate } = api.music.getPlaylist.useQuery(
-    { id: playlistId },
-    { enabled: !!session && !isNaN(playlistId), retry: false },
-  );
+  const { data: privatePlaylist, isLoading: isLoadingPrivate } =
+    api.music.getPlaylist.useQuery(
+      { id: playlistId },
+      { enabled: !!session && !isNaN(playlistId), retry: false },
+    );
 
   // Fall back to public query if not authenticated or private query failed
-  const { data: publicPlaylist, isLoading: isLoadingPublic } = api.music.getPublicPlaylist.useQuery(
-    { id: playlistId },
-    { enabled: !session && !isNaN(playlistId) },
-  );
+  const { data: publicPlaylist, isLoading: isLoadingPublic } =
+    api.music.getPublicPlaylist.useQuery(
+      { id: playlistId },
+      { enabled: !session && !isNaN(playlistId) },
+    );
 
-  const playlist = privatePlaylist ?? publicPlaylist;
-  const isLoading = isLoadingPrivate || isLoadingPublic;
+  const playlist: Playlist | undefined = privatePlaylist ?? publicPlaylist;
+  const isLoading: boolean = isLoadingPrivate || isLoadingPublic;
 
   // Check if the current user owns this playlist
-  const isOwner = !!session && !!privatePlaylist;
+  const isOwner: boolean = !!session && !!privatePlaylist;
 
   const utils = api.useUtils();
   const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
     onSuccess: async () => {
-      await utils.music.getPlaylist.invalidate({ id: playlistId });
+      try {
+        await utils.music.getPlaylist.invalidate({ id: playlistId });
+      } catch (error) {
+        console.error("Failed to invalidate playlist cache:", error);
+      }
+    },
+    onError: (error) => {
+      console.error("Failed to remove track:", error);
+      alert("Failed to remove track from playlist");
     },
   });
 
   const reorderPlaylist = api.music.reorderPlaylist.useMutation({
     onSuccess: async () => {
-      await utils.music.getPlaylist.invalidate({ id: playlistId });
+      try {
+        await utils.music.getPlaylist.invalidate({ id: playlistId });
+      } catch (error) {
+        console.error("Failed to invalidate playlist cache:", error);
+      }
+    },
+    onError: (error) => {
+      console.error("Failed to reorder playlist:", error);
+      alert("Failed to reorder playlist");
     },
   });
 
@@ -55,9 +90,13 @@ export default function PlaylistDetailPage() {
     onSuccess: () => {
       router.push("/playlists");
     },
+    onError: (error) => {
+      console.error("Failed to delete playlist:", error);
+      alert("Failed to delete playlist");
+    },
   });
 
-  const handlePlayAll = () => {
+  const handlePlayAll = (): void => {
     if (!playlist?.tracks || playlist.tracks.length === 0) return;
 
     const [first, ...rest] = playlist.tracks;
@@ -67,13 +106,13 @@ export default function PlaylistDetailPage() {
     }
   };
 
-  const handleRemoveTrack = (trackEntryId: number) => {
+  const handleRemoveTrack = (trackEntryId: number): void => {
     if (confirm("Remove this track from the playlist?")) {
       removeFromPlaylist.mutate({ playlistId, trackEntryId });
     }
   };
 
-  const handleSharePlaylist = async () => {
+  const handleSharePlaylist = async (): Promise<void> => {
     if (!playlist?.isPublic) {
       alert("Only public playlists can be shared!");
       return;
@@ -84,24 +123,24 @@ export default function PlaylistDetailPage() {
       await navigator.clipboard.writeText(url);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+    } catch (error) {
+      console.error("Failed to copy:", error);
       alert("Failed to copy link to clipboard");
     }
   };
 
-  const handleDragStart = (index: number) => {
+  const handleDragStart = (index: number): void => {
     setDraggedIndex(index);
   };
 
-  const handleDragOver = (e: React.DragEvent, _index: number) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, _index: number): void => {
     e.preventDefault();
   };
 
-  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, dropIndex: number): Promise<void> => {
     e.preventDefault();
 
-    if (draggedIndex === null || draggedIndex === dropIndex || !playlist) {
+    if (draggedIndex === null || draggedIndex === dropIndex || !playlist?.tracks) {
       setDraggedIndex(null);
       return;
     }
@@ -120,18 +159,23 @@ export default function PlaylistDetailPage() {
     newTracks.splice(dropIndex, 0, draggedTrack);
 
     // Create updates with new positions
-    const trackUpdates = newTracks.map((track, idx) => ({
-      trackEntryId: track.id,
+    const trackUpdates = newTracks.map((item, idx) => ({
+      trackEntryId: item.id,
       newPosition: idx,
     }));
 
     // Send to backend
-    await reorderPlaylist.mutateAsync({ playlistId, trackUpdates });
+    try {
+      await reorderPlaylist.mutateAsync({ playlistId, trackUpdates });
+    } catch (error) {
+      console.error("Failed to reorder tracks:", error);
+      // Error is already handled in the mutation's onError callback
+    }
 
     setDraggedIndex(null);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (): void => {
     setDraggedIndex(null);
   };
 
