@@ -10,9 +10,9 @@ import { searchTracks } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
-export default function HomePage() {
+function SearchPageContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -309,5 +309,13 @@ export default function HomePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="text-gray-400">Loading...</div></div>}>
+      <SearchPageContent />
+    </Suspense>
   );
 }

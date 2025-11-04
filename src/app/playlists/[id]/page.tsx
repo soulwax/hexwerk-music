@@ -2,22 +2,29 @@
 
 "use client";
 
-import EnhancedPlayer from "@/components/EnhancedPlayer";
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
+import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
-import { getStreamUrl } from "@/utils/api";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+
+type PlaylistTrack = {
+  id: number;
+  track: Track;
+  position: number;
+  addedAt: Date;
+};
 
 export default function PlaylistDetailPage() {
   const params = useParams();
   const router = useRouter();
   const playlistId = parseInt(params.id as string);
+  const player = useGlobalPlayer();
 
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [queue, setQueue] = useState<Track[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const { data: playlist, isLoading } = api.music.getPlaylist.useQuery(
     { id: playlistId },
@@ -31,60 +38,94 @@ export default function PlaylistDetailPage() {
     },
   });
 
+  const reorderPlaylist = api.music.reorderPlaylist.useMutation({
+    onSuccess: async () => {
+      await utils.music.getPlaylist.invalidate({ id: playlistId });
+    },
+  });
+
   const deletePlaylist = api.music.deletePlaylist.useMutation({
     onSuccess: () => {
       router.push("/playlists");
     },
   });
 
-  const addToHistory = api.music.addToHistory.useMutation();
-
-  const handlePlay = (track: Track) => {
-    setCurrentTrack(track);
-    addToHistory.mutate({ track });
-  };
-
-  const handleAddToQueue = (track: Track) => {
-    setQueue((prev) => [...prev, track]);
-  };
-
   const handlePlayAll = () => {
     if (!playlist?.tracks || playlist.tracks.length === 0) return;
 
     const [first, ...rest] = playlist.tracks;
-    setCurrentTrack(first!.track);
-    setQueue(rest.map((t) => t.track));
-    addToHistory.mutate({ track: first!.track });
-  };
-
-  const handleNext = () => {
-    if (queue.length > 0) {
-      const [nextTrack, ...remainingQueue] = queue;
-      setCurrentTrack(nextTrack!);
-      setQueue(remainingQueue);
-      if (nextTrack) {
-        addToHistory.mutate({ track: nextTrack });
-      }
+    if (first) {
+      player.play(first.track);
+      rest.forEach((t) => player.addToQueue(t.track));
     }
-  };
-
-  const handlePrevious = () => {
-    if (!playlist?.tracks) return;
-    const tracks = playlist.tracks.map((t) => t.track);
-    const currentIndex = tracks.findIndex((t) => t.id === currentTrack?.id);
-    if (currentIndex > 0) {
-      handlePlay(tracks[currentIndex - 1]!);
-    }
-  };
-
-  const handleTrackEnd = () => {
-    handleNext();
   };
 
   const handleRemoveTrack = (trackEntryId: number) => {
     if (confirm("Remove this track from the playlist?")) {
       removeFromPlaylist.mutate({ playlistId, trackEntryId });
     }
+  };
+
+  const handleSharePlaylist = async () => {
+    if (!playlist?.isPublic) {
+      alert("Only public playlists can be shared!");
+      return;
+    }
+
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      alert("Failed to copy link to clipboard");
+    }
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === dropIndex || !playlist) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const sortedTracks = [...playlist.tracks].sort((a, b) => a.position - b.position);
+    const draggedTrack = sortedTracks[draggedIndex];
+
+    if (!draggedTrack) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    // Reorder the array locally
+    const newTracks = [...sortedTracks];
+    newTracks.splice(draggedIndex, 1);
+    newTracks.splice(dropIndex, 0, draggedTrack);
+
+    // Create updates with new positions
+    const trackUpdates = newTracks.map((track, idx) => ({
+      trackEntryId: track.id,
+      newPosition: idx,
+    }));
+
+    // Send to backend
+    await reorderPlaylist.mutateAsync({ playlistId, trackUpdates });
+
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   if (isLoading) {
@@ -202,6 +243,28 @@ export default function PlaylistDetailPage() {
               Play All
             </button>
 
+            {playlist.isPublic && (
+              <button
+                onClick={handleSharePlaylist}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+                {copiedLink ? "Copied!" : "Share"}
+              </button>
+            )}
+
             <button
               onClick={() => {
                 if (confirm("Delete this playlist? This cannot be undone.")) {
@@ -215,34 +278,70 @@ export default function PlaylistDetailPage() {
           </div>
         </div>
 
+        {/* Drag-and-drop hint */}
+        {playlist.tracks && playlist.tracks.length > 0 && (
+          <div className="mb-4 rounded-lg bg-gray-800/50 px-4 py-2 text-sm text-gray-400">
+            💡 Tip: Drag and drop tracks to reorder them
+          </div>
+        )}
+
         {/* Tracks */}
         {playlist.tracks && playlist.tracks.length > 0 ? (
           <div className="grid gap-3">
-            {playlist.tracks.map((item) => (
-              <div key={item.id} className="relative">
-                <EnhancedTrackCard
-                  track={item.track}
-                  onPlay={handlePlay}
-                  onAddToQueue={handleAddToQueue}
-                  showActions={false}
-                />
-                <button
-                  onClick={() => handleRemoveTrack(item.id)}
-                  className="absolute top-4 right-4 rounded-full bg-gray-900/80 p-2 text-gray-400 opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                  title="Remove from playlist"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clipRule="evenodd"
+            {[...playlist.tracks].sort((a, b) => a.position - b.position).map((item, index) => (
+              <div
+                key={item.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`relative cursor-move transition-opacity ${
+                  draggedIndex === index ? "opacity-50" : "opacity-100"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Drag handle */}
+                  <div className="flex flex-col items-center text-gray-500">
+                    <svg
+                      className="h-5 w-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2z" />
+                    </svg>
+                    <span className="text-xs">{index + 1}</span>
+                  </div>
+
+                  {/* Track card */}
+                  <div className="flex-1">
+                    <EnhancedTrackCard
+                      track={item.track}
+                      onPlay={player.play}
+                      onAddToQueue={player.addToQueue}
+                      showActions={false}
                     />
-                  </svg>
-                </button>
+                  </div>
+
+                  {/* Remove button */}
+                  <button
+                    onClick={() => handleRemoveTrack(item.id)}
+                    className="rounded-full bg-gray-900/80 p-2 text-gray-400 transition hover:text-red-500"
+                    title="Remove from playlist"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -262,16 +361,6 @@ export default function PlaylistDetailPage() {
           </div>
         )}
       </main>
-
-      {/* Enhanced Player */}
-      <EnhancedPlayer
-        currentTrack={currentTrack}
-        queue={queue}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onTrackEnd={handleTrackEnd}
-        streamUrl={currentTrack ? getStreamUrl(currentTrack.title) : null}
-      />
     </div>
   );
 }

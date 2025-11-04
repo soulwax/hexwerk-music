@@ -286,6 +286,47 @@ export const musicRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  reorderPlaylist: protectedProcedure
+    .input(
+      z.object({
+        playlistId: z.number(),
+        trackUpdates: z.array(
+          z.object({
+            trackEntryId: z.number(),
+            newPosition: z.number(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify ownership
+      const playlist = await ctx.db.query.playlists.findFirst({
+        where: and(
+          eq(playlists.id, input.playlistId),
+          eq(playlists.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+
+      // Update positions for all tracks
+      for (const update of input.trackUpdates) {
+        await ctx.db
+          .update(playlistTracks)
+          .set({ position: update.newPosition })
+          .where(
+            and(
+              eq(playlistTracks.id, update.trackEntryId),
+              eq(playlistTracks.playlistId, input.playlistId),
+            ),
+          );
+      }
+
+      return { success: true };
+    }),
+
   // ============================================
   // LISTENING HISTORY
   // ============================================
