@@ -1,17 +1,12 @@
-<p align="center">
-  <img src=".github/assets/emily-the-strange_vivid.png" alt="Starchild Music Stream Banner" width="640" />
-</p>
+# 🌟 Starchild Music Stream
 
-<h1 align="center">� Starchild Music Stream</h1>
-<p align="center"><em>An attempt at amodern full-stack music search & streaming interface.</em></p>
+![Starchild Music Stream Banner](.github/assets/emily-the-strange_vivid.png)
 
-## 🌟 **Starchild Music Stream**
-
-*A modern full-stack music search & streaming interface.*
+*An attempt at amodern full-stack music search & streaming interface.*
 
 ---
 
-### 🪄 Overview
+## ✨ Overview
 
 **Starchild Music Stream** is a sleek **Next.js (T3 Stack)** web application for exploring and streaming music.
 It provides a minimal, neon-flat design built with **TailwindCSS**, **TypeScript**, and **App Router** architecture.

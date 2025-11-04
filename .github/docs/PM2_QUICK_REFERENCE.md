@@ -1,4 +1,4 @@
-# PM2 Quick Reference - HexMusic
+# PM2 Quick Reference - Starchild Music
 
 ## 🚀 Quick Start Commands
 
@@ -102,11 +102,13 @@ logs/pm2/combined.log      # Combined logs
 ## 🔐 Environment Variables
 
 Variables loaded from:
+
 1. `.env.production` (production)
 2. `.env` (fallback)
 3. `ecosystem.config.cjs` (defaults)
 
 To update:
+
 ```bash
 # Edit .env.production, then:
 npm run pm2:reload
@@ -186,6 +188,7 @@ pm2 save
 ## 💡 Best Practices
 
 ✅ **DO:**
+
 - Use `pm2 reload` for deployments (zero-downtime)
 - Monitor logs regularly
 - Set up log rotation
@@ -193,6 +196,7 @@ pm2 save
 - Keep PM2 updated: `npm install pm2@latest -g`
 
 ❌ **DON'T:**
+
 - Use `pm2 restart` unless necessary (causes downtime)
 - Run `pm2 delete` in production without backup
 - Ignore memory warnings
