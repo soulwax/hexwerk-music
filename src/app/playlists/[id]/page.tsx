@@ -88,7 +88,9 @@ export default function PlaylistDetailPage() {
     const [first, ...rest] = playlist.tracks;
     if (first) {
       player.play(first.track);
-      rest.forEach((t) => player.addToQueue(t.track));
+      if (rest.length > 0) {
+        player.addToQueue(rest.map((t) => t.track));
+      }
     }
   };
 
