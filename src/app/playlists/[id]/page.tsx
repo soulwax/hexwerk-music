@@ -85,7 +85,9 @@ export default function PlaylistDetailPage() {
   const handlePlayAll = (): void => {
     if (!playlist?.tracks || playlist.tracks.length === 0) return;
 
-    const [first, ...rest] = playlist.tracks;
+    // Sort tracks by position to ensure correct order
+    const sortedTracks = [...playlist.tracks].sort((a, b) => a.position - b.position);
+    const [first, ...rest] = sortedTracks;
     if (first) {
       player.play(first.track);
       if (rest.length > 0) {
