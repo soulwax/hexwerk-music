@@ -5,27 +5,10 @@
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
-import type { Track } from "@/types";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-
-type PlaylistTrack = {
-  id: number;
-  track: Track;
-  position: number;
-  addedAt: Date;
-};
-
-type Playlist = {
-  id: number;
-  name: string;
-  description: string | null;
-  isPublic: boolean;
-  createdAt: Date;
-  tracks: PlaylistTrack[];
-};
 
 export default function PlaylistDetailPage() {
   const params = useParams<{ id: string }>();
@@ -37,25 +20,15 @@ export default function PlaylistDetailPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Try authenticated query first if user is logged in
-  const { data: privatePlaylist, isLoading: isLoadingPrivate } =
+  // Fetch playlist (works for both public and private if user has access)
+  const { data: playlist, isLoading } =
     api.music.getPlaylist.useQuery(
       { id: playlistId },
-      { enabled: !!session && !isNaN(playlistId), retry: false },
+      { enabled: !isNaN(playlistId), retry: false },
     );
-
-  // Fall back to public query if not authenticated or private query failed
-  const { data: publicPlaylist, isLoading: isLoadingPublic } =
-    api.music.getPublicPlaylist.useQuery(
-      { id: playlistId },
-      { enabled: !session && !isNaN(playlistId) },
-    );
-
-  const playlist: Playlist | undefined = privatePlaylist ?? publicPlaylist;
-  const isLoading: boolean = isLoadingPrivate || isLoadingPublic;
 
   // Check if the current user owns this playlist
-  const isOwner: boolean = !!session && !!privatePlaylist;
+  const isOwner: boolean = !!session && !!playlist;
 
   const utils = api.useUtils();
   const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
@@ -72,7 +45,7 @@ export default function PlaylistDetailPage() {
     },
   });
 
-  const reorderPlaylist = api.music.reorderPlaylist.useMutation({
+  const reorderPlaylistMutation = api.music.reorderPlaylist.useMutation({
     onSuccess: async () => {
       try {
         await utils.music.getPlaylist.invalidate({ id: playlistId });
@@ -166,7 +139,7 @@ export default function PlaylistDetailPage() {
 
     // Send to backend
     try {
-      await reorderPlaylist.mutateAsync({ playlistId, trackUpdates });
+      await reorderPlaylistMutation.mutateAsync({ playlistId, trackUpdates });
     } catch (error) {
       console.error("Failed to reorder tracks:", error);
       // Error is already handled in the mutation's onError callback
