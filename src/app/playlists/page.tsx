@@ -1,107 +1,70 @@
-// File: src/app/playlists/[id]/page.tsx
+// File: src/app/playlists/page.tsx
 
 "use client";
 
-import EnhancedPlayer from "@/components/EnhancedPlayer";
-import EnhancedTrackCard from "@/components/EnhancedTrackCard";
+import { useToast } from "@/contexts/ToastContext";
 import { api } from "@/trpc/react";
-import type { Track } from "@/types";
-import { getStreamUrl } from "@/utils/api";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function PlaylistDetailPage() {
-  const params = useParams();
+export default function PlaylistsPage() {
+  const { data: session } = useSession();
   const router = useRouter();
-  const playlistId = parseInt(params.id as string);
+  const { showToast } = useToast();
 
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [queue, setQueue] = useState<Track[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
 
-  const { data: playlist, isLoading } = api.music.getPlaylist.useQuery(
-    { id: playlistId },
-    { enabled: !isNaN(playlistId) },
+  const { data: playlists, isLoading } = api.music.getPlaylists.useQuery(
+    undefined,
+    { enabled: !!session },
   );
 
   const utils = api.useUtils();
-  const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
-    onSuccess: async () => {
-      await utils.music.getPlaylist.invalidate({ id: playlistId });
-    },
-  });
-
-  const deletePlaylist = api.music.deletePlaylist.useMutation({
-    onSuccess: () => {
-      router.push("/playlists");
-    },
-  });
-
-  const addToHistory = api.music.addToHistory.useMutation();
-
-  const handlePlay = (track: Track) => {
-    setCurrentTrack(track);
-    addToHistory.mutate({ track });
-  };
-
-  const handleAddToQueue = (track: Track) => {
-    setQueue((prev) => [...prev, track]);
-  };
-
-  const handlePlayAll = () => {
-    if (!playlist?.tracks || playlist.tracks.length === 0) return;
-
-    const [first, ...rest] = playlist.tracks;
-    setCurrentTrack(first!.track);
-    setQueue(rest.map((t) => t.track));
-    addToHistory.mutate({ track: first!.track });
-  };
-
-  const handleNext = () => {
-    if (queue.length > 0) {
-      const [nextTrack, ...remainingQueue] = queue;
-      setCurrentTrack(nextTrack!);
-      setQueue(remainingQueue);
-      if (nextTrack) {
-        addToHistory.mutate({ track: nextTrack });
+  const createPlaylist = api.music.createPlaylist.useMutation({
+    onSuccess: async (playlist) => {
+      await utils.music.getPlaylists.invalidate();
+      if (playlist) {
+        showToast(`Created playlist "${playlist.name}"`, "success");
+        setShowCreateModal(false);
+        setNewPlaylistName("");
+        setNewPlaylistDescription("");
+        setIsPublic(false);
+        router.push(`/playlists/${playlist.id}`);
       }
+    },
+    onError: (error) => {
+      showToast(`Failed to create playlist: ${error.message}`, "error");
+    },
+  });
+
+  const handleCreatePlaylist = () => {
+    if (!newPlaylistName.trim()) {
+      showToast("Please enter a playlist name", "error");
+      return;
     }
+
+    createPlaylist.mutate({
+      name: newPlaylistName.trim(),
+      description: newPlaylistDescription.trim() || undefined,
+      isPublic,
+    });
   };
 
-  const handlePrevious = () => {
-    if (!playlist?.tracks) return;
-    const tracks = playlist.tracks.map((t) => t.track);
-    const currentIndex = tracks.findIndex((t) => t.id === currentTrack?.id);
-    if (currentIndex > 0) {
-      handlePlay(tracks[currentIndex - 1]!);
-    }
-  };
-
-  const handleTrackEnd = () => {
-    handleNext();
-  };
-
-  const handleRemoveTrack = (trackEntryId: number) => {
-    if (confirm("Remove this track from the playlist?")) {
-      removeFromPlaylist.mutate({ playlistId, trackEntryId });
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="border-accent inline-block h-8 w-8 animate-spin rounded-full border-b-2"></div>
-      </div>
-    );
-  }
-
-  if (!playlist) {
+  if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="mb-4 text-gray-400">Playlist not found</p>
-          <Link href="/playlists" className="text-accent hover:underline">
-            Back to Playlists
+          <p className="mb-4 text-gray-400">
+            Please sign in to view your playlists
+          </p>
+          <Link href="/api/auth/signin" className="btn-primary">
+            Sign In
           </Link>
         </div>
       </div>
@@ -109,14 +72,14 @@ export default function PlaylistDetailPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col pb-32">
+    <div className="flex min-h-screen flex-col">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
         <div className="mx-auto max-w-7xl px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <h1 className="accent-gradient text-glow text-2xl font-bold">
-                ðŸŽ§ HexMusic
+                🎧 HexMusic
               </h1>
             </Link>
 
@@ -135,7 +98,7 @@ export default function PlaylistDetailPage() {
               </Link>
               <Link
                 href="/playlists"
-                className="text-gray-300 transition hover:text-white"
+                className="text-white"
               >
                 Playlists
               </Link>
@@ -146,104 +109,101 @@ export default function PlaylistDetailPage() {
 
       {/* Main Content */}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
-        {/* Playlist Header */}
-        <div className="mb-8">
-          <div className="mb-2 flex items-start gap-2">
-            <Link
-              href="/playlists"
-              className="text-gray-400 transition hover:text-white"
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-white">Your Playlists</h1>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </Link>
-            <div className="flex-1">
-              <h1 className="mb-2 text-3xl font-bold text-white">
-                {playlist.name}
-              </h1>
-              {playlist.description && (
-                <p className="mb-4 text-gray-400">{playlist.description}</p>
-              )}
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span>{playlist.tracks.length} tracks</span>
-                {playlist.isPublic && (
-                  <span className="text-accent">Public</span>
-                )}
-                <span>
-                  Created {new Date(playlist.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex items-center gap-4">
-            <button
-              onClick={handlePlayAll}
-              className="btn-primary flex items-center gap-2"
-              disabled={!playlist.tracks || playlist.tracks.length === 0}
-            >
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Play All
-            </button>
-
-            <button
-              onClick={() => {
-                if (confirm("Delete this playlist? This cannot be undone.")) {
-                  deletePlaylist.mutate({ id: playlistId });
-                }
-              }}
-              className="rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
-            >
-              Delete Playlist
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Create Playlist
+          </button>
         </div>
 
-        {/* Tracks */}
-        {playlist.tracks && playlist.tracks.length > 0 ? (
-          <div className="grid gap-3">
-            {playlist.tracks.map((item) => (
-              <div key={item.id} className="relative">
-                <EnhancedTrackCard
-                  track={item.track}
-                  onPlay={handlePlay}
-                  onAddToQueue={handleAddToQueue}
-                  showActions={false}
-                />
-                <button
-                  onClick={() => handleRemoveTrack(item.id)}
-                  className="absolute top-4 right-4 rounded-full bg-gray-900/80 p-2 text-gray-400 opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-                  title="Remove from playlist"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="border-accent inline-block h-8 w-8 animate-spin rounded-full border-b-2"></div>
+          </div>
+        ) : playlists && playlists.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {playlists.map((playlist) => (
+              <Link
+                key={playlist.id}
+                href={`/playlists/${playlist.id}`}
+                className="card group overflow-hidden transition hover:scale-105"
+              >
+                <div className="relative aspect-square bg-gradient-to-br from-indigo-600 to-purple-600">
+                  {playlist.tracks && playlist.tracks.length > 0 ? (
+                    <div className="grid h-full grid-cols-2 grid-rows-2 gap-0.5">
+                      {playlist.tracks.slice(0, 4).map((track, idx) => (
+                        <div
+                          key={idx}
+                          className="relative h-full w-full bg-gray-800"
+                        >
+                          <Image
+                            src={
+                              track.trackData &&
+                              typeof track.trackData === "object" &&
+                              "album" in track.trackData &&
+                              track.trackData.album &&
+                              typeof track.trackData.album === "object" &&
+                              "cover_medium" in track.trackData.album
+                                ? (track.trackData.album
+                                    .cover_medium as string)
+                                : "/placeholder.png"
+                            }
+                            alt=""
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <svg
+                        className="h-16 w-16 text-white/50"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 transition group-hover:opacity-100" />
+                </div>
+                <div className="p-4">
+                  <h3 className="mb-1 truncate font-semibold text-white">
+                    {playlist.name}
+                  </h3>
+                  {playlist.description && (
+                    <p className="mb-2 line-clamp-2 text-sm text-gray-400">
+                      {playlist.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span>
+                      {playlist.tracks?.length ?? 0} track
+                      {(playlist.tracks?.length ?? 0) !== 1 ? "s" : ""}
+                    </span>
+                    {playlist.isPublic && (
+                      <span className="text-accent">• Public</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         ) : (
@@ -255,23 +215,90 @@ export default function PlaylistDetailPage() {
             >
               <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
             </svg>
-            <p className="mb-2 text-gray-400">This playlist is empty</p>
-            <Link href="/" className="text-accent hover:underline">
-              Search for music to add tracks
-            </Link>
+            <p className="mb-4 text-gray-400">No playlists yet</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary"
+            >
+              Create Your First Playlist
+            </button>
           </div>
         )}
       </main>
 
-      {/* Enhanced Player */}
-      <EnhancedPlayer
-        currentTrack={currentTrack}
-        queue={queue}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onTrackEnd={handleTrackEnd}
-        streamUrl={currentTrack ? getStreamUrl(currentTrack.title) : null}
-      />
+      {/* Create Playlist Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="card w-full max-w-md p-6">
+            <h2 className="mb-4 text-2xl font-bold text-white">
+              Create Playlist
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">
+                  Playlist Name *
+                </label>
+                <input
+                  type="text"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  placeholder="My Awesome Playlist"
+                  className="input-text"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">
+                  Description (optional)
+                </label>
+                <textarea
+                  value={newPlaylistDescription}
+                  onChange={(e) => setNewPlaylistDescription(e.target.value)}
+                  placeholder="Add a description..."
+                  rows={3}
+                  className="input-text resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isPublic"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                />
+                <label htmlFor="isPublic" className="text-sm text-gray-400">
+                  Make this playlist public
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setNewPlaylistName("");
+                  setNewPlaylistDescription("");
+                  setIsPublic(false);
+                }}
+                className="flex-1 rounded-lg bg-gray-700 px-4 py-2 text-white transition hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreatePlaylist}
+                disabled={createPlaylist.isPending || !newPlaylistName.trim()}
+                className="btn-primary flex-1"
+              >
+                {createPlaylist.isPending ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

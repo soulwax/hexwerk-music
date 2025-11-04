@@ -5,31 +5,38 @@
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
-import type { Track } from "@/types";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-
-type PlaylistTrack = {
-  id: number;
-  track: Track;
-  position: number;
-  addedAt: Date;
-};
 
 export default function PlaylistDetailPage() {
   const params = useParams();
   const router = useRouter();
   const playlistId = parseInt(params.id as string);
   const player = useGlobalPlayer();
+  const { data: session } = useSession();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const { data: playlist, isLoading } = api.music.getPlaylist.useQuery(
+  // Try authenticated query first if user is logged in
+  const { data: privatePlaylist, isLoading: isLoadingPrivate } = api.music.getPlaylist.useQuery(
     { id: playlistId },
-    { enabled: !isNaN(playlistId) },
+    { enabled: !!session && !isNaN(playlistId), retry: false },
   );
+
+  // Fall back to public query if not authenticated or private query failed
+  const { data: publicPlaylist, isLoading: isLoadingPublic } = api.music.getPublicPlaylist.useQuery(
+    { id: playlistId },
+    { enabled: !session && !isNaN(playlistId) },
+  );
+
+  const playlist = privatePlaylist ?? publicPlaylist;
+  const isLoading = isLoadingPrivate || isLoadingPublic;
+
+  // Check if the current user owns this playlist
+  const isOwner = !!session && !!privatePlaylist;
 
   const utils = api.useUtils();
   const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
@@ -87,7 +94,7 @@ export default function PlaylistDetailPage() {
     setDraggedIndex(index);
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: React.DragEvent, _index: number) => {
     e.preventDefault();
   };
 
@@ -265,21 +272,23 @@ export default function PlaylistDetailPage() {
               </button>
             )}
 
-            <button
-              onClick={() => {
-                if (confirm("Delete this playlist? This cannot be undone.")) {
-                  deletePlaylist.mutate({ id: playlistId });
-                }
-              }}
-              className="rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
-            >
-              Delete Playlist
-            </button>
+            {isOwner && (
+              <button
+                onClick={() => {
+                  if (confirm("Delete this playlist? This cannot be undone.")) {
+                    deletePlaylist.mutate({ id: playlistId });
+                  }
+                }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
+              >
+                Delete Playlist
+              </button>
+            )}
           </div>
         </div>
 
         {/* Drag-and-drop hint */}
-        {playlist.tracks && playlist.tracks.length > 0 && (
+        {isOwner && playlist.tracks && playlist.tracks.length > 0 && (
           <div className="mb-4 rounded-lg bg-gray-800/50 px-4 py-2 text-sm text-gray-400">
             💡 Tip: Drag and drop tracks to reorder them
           </div>
@@ -291,27 +300,35 @@ export default function PlaylistDetailPage() {
             {[...playlist.tracks].sort((a, b) => a.position - b.position).map((item, index) => (
               <div
                 key={item.id}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={(e) => handleDrop(e, index)}
-                onDragEnd={handleDragEnd}
-                className={`relative cursor-move transition-opacity ${
+                draggable={isOwner}
+                onDragStart={isOwner ? () => handleDragStart(index) : undefined}
+                onDragOver={isOwner ? (e) => handleDragOver(e, index) : undefined}
+                onDrop={isOwner ? (e) => handleDrop(e, index) : undefined}
+                onDragEnd={isOwner ? handleDragEnd : undefined}
+                className={`relative transition-opacity ${
+                  isOwner ? "cursor-move" : ""
+                } ${
                   draggedIndex === index ? "opacity-50" : "opacity-100"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  {/* Drag handle */}
-                  <div className="flex flex-col items-center text-gray-500">
-                    <svg
-                      className="h-5 w-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2z" />
-                    </svg>
-                    <span className="text-xs">{index + 1}</span>
-                  </div>
+                  {/* Drag handle or track number */}
+                  {isOwner ? (
+                    <div className="flex flex-col items-center text-gray-500">
+                      <svg
+                        className="h-5 w-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2zm0-4a1 1 0 100-2 1 1 0 000 2z" />
+                      </svg>
+                      <span className="text-xs">{index + 1}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center text-gray-500">
+                      <span className="text-sm font-medium">{index + 1}</span>
+                    </div>
+                  )}
 
                   {/* Track card */}
                   <div className="flex-1">
@@ -319,28 +336,30 @@ export default function PlaylistDetailPage() {
                       track={item.track}
                       onPlay={player.play}
                       onAddToQueue={player.addToQueue}
-                      showActions={false}
+                      showActions={!isOwner}
                     />
                   </div>
 
-                  {/* Remove button */}
-                  <button
-                    onClick={() => handleRemoveTrack(item.id)}
-                    className="rounded-full bg-gray-900/80 p-2 text-gray-400 transition hover:text-red-500"
-                    title="Remove from playlist"
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+                  {/* Remove button (only for owners) */}
+                  {isOwner && (
+                    <button
+                      onClick={() => handleRemoveTrack(item.id)}
+                      className="rounded-full bg-gray-900/80 p-2 text-gray-400 transition hover:text-red-500"
+                      title="Remove from playlist"
                     >
-                      <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        className="h-5 w-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

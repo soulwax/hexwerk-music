@@ -3,7 +3,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import {
   favorites,
   listeningHistory,
@@ -188,6 +188,36 @@ export const musicRouter = createTRPCRouter({
 
       if (!playlist) {
         throw new Error("Playlist not found");
+      }
+
+      return {
+        ...playlist,
+        tracks: playlist.tracks.map((t) => ({
+          id: t.id,
+          track: t.trackData as Track,
+          position: t.position,
+          addedAt: t.addedAt,
+        })),
+      };
+    }),
+
+  getPublicPlaylist: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const playlist = await ctx.db.query.playlists.findFirst({
+        where: and(
+          eq(playlists.id, input.id),
+          eq(playlists.isPublic, true),
+        ),
+        with: {
+          tracks: {
+            orderBy: [desc(playlistTracks.position)],
+          },
+        },
+      });
+
+      if (!playlist) {
+        throw new Error("Playlist not found or not public");
       }
 
       return {
