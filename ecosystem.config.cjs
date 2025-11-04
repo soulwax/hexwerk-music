@@ -103,7 +103,7 @@ module.exports = {
     {
       name: 'hexmusic-dev',
       script: 'node_modules/next/dist/bin/next',
-      args: 'dev --port 3333',
+      args: 'dev --port 3222',
 
       instances: 1, // Single instance for development
       exec_mode: 'fork',

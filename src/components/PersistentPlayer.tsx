@@ -3,11 +3,25 @@
 "use client";
 
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
+import dynamic from "next/dynamic";
 import { useState } from "react";
-import { AudioVisualizer } from "./AudioVisualizer";
-import { Equalizer } from "./Equalizer";
-import { EnhancedQueue } from "./EnhancedQueue";
 import MaturePlayer from "./Player";
+
+// Dynamic imports to prevent SSR issues with Web Audio API
+const AudioVisualizer = dynamic(
+  () => import("./AudioVisualizer").then((mod) => mod.AudioVisualizer),
+  { ssr: false }
+);
+
+const Equalizer = dynamic(
+  () => import("./Equalizer").then((mod) => mod.Equalizer),
+  { ssr: false }
+);
+
+const EnhancedQueue = dynamic(
+  () => import("./EnhancedQueue").then((mod) => mod.EnhancedQueue),
+  { ssr: false }
+);
 
 export default function PersistentPlayer() {
   const player = useGlobalPlayer();
