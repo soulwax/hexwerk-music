@@ -445,7 +445,7 @@ export default function MaturePlayer({
           {onToggleQueue && (
             <button
               onClick={onToggleQueue}
-              className="hidden text-gray-400 transition hover:text-white md:block"
+              className="text-gray-400 transition hover:text-white"
               title="Queue (Q)"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -463,7 +463,7 @@ export default function MaturePlayer({
           {onToggleEqualizer && (
             <button
               onClick={onToggleEqualizer}
-              className="hidden text-gray-400 transition hover:text-white md:block"
+              className="text-gray-400 transition hover:text-white"
               title="Equalizer (E)"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
