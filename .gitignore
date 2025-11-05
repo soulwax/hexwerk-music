@@ -57,3 +57,6 @@ ca.pem
 
 # db credentials
 drizzle.env.js
+
+# .github unnecessary notes
+.github/docs/*
