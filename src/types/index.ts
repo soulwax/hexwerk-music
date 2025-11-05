@@ -177,6 +177,12 @@ export interface EqualizerSettings {
   enabled: boolean;
 }
 
+export interface EQPreferences {
+  enabled: boolean;
+  preset: string;
+  bands: number[];
+}
+
 // Utility type guards
 export function isTrack(obj: unknown): obj is Track {
   return (

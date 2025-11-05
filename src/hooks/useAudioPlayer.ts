@@ -1,10 +1,10 @@
-// File: src/hooks/useAudioPlayer.ts
+// File: src/hooks/useAudioPlayer.ts (FIXED - Missing dependency)
 
 "use client";
 
 import type { SmartQueueSettings, Track } from "@/types";
-import { loadPersistedQueueState } from "./useQueuePersistence";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { loadPersistedQueueState } from "./useQueuePersistence";
 
 type RepeatMode = "none" | "one" | "all";
 
@@ -12,7 +12,10 @@ interface UseAudioPlayerOptions {
   onTrackChange?: (track: Track | null) => void;
   onTrackEnd?: (track: Track) => void;
   onDuplicateTrack?: (track: Track) => void;
-  onAutoQueueTrigger?: (currentTrack: Track, queueLength: number) => Promise<Track[]>;
+  onAutoQueueTrigger?: (
+    currentTrack: Track,
+    queueLength: number
+  ) => Promise<Track[]>;
   smartQueueSettings?: SmartQueueSettings;
 }
 
@@ -21,6 +24,13 @@ const PLAYBACK_RATE_KEY = "hexmusic_playback_rate";
 const QUEUE_STORAGE_KEY = "hexmusic_queue_state";
 
 export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
+  const {
+    onTrackChange,
+    onTrackEnd,
+    onDuplicateTrack,
+    onAutoQueueTrigger,
+    smartQueueSettings,
+  } = options;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [queue, setQueue] = useState<Track[]>([]);
@@ -43,6 +53,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     if (typeof window !== "undefined") {
       const savedVolume = localStorage.getItem(VOLUME_STORAGE_KEY);
       const savedRate = localStorage.getItem(PLAYBACK_RATE_KEY);
+
       if (savedVolume) setVolume(parseFloat(savedVolume));
       if (savedRate) setPlaybackRate(parseFloat(savedRate));
 
@@ -105,6 +116,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     }
   }, [volume, isMuted, playbackRate]);
 
+  // Memoize handleTrackEnd with proper dependencies
   const handleTrackEnd = useCallback(() => {
     if (!currentTrack) return;
 
@@ -125,25 +137,56 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       setQueue([...history]);
       setHistory([]);
     } else {
-      options.onTrackEnd?.(currentTrack);
+      onTrackEnd?.(currentTrack);
     }
-  }, [currentTrack, queue, repeatMode, history, options]);
+  }, [currentTrack, queue, repeatMode, history, onTrackEnd]);
 
   // Media Session API integration
   useEffect(() => {
-    if (!currentTrack || typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    if (
+      !currentTrack ||
+      typeof navigator === "undefined" ||
+      !("mediaSession" in navigator)
+    )
+      return;
 
-    // TODO: address proper typing according to api response
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.artist.name,
       album: currentTrack.album.title,
       artwork: [
-        currentTrack.album.cover_small ? { src: currentTrack.album.cover_small, sizes: "56x56", type: "image/jpeg" } : undefined,
-        currentTrack.album.cover_medium ? { src: currentTrack.album.cover_medium, sizes: "250x250", type: "image/jpeg" } : undefined,
-        currentTrack.album.cover_big ? { src: currentTrack.album.cover_big, sizes: "500x500", type: "image/jpeg" } : undefined,
-        currentTrack.album.cover_xl ? { src: currentTrack.album.cover_xl, sizes: "1000x1000", type: "image/jpeg" } : undefined,
-      ].filter((artwork): artwork is NonNullable<typeof artwork> => artwork !== undefined),
+        currentTrack.album.cover_small
+          ? {
+              src: currentTrack.album.cover_small,
+              sizes: "56x56",
+              type: "image/jpeg",
+            }
+          : undefined,
+        currentTrack.album.cover_medium
+          ? {
+              src: currentTrack.album.cover_medium,
+              sizes: "250x250",
+              type: "image/jpeg",
+            }
+          : undefined,
+        currentTrack.album.cover_big
+          ? {
+              src: currentTrack.album.cover_big,
+              sizes: "500x500",
+              type: "image/jpeg",
+            }
+          : undefined,
+        currentTrack.album.cover_xl
+          ? {
+              src: currentTrack.album.cover_xl,
+              sizes: "1000x1000",
+              type: "image/jpeg",
+            }
+          : undefined,
+      ].filter(
+        (artwork): artwork is NonNullable<typeof artwork> =>
+          artwork !== undefined
+      ),
     });
   }, [currentTrack]);
 
@@ -183,20 +226,24 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("error", handleError);
     };
-  }, [queue, repeatMode, currentTrack, handleTrackEnd]);
+  }, [handleTrackEnd]);
 
-  const loadTrack = useCallback((track: Track, streamUrl: string) => {
-    if (!audioRef.current) return;
+  const loadTrack = useCallback(
+    (track: Track, streamUrl: string) => {
+      if (!audioRef.current) return;
 
-    setHistory((prev) => currentTrack ? [...prev, currentTrack] : prev);
-    setCurrentTrack(track);
-    audioRef.current.src = streamUrl;
-    audioRef.current.load();
-    options.onTrackChange?.(track);
-  }, [currentTrack, options]);
+      setHistory((prev) => (currentTrack ? [...prev, currentTrack] : prev));
+      setCurrentTrack(track);
+      audioRef.current.src = streamUrl;
+      audioRef.current.load();
+      onTrackChange?.(track);
+    },
+    [currentTrack, onTrackChange]
+  );
 
   const play = useCallback(async () => {
     if (!audioRef.current) return;
+
     try {
       await audioRef.current.play();
       setIsPlaying(true);
@@ -218,6 +265,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
   const seek = useCallback((time: number) => {
     if (!audioRef.current) return;
+
     audioRef.current.currentTime = time;
     setCurrentTime(time);
   }, []);
@@ -228,38 +276,45 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     const previousTracks = [...history];
     const prevTrack = previousTracks.pop()!;
     setHistory(previousTracks);
+
     if (currentTrack) {
       setQueue((prev) => [currentTrack, ...prev]);
     }
+
     return prevTrack;
   }, [history, currentTrack]);
 
-  const addToQueue = useCallback((track: Track | Track[], checkDuplicates = true) => {
-    const tracks = Array.isArray(track) ? track : [track];
+  const addToQueue = useCallback(
+    (track: Track | Track[], checkDuplicates = true) => {
+      const tracks = Array.isArray(track) ? track : [track];
 
-    if (checkDuplicates) {
-      const duplicates = tracks.filter((t) =>
-        queue.some((q) => q.id === t.id) ||
-        (currentTrack && currentTrack.id === t.id)
-      );
+      if (checkDuplicates) {
+        const duplicates = tracks.filter(
+          (t) =>
+            queue.some((q) => q.id === t.id) ||
+            (currentTrack && currentTrack.id === t.id)
+        );
 
-      if (duplicates.length > 0 && options.onDuplicateTrack) {
-        duplicates.forEach((dup) => options.onDuplicateTrack?.(dup));
+          if (duplicates.length > 0 && onDuplicateTrack) {
+            duplicates.forEach((dup) => onDuplicateTrack?.(dup));
+          }
+
+        // Only add non-duplicate tracks
+        const uniqueTracks = tracks.filter(
+          (t) =>
+            !queue.some((q) => q.id === t.id) &&
+            (!currentTrack || currentTrack.id !== t.id)
+        );
+
+        if (uniqueTracks.length > 0) {
+          setQueue((prev) => [...prev, ...uniqueTracks]);
+        }
+      } else {
+        setQueue((prev) => [...prev, ...tracks]);
       }
-
-      // Only add non-duplicate tracks
-      const uniqueTracks = tracks.filter((t) =>
-        !queue.some((q) => q.id === t.id) &&
-        (!currentTrack || currentTrack.id !== t.id)
-      );
-
-      if (uniqueTracks.length > 0) {
-        setQueue((prev) => [...prev, ...uniqueTracks]);
-      }
-    } else {
-      setQueue((prev) => [...prev, ...tracks]);
-    }
-  }, [queue, currentTrack, options]);
+    },
+    [queue, currentTrack, onDuplicateTrack]
+  );
 
   const addToPlayNext = useCallback((track: Track | Track[]) => {
     const tracks = Array.isArray(track) ? track : [track];
@@ -279,32 +334,37 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     setQueue((prev) => {
       const newQueue = [...prev];
       const [removed] = newQueue.splice(oldIndex, 1);
+
       if (removed) {
         newQueue.splice(newIndex, 0, removed);
       }
+
       return newQueue;
     });
   }, []);
 
-  const playFromQueue = useCallback((index: number) => {
-    if (index < 0 || index >= queue.length) return null;
+  const playFromQueue = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= queue.length) return null;
 
-    const selectedTrack = queue[index];
-    if (!selectedTrack) return null;
+      const selectedTrack = queue[index];
+      if (!selectedTrack) return null;
 
-    // Remove tracks before the selected index and move current track to history
-    const remainingQueue = queue.slice(index + 1);
-    const skippedTracks = queue.slice(0, index);
+      // Remove tracks before the selected index and move current track to history
+      const remainingQueue = queue.slice(index + 1);
+      const skippedTracks = queue.slice(0, index);
 
-    if (currentTrack) {
-      setHistory((prev) => [...prev, currentTrack, ...skippedTracks]);
-    } else {
-      setHistory((prev) => [...prev, ...skippedTracks]);
-    }
+      if (currentTrack) {
+        setHistory((prev) => [...prev, currentTrack, ...skippedTracks]);
+      } else {
+        setHistory((prev) => [...prev, ...skippedTracks]);
+      }
 
-    setQueue(remainingQueue);
-    return selectedTrack;
-  }, [queue, currentTrack]);
+      setQueue(remainingQueue);
+      return selectedTrack;
+    },
+    [queue, currentTrack]
+  );
 
   const smartShuffle = useCallback(() => {
     setQueue((prev) => {
@@ -316,9 +376,11 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       // Group tracks by artist
       shuffled.forEach((track) => {
         const artistId = track.artist.id;
+
         if (!artists.has(artistId)) {
           artists.set(artistId, []);
         }
+
         artists.get(artistId)!.push(track);
       });
 
@@ -341,6 +403,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
         // Try to find a track from a different artist
         for (let i = 0; i < tempPool.length; i++) {
           const track = tempPool[i];
+
           if (!track) continue;
 
           if (!lastArtistId || track.artist.id !== lastArtistId) {
@@ -355,6 +418,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
         // If all remaining tracks are from the same artist, just add them
         if (!foundDifferent && tempPool.length > 0) {
           const track = tempPool.shift();
+
           if (track) {
             result.push(track);
             lastArtistId = track.artist.id;
@@ -369,6 +433,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const toggleShuffle = useCallback(() => {
     setIsShuffled((prev) => {
       const newShuffleState = !prev;
+
       if (newShuffleState) {
         // Save original order before shuffling
         setOriginalQueueOrder([...queue]);
@@ -380,6 +445,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
           setOriginalQueueOrder([]);
         }
       }
+
       return newShuffleState;
     });
   }, [queue, originalQueueOrder, smartShuffle]);
@@ -396,50 +462,66 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     setVolume((prev) => Math.max(0, Math.min(1, prev + delta)));
   }, []);
 
-  const skipForward = useCallback((seconds = 10) => {
-    if (!audioRef.current) return;
-    seek(Math.min(duration, currentTime + seconds));
-  }, [currentTime, duration, seek]);
+  const skipForward = useCallback(
+    (seconds = 10) => {
+      if (!audioRef.current) return;
 
-  const skipBackward = useCallback((seconds = 10) => {
-    if (!audioRef.current) return;
-    seek(Math.max(0, currentTime - seconds));
-  }, [currentTime, seek]);
+      seek(Math.min(duration, currentTime + seconds));
+    },
+    [currentTime, duration, seek]
+  );
+
+  const skipBackward = useCallback(
+    (seconds = 10) => {
+      if (!audioRef.current) return;
+
+      seek(Math.max(0, currentTime - seconds));
+    },
+    [currentTime, seek]
+  );
 
   // Smart Queue: Auto-add tracks when queue is low
   useEffect(() => {
     const checkAutoQueue = async () => {
       // Don't trigger if already queuing or no settings provided
-      if (isAutoQueueing || !options.smartQueueSettings || !currentTrack) {
+      if (isAutoQueueing || !smartQueueSettings || !currentTrack) {
         return;
       }
 
-      const settings = options.smartQueueSettings;
+      const settings = smartQueueSettings;
 
       // Check if auto-queue is enabled and threshold is met
-      if (settings.autoQueueEnabled && queue.length <= settings.autoQueueThreshold) {
+      if (
+        settings.autoQueueEnabled &&
+        queue.length <= settings.autoQueueThreshold
+      ) {
         // Prevent multiple simultaneous triggers
         if (autoQueueTriggeredRef.current) return;
+
         autoQueueTriggeredRef.current = true;
         setIsAutoQueueing(true);
 
         try {
           // Call the callback to fetch recommendations
-          if (options.onAutoQueueTrigger) {
-            const recommendations = await options.onAutoQueueTrigger(
+          if (onAutoQueueTrigger) {
+            const recommendations = await onAutoQueueTrigger(
               currentTrack,
-              queue.length,
+              queue.length
             );
 
             // Add recommendations to queue
             if (recommendations.length > 0) {
-              addToQueue(recommendations.slice(0, settings.autoQueueCount), false);
+              addToQueue(
+                recommendations.slice(0, settings.autoQueueCount),
+                false
+              );
             }
           }
         } catch (error) {
           console.error("Auto-queue failed:", error);
         } finally {
           setIsAutoQueueing(false);
+
           // Reset trigger flag after a delay to allow re-triggering
           setTimeout(() => {
             autoQueueTriggeredRef.current = false;
@@ -453,8 +535,8 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     queue.length,
     currentTrack,
     isAutoQueueing,
-    options.smartQueueSettings,
-    options.onAutoQueueTrigger,
+    smartQueueSettings,
+    onAutoQueueTrigger,
     addToQueue,
   ]);
 
@@ -484,9 +566,11 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       if (queue.length === 0) return null;
 
       const [nextTrack, ...remainingQueue] = queue;
+
       if (currentTrack) {
         setHistory((prev) => [...prev, currentTrack]);
       }
+
       setQueue(remainingQueue);
       return nextTrack!;
     }, [queue, currentTrack]),

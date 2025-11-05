@@ -41,17 +41,11 @@ const PRESETS: EqualizerPreset[] = [
   { name: "Electronic", bands: [5, 4, 1, 0, -2, 2, 1, 2, 5] },
 ];
 
-interface EQPreferences {
-  enabled: boolean;
-  preset: string;
-  bands: number[];
-}
-
 export function useEqualizer(audioElement: HTMLAudioElement | null) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const filtersRef = useRef<BiquadFilterNode[]>([]);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+const debounceTimerRef = useRef<number | null>(null);
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
