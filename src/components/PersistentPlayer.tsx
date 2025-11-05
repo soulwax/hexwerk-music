@@ -10,17 +10,17 @@ import MaturePlayer from "./Player";
 // Dynamic imports to prevent SSR issues with Web Audio API
 const AudioVisualizer = dynamic(
   () => import("./AudioVisualizer").then((mod) => mod.AudioVisualizer),
-  { ssr: false }
+  { ssr: false },
 );
 
 const Equalizer = dynamic(
   () => import("./Equalizer").then((mod) => mod.Equalizer),
-  { ssr: false }
+  { ssr: false },
 );
 
 const EnhancedQueue = dynamic(
   () => import("./EnhancedQueue").then((mod) => mod.EnhancedQueue),
-  { ssr: false }
+  { ssr: false },
 );
 
 export default function PersistentPlayer() {
@@ -31,7 +31,7 @@ export default function PersistentPlayer() {
   return (
     <>
       {/* Main Player */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed right-0 bottom-0 left-0 z-50">
         <MaturePlayer
           currentTrack={player.currentTrack}
           queue={player.queue}
@@ -74,8 +74,13 @@ export default function PersistentPlayer() {
             // TODO: Implement save queue as playlist functionality
             console.log("Save queue as playlist - to be implemented");
           }}
-          onAddSimilarTracks={player.addSimilarTracks}
-          isAutoQueueing={player.isAutoQueueing}
+          onAddSimilarTracks={
+            player.addSimilarTracks ??
+            (() => {
+              /* No similar tracks available */
+            })
+          }
+          isAutoQueueing={player.isAutoQueueing ?? false}
         />
       )}
 
