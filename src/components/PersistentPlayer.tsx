@@ -3,9 +3,11 @@
 "use client";
 
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import MaturePlayer from "./Player";
+import MobilePlayer from "./MobilePlayer";
 
 // Dynamic imports to prevent SSR issues with Web Audio API
 const AudioVisualizer = dynamic(
@@ -27,38 +29,45 @@ export default function PersistentPlayer() {
   const player = useGlobalPlayer();
   const [showQueue, setShowQueue] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
+  const isMobile = useIsMobile();
+
+  const playerProps = {
+    currentTrack: player.currentTrack,
+    queue: player.queue,
+    isPlaying: player.isPlaying,
+    currentTime: player.currentTime,
+    duration: player.duration,
+    volume: player.volume,
+    isMuted: player.isMuted,
+    isShuffled: player.isShuffled,
+    repeatMode: player.repeatMode,
+    playbackRate: player.playbackRate,
+    isLoading: player.isLoading,
+    onPlayPause: player.togglePlay,
+    onNext: player.playNext,
+    onPrevious: player.playPrevious,
+    onSeek: player.seek,
+    onVolumeChange: player.setVolume,
+    onToggleMute: () => player.setIsMuted(!player.isMuted),
+    onToggleShuffle: player.toggleShuffle,
+    onCycleRepeat: player.cycleRepeatMode,
+    onPlaybackRateChange: player.setPlaybackRate,
+    onSkipForward: player.skipForward,
+    onSkipBackward: player.skipBackward,
+    onToggleQueue: () => setShowQueue(!showQueue),
+    onToggleEqualizer: () => setShowEqualizer(!showEqualizer),
+  };
 
   return (
     <>
-      {/* Main Player */}
-      <div className="fixed right-0 bottom-0 left-0 z-50">
-        <MaturePlayer
-          currentTrack={player.currentTrack}
-          queue={player.queue}
-          isPlaying={player.isPlaying}
-          currentTime={player.currentTime}
-          duration={player.duration}
-          volume={player.volume}
-          isMuted={player.isMuted}
-          isShuffled={player.isShuffled}
-          repeatMode={player.repeatMode}
-          playbackRate={player.playbackRate}
-          isLoading={player.isLoading}
-          onPlayPause={player.togglePlay}
-          onNext={player.playNext}
-          onPrevious={player.playPrevious}
-          onSeek={player.seek}
-          onVolumeChange={player.setVolume}
-          onToggleMute={() => player.setIsMuted(!player.isMuted)}
-          onToggleShuffle={player.toggleShuffle}
-          onCycleRepeat={player.cycleRepeatMode}
-          onPlaybackRateChange={player.setPlaybackRate}
-          onSkipForward={player.skipForward}
-          onSkipBackward={player.skipBackward}
-          onToggleQueue={() => setShowQueue(!showQueue)}
-          onToggleEqualizer={() => setShowEqualizer(!showEqualizer)}
-        />
-      </div>
+      {/* Adaptive Player - Mobile or Desktop */}
+      {isMobile ? (
+        <MobilePlayer {...playerProps} />
+      ) : (
+        <div className="fixed right-0 bottom-0 left-0 z-50">
+          <MaturePlayer {...playerProps} />
+        </div>
+      )}
 
       {/* Enhanced Queue Panel */}
       {showQueue && (
