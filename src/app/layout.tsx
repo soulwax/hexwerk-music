@@ -17,7 +17,7 @@ const geist = Geist({
 });
 
 export const metadata = {
-  title: "HexMusic Stream",
+  title: "Starchild Music Stream",
   description: "Modern music streaming application",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
