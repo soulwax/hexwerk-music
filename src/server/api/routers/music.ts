@@ -3,6 +3,7 @@
 import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { ENABLE_AUDIO_FEATURES } from "@/config/features";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import {
   audioFeatures,
@@ -17,7 +18,6 @@ import {
   searchHistory,
   userPreferences,
 } from "@/server/db/schema";
-import type { Track } from "@/types";
 import {
   fetchDeezerRecommendations,
   fetchHybridRecommendations,
@@ -25,7 +25,7 @@ import {
   getCacheExpiryDate,
   shuffleWithDiversity,
 } from "@/server/services/recommendations";
-import { ENABLE_AUDIO_FEATURES } from "@/config/features";
+import type { Track } from "@/types";
 
 const trackSchema = z.object({
   id: z.number(),
@@ -990,7 +990,7 @@ export const musicRouter = createTRPCRouter({
         diversity: z.enum(["strict", "balanced", "diverse"]).default("balanced"),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const allRecommendations: Track[] = [];
       const seenTrackIds = new Set<number>(input.seedTrackIds);
 

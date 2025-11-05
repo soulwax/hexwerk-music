@@ -18,7 +18,7 @@ module.exports = {
       // ============================================
       // PRODUCTION CONFIGURATION
       // ============================================
-      name: 'hexmusic-prod',
+      name: 'starchild--music-frontend-prod',
       script: 'node_modules/next/dist/bin/next',
       args: 'start --port 3222',
 
@@ -104,10 +104,10 @@ module.exports = {
   deploy: {
     production: {
       user: 'node',
-      host: ['hex.madtec.org', 'music.soulwax.dev'],
+      host: ['soulwax.dev'],
       ref: 'origin/main',
-      repo: 'git@github.com:soulwax/hexwerk-music.git',
-      path: '/var/www/hexmusic',
+      repo: 'git@github.com:soulwax/starchild-music-frontend.git',
+      path: '/home/soulwax/workspace/Web/Frontends/starchild-music-frontend',
       'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.cjs --env production',
       'pre-setup': '',
       env: {

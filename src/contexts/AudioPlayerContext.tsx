@@ -8,10 +8,10 @@ import type { Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import {
-    createContext,
-    useCallback,
-    useContext,
-    type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  type ReactNode,
 } from "react";
 
 interface AudioPlayerContextType {
@@ -72,12 +72,12 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   );
 
   // Mutation for fetching recommendations
-  const getSimilarTracks = api.music.getSimilarTracks.useQuery;
+  // const getSimilarTracks = api.music.getSimilarTracks.useQuery;
   const generateSmartMixMutation = api.music.generateSmartMix.useMutation();
 
   // Auto-queue trigger callback
   const handleAutoQueueTrigger = useCallback(
-    async (currentTrack: Track, queueLength: number) => {
+    async (currentTrack: Track, _queueLength: number) => {
       if (!session || !smartQueueSettings) return [];
 
       try {
@@ -154,7 +154,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   // Smart Queue Functions
   const addSimilarTracks = useCallback(
-    async (trackId: number, count: number = 5) => {
+    async (trackId: number, count = 5) => {
       if (!session) return;
 
       try {
@@ -190,7 +190,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   );
 
   const generateSmartMix = useCallback(
-    async (seedTrackIds: number[], count: number = 50) => {
+    async (seedTrackIds: number[], count = 50) => {
       if (!session) return;
 
       try {

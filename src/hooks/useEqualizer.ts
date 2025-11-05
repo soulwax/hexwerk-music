@@ -1,7 +1,8 @@
-// File: src/hooks/useEqualizer.ts
+// File: src/hooks/useEqualizer.ts (FIXED - Type-Safe)
 
 "use client";
 
+import { api } from "@/trpc/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface EqualizerBand {
@@ -40,51 +41,64 @@ const PRESETS: EqualizerPreset[] = [
   { name: "Electronic", bands: [5, 4, 1, 0, -2, 2, 1, 2, 5] },
 ];
 
-const EQ_STORAGE_KEY = "hexmusic_equalizer";
+interface EQPreferences {
+  enabled: boolean;
+  preset: string;
+  bands: number[];
+}
 
 export function useEqualizer(audioElement: HTMLAudioElement | null) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const filtersRef = useRef<BiquadFilterNode[]>([]);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [isInitialized, setIsInitialized] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const [bands, setBands] = useState<EqualizerBand[]>(DEFAULT_BANDS);
-  const [currentPreset, setCurrentPreset] = useState<string>("Flat");
+  const [currentPreset, setCurrentPreset] = useState("Flat");
 
-  // Load saved EQ settings
+  // Fetch preferences from server - Fixed typing
+  const { data: preferences, error: preferencesError } =
+    api.equalizer.getPreferences.useQuery(undefined, {
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+    });
+
+  // Mutations for persisting to database - Fixed typing
+  const updatePreferencesMutation = api.equalizer.updatePreferences.useMutation({
+    onError: (error) => {
+      console.error("Failed to update equalizer preferences:", error.message);
+    },
+  });
+
+  const applyPresetMutation = api.equalizer.applyPreset.useMutation({
+    onError: (error) => {
+      console.error("Failed to apply preset:", error.message);
+    },
+  });
+
+  // Load saved EQ settings from server
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const saved = localStorage.getItem(EQ_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as {
-          bands?: EqualizerBand[];
-          preset?: string;
-          enabled?: boolean;
-        };
-        if (parsed.bands) setBands(parsed.bands);
-        if (parsed.preset) setCurrentPreset(parsed.preset);
-        if (typeof parsed.enabled === "boolean") setIsEnabled(parsed.enabled);
-      }
-    } catch (error) {
-      console.error("Failed to load EQ settings:", error);
-    }
-  }, []);
-
-  // Save EQ settings
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      localStorage.setItem(
-        EQ_STORAGE_KEY,
-        JSON.stringify({ bands, preset: currentPreset, enabled: isEnabled })
+    if (preferences) {
+      setBands((prev) =>
+        prev.map((b, i) => ({ ...b, gain: preferences.bands[i] ?? 0 }))
       );
-    } catch (error) {
-      console.error("Failed to save EQ settings:", error);
+      setCurrentPreset(preferences.preset);
+      setIsEnabled(preferences.enabled);
+    } else if (preferencesError) {
+      console.error("Failed to load preferences from server:", preferencesError.message);
     }
-  }, [bands, currentPreset, isEnabled]);
+  }, [preferences, preferencesError]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Initialize equalizer
   const initialize = useCallback(() => {
@@ -93,7 +107,9 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
     try {
       const AudioContext =
         window.AudioContext ||
-        (window as Window & { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
+        (window as Window & { webkitAudioContext?: typeof window.AudioContext })
+          .webkitAudioContext;
+
       if (!AudioContext) {
         console.error("Web Audio API is not supported");
         return;
@@ -130,31 +146,44 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
     }
   }, [audioElement, isInitialized, bands]);
 
-  // Update a single band
+  // Update a single band (debounced database save)
   const updateBand = useCallback(
     (index: number, gain: number) => {
       if (index < 0 || index >= bands.length) return;
 
-      // Update state
+      // Update state for immediate UI feedback
       setBands((prev) => {
         const newBands = [...prev];
         newBands[index] = { ...newBands[index]!, gain };
         return newBands;
       });
 
-      // Update filter node
+      // Update filter node immediately
       const filter = filtersRef.current[index];
       if (filter) {
         filter.gain.value = gain;
       }
 
-      // Clear preset selection when manually adjusting
+      // Mark as custom preset
       setCurrentPreset("Custom");
+
+      // Debounce the database save (1 second after user stops dragging)
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = window.setTimeout(() => {
+        updatePreferencesMutation.mutate({
+          bands: bands.map((b) => b.gain),
+          preset: "Custom",
+          enabled: isEnabled,
+        });
+      }, 1000);
     },
-    [bands.length]
+    [bands, updatePreferencesMutation, isEnabled]
   );
 
-  // Apply preset
+  // Apply preset and save to database
   const applyPreset = useCallback(
     (presetName: string) => {
       const preset = PRESETS.find((p) => p.name === presetName);
@@ -168,12 +197,18 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
       setBands(newBands);
       setCurrentPreset(presetName);
 
-      // Update filter nodes
+      // Update filter nodes immediately
       filtersRef.current.forEach((filter, index) => {
         filter.gain.value = preset.bands[index] ?? 0;
       });
+
+      // Save preset to database
+      applyPresetMutation.mutate({
+        preset: presetName,
+        bands: preset.bands,
+      });
     },
-    [bands]
+    [applyPresetMutation, bands]
   );
 
   // Reset all bands to 0
@@ -181,7 +216,7 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
     applyPreset("Flat");
   }, [applyPreset]);
 
-  // Toggle equalizer on/off
+  // Toggle equalizer on/off and persist to database
   const toggle = useCallback(() => {
     setIsEnabled((prev) => {
       const newState = !prev;
@@ -201,9 +236,16 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
         }
       }
 
+      // Save toggle state to database
+      updatePreferencesMutation.mutate({
+        enabled: newState,
+        bands: bands.map((b) => b.gain),
+        preset: currentPreset,
+      });
+
       return newState;
     });
-  }, []);
+  }, [updatePreferencesMutation, bands, currentPreset]);
 
   // Initialize when audio element is available
   useEffect(() => {
@@ -221,16 +263,14 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
     }
   }, [audioElement, isInitialized, initialize]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       filtersRef.current = [];
-
       if (audioContextRef.current) {
         void audioContextRef.current.close();
         audioContextRef.current = null;
       }
-
       sourceRef.current = null;
       setIsInitialized(false);
     };

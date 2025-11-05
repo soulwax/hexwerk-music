@@ -1,8 +1,8 @@
 // Recommendations Service
 // Handles fetching recommendations from various sources (Deezer, custom algorithms, etc.)
 
-import type { Track } from "@/types";
 import { ENABLE_AUDIO_FEATURES, RECOMMENDATION_CACHE_HOURS } from "@/config/features";
+import type { Track } from "@/types";
 
 /**
  * Fetch recommendations from Deezer API
@@ -26,7 +26,7 @@ import { ENABLE_AUDIO_FEATURES, RECOMMENDATION_CACHE_HOURS } from "@/config/feat
  */
 export async function fetchDeezerRecommendations(
   seedTrackId: number,
-  limit: number = 20,
+  limit = 20,
 ): Promise<Track[]> {
   try {
     // Fetch track radio (similar tracks)
@@ -58,7 +58,7 @@ export async function fetchDeezerRecommendations(
  */
 export async function fetchArtistRecommendations(
   artistId: number,
-  limit: number = 20,
+  limit = 20,
 ): Promise<Track[]> {
   try {
     const response = await fetch(
@@ -129,7 +129,7 @@ export function getCacheExpiryDate(): Date {
 export async function fetchHybridRecommendations(
   seedTrack: Track,
   userTopArtistIds: number[],
-  limit: number = 20,
+  limit = 20,
 ): Promise<Track[]> {
   const recommendations: Track[] = [];
   const seenTrackIds = new Set<number>([seedTrack.id]);
@@ -279,7 +279,7 @@ export function shuffleWithDiversity(tracks: Track[]): Track[] {
  */
 export async function fetchAudioFeatureRecommendations(
   seedTrackId: number,
-  limit: number = 20,
+  limit = 20,
 ): Promise<Track[]> {
   if (!ENABLE_AUDIO_FEATURES) {
     console.log("Audio features not enabled, falling back to Deezer recommendations");

@@ -6,213 +6,374 @@
 
 ---
 
-## ✨ Overview
+## ✨ Project Status
 
-**Starchild Music Stream** is a sleek **Next.js (T3 Stack)** web application for exploring and streaming music.
-It provides a minimal, neon-flat design built with **TailwindCSS**, **TypeScript**, and **App Router** architecture.
+**Development Stage**: This is an early-stage music streaming interface built as a proof-of-concept. The project should display a modern full-stack architecture with Next.js, TypeScript, and TailwindCSS, suitable as foundation for music discovery and playback.
 
-Users can:
+## 📋 Core Features
 
-* Search for music tracks via a backend API (e.g. Deezer-style endpoints)
-* Stream playable previews via a secure backend key
+### Current Implementation
 
----
+- **Music Search Interface**: Type-safe search functionality integrated with backend API endpoints
+- **Type-Safe Environment Validation**: Strict environment variable management using `@t3-oss/env-nextjs`
+- **Responsive UI**: Flat design with neon indigo accents, built with TailwindCSS v4
+- **HTML5 Audio Playback**: Lightweight audio player components using native browser APIs (no external player libraries)
+- **NextAuth Integration Ready**: OAuth 2.0 infrastructure configured for Discord authentication
+- **Database Schema Support**: Drizzle ORM configuration for PostgreSQL integration
 
-### 🧱 Tech Stack
+### Capabilities
 
-| Layer                      | Technology                                             | Purpose                              |
-| -------------------------- | ------------------------------------------------------ | ------------------------------------ |
-| **Framework**              | [Next.js 15 (App Router)](https://nextjs.org/docs/app) | Frontend & routing                   |
-| **Styling**                | [TailwindCSS v4](https://tailwindcss.com/)             | Responsive, flat design              |
-| **Type Safety**            | [TypeScript](https://www.typescriptlang.org/)          | Strict typing throughout             |
-| **Environment Management** | [@t3-oss/env-nextjs](https://env.t3.gg/)               | Typed environment validation         |
-| **Authentication**         | [NextAuth](https://next-auth.js.org/)                  | OAuth 2.0 / Discord ready            |
-| **Database**               | [Drizzle ORM](https://orm.drizzle.team/)               | PostgreSQL schema handling           |
-| **Player Components**      | React Hooks + HTML5 Audio                              | Lightweight, no external player libs |
+The application provides:
 
----
+- Pre-configured search UI components for music discovery
+- Player component scaffolding for audio preview playback
+- Type-safe React components with full TypeScript coverage
+- Environment management for multiple deployment stages
+- Responsive design system with CSS animations
 
-### ⚙️ Environment Setup
+## 🧱 Tech Stack
 
-Create a `.env` file based on the following structure:
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Framework** | Next.js 15 (App Router) | Server-side rendering & routing |
+| **Language** | TypeScript | Type-safe development |
+| **Styling** | TailwindCSS v4 | Utility-first CSS framework |
+| **Environment** | @t3-oss/env-nextjs | Type-safe environment configuration |
+| **Authentication** | NextAuth.js | OAuth 2.0 / Session management |
+| **Database** | Drizzle ORM | PostgreSQL schema & queries |
+| **Audio** | HTML5 Audio API | Native playback control |
 
-```env
-# .env
-AUTH_SECRET="your-generated-auth-secret"
-AUTH_DISCORD_ID="your-discord-app-id"
-AUTH_DISCORD_SECRET="your-discord-app-secret"
+## 🚀 Getting Started
 
-DATABASE_URL="postgres://user:password@host:port/dbname?sslmode=require"
+### Prerequisites
 
-API_URL="https://your-music-api.com/"
-STREAMING_KEY="your-secure-stream-key"
-```
+- Node.js 18+
+- npm or yarn
+- PostgreSQL database (for production use)
 
-#### Create a drizzle.env.ts file for database credentials
+### Installation
 
-```ts
-// File: drizzle.env.ts
-import "dotenv/config";
+1. **Clone & Install**
 
-const required = (key: string) => {
-  const val = process.env[key];
-  if (!val) throw new Error(`Missing required env var: ${key}`);
-  return val;
-};
+    ```bash
+    git clone https://github.com/soulwax/starchild-music-frontend.git
+    cd starchild-music-frontend
+    npm install
+    ```
 
-const config = {
-  DB_HOST: required("DB_HOST"),
-  DB_PORT: required("DB_PORT"),
-  DB_ADMIN_USER: required("DB_ADMIN_USER"),
-  DB_ADMIN_PASSWORD: required("DB_ADMIN_PASSWORD"),
-  DB_NAME: required("DB_NAME"),
-};
+2. **Environment Configuration**
 
-export default config;
-```
+    Create a `.env.local` file with required variables:
 
-This way you can keep your database credentials separate and out of version control.
+    ```yaml
+    # NextAuth Configuration
+    AUTH_SECRET=generate-with->npx auth secret
+    AUTH_DISCORD_ID="your-discord-app-id"
+    AUTH_DISCORD_SECRET="your-discord-app-secret"
 
-> ✅ **Tip:**
-> You can generate a secret for NextAuth with:
->
-> ```bash
-> npx auth secret
-> ```
+    # Database
+    DATABASE_URL="postgres://user:password@host:port/dbname?sslmode=require"
 
----
+    # API Configuration
+    API_URL="https://your-music-api.com/"
+    STREAMING_KEY="your-secure-stream-key"
+    ```
 
-### 🧩 Directory Structure
+    **Generate NextAuth Secret:**
 
-```plaintext
+    ```bash
+    npx auth secret
+    ```
+
+3. **Database Setup (Optional)**
+
+    For database operations, create `drizzle.env.ts`:
+
+    ```typescript
+    // File: drizzle.env.ts
+    import "dotenv/config";
+
+    const required = (key: string) => {
+      const val = process.env[key];
+      if (!val) throw new Error(`Missing required env var: ${key}`);
+      return val;
+    };
+
+    const config = {
+      DB_HOST: required("DB_HOST"),
+      DB_PORT: required("DB_PORT"),
+      DB_ADMIN_USER: required("DB_ADMIN_USER"),
+      DB_ADMIN_PASSWORD: required("DB_ADMIN_PASSWORD"),
+      DB_NAME: required("DB_NAME"),
+    };
+
+    export default config;
+    ```
+
+4. **Run Development Server**
+
+  ```bash
+  npm run dev
+  ```
+
+  Visit `http://localhost:3000` to see the application.
+
+## 📁 Project Structure
+
+```shell
 src/
- ├── app/
- │    ├── layout.tsx        # App Router layout
- │    └── page.tsx          # Main music search page
- ├── components/
- │    ├── Player.tsx        # Audio playback component
- │    └── TrackCard.tsx     # Music track card
- ├── styles/
- │    └── globals.css       # Custom Tailwind theme
- ├── utils/
- │    └── api.ts            # Type-safe API functions
- ├── types/
- │    └── index.ts          # Shared TypeScript interfaces
- └── env.js                 # Typed environment validation
+├── app/
+│   ├── layout.tsx          # Root layout with App Router setup
+│   └── page.tsx            # Main application page
+├── components/
+│   ├── Player.tsx          # Audio playback component
+│   └── TrackCard.tsx       # Individual track display
+├── styles/
+│   └── globals.css         # TailwindCSS v4 theme & animations
+├── utils/
+│   └── api.ts              # Type-safe API client functions
+├── types/
+│   └── index.ts            # Shared TypeScript interfaces
+└── env.js                  # Typed environment validation
 ```
 
----
+## 🎨 Design System
 
-### 🚀 Development
+| Element | Description |
+|---------|-------------|
+| **Cards & Buttons** | Rounded corners, flat surfaces with neon indigo borders/text |
+| **Background** | Matte deep gray gradient with subtle animated accents |
+| **Typography** | System sans-serif stack for crisp, accessible typography |
+| **Animations** | CSS-based `slide-up`, `fade-in`, and gradient flows |
+| **Color Palette** | Indigo accents on dark backgrounds for modern, minimal aesthetic |
 
-1. **Install dependencies**
+### Design Tokens
 
-   ```bash
-   npm install
-   ```
+Available in `src/styles/globals.css`:
 
-2. **Run local development server**
+```css
+:root {
+  --primary: #6366f1;      /* Indigo accent */
+  --background: #0f172a;   /* Deep gray */
+  --surface: #1e293b;      /* Card surface */
+  --text: #f1f5f9;         /* Primary text */
+  --text-muted: #94a3b8;   /* Secondary text */
+}
+```
 
-   ```bash
-   npm run dev
-   ```
+## 🔌 API Integration
 
-3. **Visit**
+### Required Backend API
+
+To function, this frontend requires a backend music API that provides:
+
+1. **Search Endpoint**
 
    ```plaintext
-   http://localhost:3000
+   GET /music/search?q={query}
    ```
 
----
+   Returns: Array of track objects
 
-### 🎨 Design System
+2. **Streaming Endpoint** (Optional)
 
-| Element             | Description                                              |
-| ------------------- | -------------------------------------------------------- |
-| **Cards & Buttons** | Rounded, flat surfaces with neon indigo accents          |
-| **Background**      | Matte deep gray gradient with animated accent highlights |
-| **Font**            | System Sans / UI default for crisp contrast              |
-| **Animation**       | Subtle `slide-up`, `fade-in`, and gradient flows         |
+   ```plaintext
+   GET /music/stream?key={KEY}&q={query}
+   ```
 
-See `src/styles/globals.css` for design tokens and animations.
+   Returns: Audio stream or preview URL
 
----
+### Supported API Formats
 
-### 🔑 API Requirements
+The application expects JSON responses compatible with **Deezer API format**:
 
-Starchild Music Stream **requires** a backend API that:
+```json
+{
+  "data": [
+    {
+      "id": "123456",
+      "title": "Track Name",
+      "artist": {
+        "name": "Artist Name"
+      },
+      "album": {
+        "title": "Album Name",
+        "cover": "https://..."
+      },
+      "preview": "https://..."
+    }
+  ]
+}
+```
 
-* Provides **legal access** to music metadata and audio previews.
-* Implements endpoints similar to:
+### Type-Safe API Functions
 
-  * `/music/search?q={query}`
-  * `/music/stream?key={KEY}&q={query}`
-* Returns JSON in the [Deezer API](https://developers.deezer.com/api) format or compatible structure.
+Example usage in `src/utils/api.ts`:
 
-> ⚖️ **Legal Note:**
-> This project does **not** include or distribute copyrighted music.
-> To use it publicly, you must connect it to a **legitimate licensed music API** or your own authorized backend that complies with copyright law in your jurisdiction.
-> Examples of legal data sources include:
->
-> * [Deezer API](https://developers.deezer.com/)
-> * [Spotify Web API](https://developer.spotify.com/documentation/web-api/)
-> * [Apple Music API](https://developer.apple.com/documentation/applemusicapi)
-> * or your self-hosted licensed audio content.
-
----
-
-### 🧠 Type Safety Highlights
-
-* Fully typed `env` schema validation (`src/env.js`)
-* Strongly typed API responses (`src/types/index.ts`)
-* Reusable `Track`, `Artist`, `Album`, and `StreamParams` interfaces
-* Type-safe component props across all React components
-
----
-
-### 🛠 Example API Integration
-
-```ts
-// File: src/utils/api.ts
+```typescript
 import { env } from "@/env";
 import type { SearchResponse, Track } from "@/types";
 
 export async function searchTracks(query: string): Promise<Track[]> {
   const url = new URL("music/search", env.API_URL);
   url.searchParams.set("q", query);
+  
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error("Search failed");
+  
   const json: SearchResponse = await res.json();
   return json.data;
 }
 ```
 
+## ⚖️ Legal & Licensing
+
+### Important Notice
+
+This project does **not** include or distribute copyrighted music. It is a frontend interface designed to work with legitimate, licensed music APIs.
+
+**To deploy publicly, you must connect it to a legally compliant music service**, such as:
+
+- **Deezer API** - Official music catalog with licensing
+- **Spotify Web API** - Requires OAuth and subscription agreement
+- **Apple Music API** - Licensed music streaming service
+- **Your own licensed content** - Self-hosted audio with proper rights
+
+**Do not use this with unauthorized music sources.**
+
+### License
+
+This project is licensed under the **GPL-3.0 License**. See the LICENSE file for details.
+
+## 🛠️ Development
+
+### Available Scripts
+
+```bash
+# Development server with hot reload
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Type checking
+npm run type-check
+
+# Linting (if configured)
+npm run lint
+```
+
+### TypeScript Configuration
+
+The project enforces strict TypeScript settings:
+
+- Full type checking enabled
+- No implicit `any` types
+- Required explicit null/undefined handling
+- Strict property initialization
+
+### Working with TailwindCSS v4
+
+This project uses **TailwindCSS v4** with pure CSS Variables (no `@apply` directives):
+
+```css
+/* globals.css */
+@import "tailwindcss";
+
+:root {
+  --primary: #6366f1;
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 rounded bg-[rgb(var(--primary))];
+  }
+}
+```
+
+## 🚨 Common Issues & Solutions
+
+### Issue: "Missing required env var"
+
+**Solution**: Ensure all required environment variables in `.env.local` are set and valid.
+
+### Issue: NextAuth not working
+
+**Solution**:
+
+1. Generate secret: `npx auth secret`
+2. Verify Discord OAuth app credentials
+3. Check callback URL matches your domain
+
+### Issue: Routing conflicts
+
+**Solution**: Ensure `src/pages/` directory is removed if using App Router (`src/app/`).
+
+### Issue: Database connection fails
+
+**Solution**:
+
+1. Verify DATABASE_URL format includes `?sslmode=require`
+2. Check PostgreSQL is running and accessible
+3. Confirm database exists and credentials are correct
+
+## 📈 Future Roadmap
+
+Potential enhancements for this project:
+
+- **Playlist Management** - Create and save playlists
+- **User Accounts** - Persist user preferences and favorites
+- **Advanced Search** - Filters by genre, artist, release date
+- **Audio Visualization** - Waveform display during playback
+- **Queue System** - Manage upcoming tracks
+- **Social Features** - Share playlists and recommendations
+- **Responsive Audio Player** - Enhanced mobile UI
+- **Dark/Light Theme Toggle** - User preference saving
+- **Offline Mode** - Cache downloaded tracks
+
+## 📝 Configuration Examples
+
+### Minimal Setup (No Database)
+
+For a basic search-only interface:
+
+```yaml
+AUTH_SECRET="your-secret"
+API_URL="https://api.deezer.com/"
+STREAMING_KEY="optional"
+```
+
+### Full Production Setup
+
+```yaml
+AUTH_SECRET="your-secret"
+AUTH_DISCORD_ID="discord-app-id"
+AUTH_DISCORD_SECRET="discord-app-secret"
+
+DATABASE_URL="postgres://prod_user:prod_pass@prod-host:5432/starchild?sslmode=require"
+
+API_URL="https://your-music-api.com/"
+STREAMING_KEY="your-secure-key"
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please ensure:
+
+1. All code is TypeScript with strict mode enabled
+2. Components are properly typed with interfaces
+3. Styling follows TailwindCSS v4 conventions
+4. Environment variables are added to type validation
+
+## 📜 Acknowledgments
+
+Built with the **T3 Stack** - a modern, type-safe full-stack framework for Next.js applications.
+
 ---
 
-### 💡 Development Notes
+## © 2025 soulwax @ GitHub
 
-* If both `src/pages/` and `src/app/` exist, remove `src/pages/index.tsx` to prevent routing conflicts.
-* `globals.css` is written for **TailwindCSS v4** — it uses `@import "tailwindcss";` and pure CSS variables, no `@apply`.
-* When changing environment variables, restart your dev server.
-
----
-
-### ⚡ Roadmap Ideas
-
-* [ ] Add playlist & queue system
-* [ ] Integrate waveform visualizer
-* [ ] Support `/track/[id]` routes with SSR
-* [ ] Extend theme switching (light / dark)
-* [ ] Add caching and rate limiting for API calls
-
----
-
-### 📜 License
-
-To read the License, see the [LICENSE](LICENSE.md) file
-
----
-
-**© 2025 soulwax@github / Kling
-
-*All trademarks, music data, and streaming rights remain the property of their respective owners.*
+*All music data, streaming rights, and trademarks remain the property of their respective owners.*

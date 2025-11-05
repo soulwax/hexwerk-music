@@ -1,7 +1,8 @@
-hexmusic-frontend
+starchild-music-frontend
 ├───.env.example
 ├───.env.production
 ├───.gitignore
+├───.markdownlint-cli2.jsonc
 ├───.pm2ignore
 ├───drizzle.config.ts
 ├───drizzle.env.ts
@@ -27,24 +28,31 @@ hexmusic-frontend
 │   ├───assets/
 │   │   └───emily-the-strange_vivid.png
 │   └───docs/
+│       ├───DATABASE_MIGRATION_GUIDE.md
 │       ├───IMPLEMENTATION_GUIDE.md
+│       ├───IMPLEMENTATION_SUMMARY.md
 │       ├───PM2_GUIDE.md
-│       └───PM2_QUICK_REFERENCE.md
+│       ├───PM2_QUICK_REFERENCE.md
+│       ├───SMART_QUEUE_DOCUMENTATION.md
+│       └───SMART_QUEUE_QUICKSTART.md
 ├───certs/
 │   └───ca.pem
 ├───drizzle/
 │   ├───0000_eager_gideon.sql
 │   ├───0001_strange_warlock.sql
 │   ├───0002_stiff_the_phantom.sql
+│   ├───0003_chemical_mastermind.sql
 │   └───meta/
 │       ├───0000_snapshot.json
 │       ├───0001_snapshot.json
 │       ├───0002_snapshot.json
+│       ├───0003_snapshot.json
 │       └───_journal.json
 ├───logs/
 │   └───pm2/
 │       ├───.gitkeep
 │       ├───combined.log
+│       ├───combined__2025-11-05_00-00-00.log
 │       ├───dev-error-14.log
 │       ├───dev-error-5.log
 │       ├───dev-error-9.log
@@ -52,7 +60,9 @@ hexmusic-frontend
 │       ├───dev-out-5.log
 │       ├───dev-out-9.log
 │       ├───error.log
-│       └───out.log
+│       ├───error__2025-11-05_00-00-00.log
+│       ├───out.log
+│       └───out__2025-11-05_00-00-00.log
 ├───public/
 │   └───favicon.ico
 └───src/
@@ -91,6 +101,8 @@ hexmusic-frontend
     │   ├───SessionProvider.tsx
     │   ├───Toast.tsx
     │   └───TrackCard.tsx
+    ├───config/
+    │   └───features.ts
     ├───contexts/
     │   ├───AudioPlayerContext.tsx
     │   └───ToastContext.tsx
@@ -110,9 +122,11 @@ hexmusic-frontend
     │   ├───auth/
     │   │   ├───config.ts
     │   │   └───index.ts
-    │   └───db/
-    │       ├───index.ts
-    │       └───schema.ts
+    │   ├───db/
+    │   │   ├───index.ts
+    │   │   └───schema.ts
+    │   └───services/
+    │       └───recommendations.ts
     ├───styles/
     │   └───globals.css
     ├───trpc/

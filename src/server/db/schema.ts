@@ -212,9 +212,9 @@ export const userPreferences = createTable(
     playbackRate: d.real().default(1.0).notNull(),
     repeatMode: d.varchar({ length: 20 }).default("none").notNull(), // 'none' | 'one' | 'all'
     shuffleEnabled: d.boolean().default(false).notNull(),
-    equalizerEnabled: d.boolean().default(false).notNull(),
-    equalizerPreset: d.varchar({ length: 50 }).default("Flat"),
-    equalizerBands: d.jsonb(), // Array of band gain values
+    equalizerEnabled: d.boolean().notNull().default(false),
+    equalizerPreset: d.varchar({ length: 255 }).notNull().default("Flat"),
+    equalizerBands: d.jsonb().$type<number[]>().default(sql`'[]'::jsonb`),
     visualizerType: d.varchar({ length: 20 }).default("bars"), // 'bars' | 'wave' | 'circular'
     visualizerEnabled: d.boolean().default(true).notNull(),
     compactMode: d.boolean().default(false).notNull(),

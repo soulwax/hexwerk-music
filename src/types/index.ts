@@ -1,5 +1,6 @@
 // File: src/types/index.ts
 
+
 export interface Artist {
   id: number;
   name: string;
@@ -168,8 +169,15 @@ export interface SimilarTrackOptions {
   useAudioFeatures?: boolean;
 }
 
-// Utility type guards
+export type EqualizerType = "Flat" | "Rock" | "Pop" | "Jazz" | "Classical" | "Bass Boost" | "Treble Boost" | "Vocal" | "Electronic" | "Custom";
 
+export interface EqualizerSettings {
+  preset: string;
+  bands: number[];
+  enabled: boolean;
+}
+
+// Utility type guards
 export function isTrack(obj: unknown): obj is Track {
   return (
     typeof obj === 'object' &&
