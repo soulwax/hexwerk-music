@@ -4,7 +4,7 @@
 
 import { useEqualizer } from "@/hooks/useEqualizer";
 import { Power, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 interface EqualizerProps {
   audioElement: HTMLAudioElement | null;
@@ -13,13 +13,11 @@ interface EqualizerProps {
 
 export function Equalizer({ audioElement, onClose }: EqualizerProps) {
   const equalizer = useEqualizer(audioElement);
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (audioElement && !equalizer.isInitialized) {
       const handleInteraction = () => {
         equalizer.initialize();
-        setIsReady(true);
       };
 
       document.addEventListener("click", handleInteraction, { once: true });
@@ -38,24 +36,24 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full max-w-md bg-gray-900 border-l border-gray-800 z-50 flex flex-col">
+    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-gray-800 bg-gray-900">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-800 p-4">
         <h2 className="text-xl font-bold text-white">Equalizer</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={equalizer.reset}
-            className="p-2 rounded-full hover:bg-gray-800 transition-colors text-gray-400 hover:text-white"
+            className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
             title="Reset to flat"
           >
             <RotateCcw className="h-5 w-5" />
           </button>
           <button
             onClick={equalizer.toggle}
-            className={`p-2 rounded-full transition-colors ${
+            className={`rounded-full p-2 transition-colors ${
               equalizer.isEnabled
                 ? "bg-accent/20 text-accent"
-                : "text-gray-400 hover:text-white hover:bg-gray-800"
+                : "text-gray-400 hover:bg-gray-800 hover:text-white"
             }`}
             title={equalizer.isEnabled ? "Disable EQ" : "Enable EQ"}
           >
@@ -63,7 +61,7 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
           </button>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-800 transition-colors text-gray-300"
+            className="rounded-full p-2 text-gray-300 transition-colors hover:bg-gray-800"
           >
             <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -77,9 +75,11 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
       </div>
 
       {!equalizer.isInitialized ? (
-        <div className="flex-1 flex items-center justify-center p-8 text-center">
+        <div className="flex flex-1 items-center justify-center p-8 text-center">
           <div>
-            <p className="text-gray-400 mb-2">Click anywhere to enable equalizer</p>
+            <p className="mb-2 text-gray-400">
+              Click anywhere to enable equalizer
+            </p>
             <p className="text-xs text-gray-500">
               Web Audio API requires user interaction
             </p>
@@ -88,14 +88,14 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
       ) : (
         <>
           {/* Presets */}
-          <div className="p-4 border-b border-gray-800">
-            <label className="block text-sm font-medium text-gray-400 mb-2">
+          <div className="border-b border-gray-800 p-4">
+            <label className="mb-2 block text-sm font-medium text-gray-400">
               Presets
             </label>
             <select
               value={equalizer.currentPreset}
               onChange={(e) => equalizer.applyPreset(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              className="focus:ring-accent w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:border-transparent focus:ring-2 focus:outline-none"
             >
               {equalizer.presets.map((preset) => (
                 <option key={preset.name} value={preset.name}>
@@ -109,24 +109,24 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
           </div>
 
           {/* Frequency Bands */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="flex items-end justify-between gap-2 h-64 mb-4">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="mb-6 flex items-end justify-between gap-4">
               {equalizer.bands.map((band, index) => {
                 const percentage = ((band.gain + 12) / 24) * 100;
 
                 return (
                   <div
                     key={band.frequency}
-                    className="flex-1 flex flex-col items-center gap-2"
+                    className="flex flex-1 flex-col items-center gap-3"
                   >
                     {/* Gain value */}
-                    <span className="text-xs font-medium text-gray-400 min-w-[2rem] text-center">
+                    <span className="eq-gain-label">
                       {band.gain > 0 ? "+" : ""}
                       {band.gain.toFixed(1)}
                     </span>
 
-                    {/* Slider container */}
-                    <div className="relative flex-1 w-8">
+                    {/* Slider container with FIXED HEIGHT */}
+                    <div className="relative h-[400px] w-10">
                       <input
                         type="range"
                         min={-12}
@@ -134,25 +134,27 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
                         step={0.5}
                         value={band.gain}
                         onChange={(e) =>
-                          equalizer.updateBand(index, parseFloat(e.target.value))
+                          equalizer.updateBand(
+                            index,
+                            parseFloat(e.target.value),
+                          )
                         }
                         disabled={!equalizer.isEnabled}
-                        className="absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer vertical-slider"
+                        className="vertical-slider absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent"
                         style={{
-                          writingMode: "bt-lr",
-                          WebkitAppearance: "slider-vertical",
+                          writingMode: "vertical-lr" as const,
+                          WebkitAppearance: "slider-vertical" as React.CSSProperties["WebkitAppearance"],
+                          transform: "rotate(180deg)",
                         }}
                       />
 
                       {/* Visual slider track */}
-                      <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-center items-center pointer-events-none">
-                        <div className="w-1 h-full bg-gray-700 rounded-full relative overflow-hidden">
+                      <div className="pointer-events-none absolute inset-x-0 top-0 bottom-0 flex flex-col items-center justify-center">
+                        <div className="eq-slider-track">
                           {/* Filled portion */}
                           <div
-                            className={`absolute bottom-0 left-0 right-0 rounded-full transition-all ${
-                              equalizer.isEnabled
-                                ? "bg-accent"
-                                : "bg-gray-600"
+                            className={`eq-slider-fill ${
+                              !equalizer.isEnabled ? "disabled" : ""
                             }`}
                             style={{
                               height: `${Math.abs(percentage - 50)}%`,
@@ -161,13 +163,13 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
                             }}
                           />
                           {/* Center line */}
-                          <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-500" />
+                          <div className="eq-slider-center" />
                         </div>
                       </div>
                     </div>
 
                     {/* Frequency label */}
-                    <span className="text-xs text-gray-500 min-w-[2rem] text-center">
+                    <span className="eq-freq-label">
                       {formatFrequency(band.frequency)}
                     </span>
                   </div>
@@ -176,7 +178,7 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
             </div>
 
             {/* Instructions */}
-            <div className="text-xs text-gray-500 text-center space-y-1">
+            <div className="space-y-1 text-center text-xs text-gray-500">
               <p>Drag sliders to adjust frequency bands</p>
               <p>Range: -12dB to +12dB</p>
             </div>

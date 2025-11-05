@@ -1,4 +1,4 @@
-// File: src/hooks/useAudioPlayer.ts (FIXED - Missing dependency)
+// File: src/hooks/useAudioPlayer.ts
 
 "use client";
 

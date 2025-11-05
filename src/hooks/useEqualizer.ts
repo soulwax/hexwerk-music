@@ -1,4 +1,4 @@
-// File: src/hooks/useEqualizer.ts (FIXED - Type-Safe)
+// File: src/hooks/useEqualizer.ts
 
 "use client";
 
@@ -52,14 +52,14 @@ const debounceTimerRef = useRef<number | null>(null);
   const [bands, setBands] = useState<EqualizerBand[]>(DEFAULT_BANDS);
   const [currentPreset, setCurrentPreset] = useState("Flat");
 
-  // Fetch preferences from server - Fixed typing
+  // Fetch preferences from server
   const { data: preferences, error: preferencesError } =
     api.equalizer.getPreferences.useQuery(undefined, {
       refetchOnWindowFocus: false,
       refetchOnMount: true,
     });
 
-  // Mutations for persisting to database - Fixed typing
+  // Mutations for persisting to database
   const updatePreferencesMutation = api.equalizer.updatePreferences.useMutation({
     onError: (error) => {
       console.error("Failed to update equalizer preferences:", error.message);
