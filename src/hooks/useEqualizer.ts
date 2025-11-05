@@ -51,7 +51,7 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const filtersRef = useRef<BiquadFilterNode[]>([]);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
