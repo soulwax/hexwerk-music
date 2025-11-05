@@ -40,7 +40,7 @@ export default function RootLayout({
             <ToastProvider>
               <AudioPlayerProvider>
                 {/* Main content with bottom padding for player and mobile nav */}
-                <div className="pb-24 md:pb-24">{children}</div>
+                <div className="pb-36 md:pb-24">{children}</div>
                 {/* Mobile bottom navigation */}
                 <MobileNavigation />
                 {/* Persistent player - stays on all pages */}
