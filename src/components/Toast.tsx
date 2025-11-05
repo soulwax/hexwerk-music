@@ -72,16 +72,16 @@ export default function Toast({
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white shadow-lg transition-all duration-300 ${
+      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-white shadow-lg backdrop-blur-sm transition-all duration-300 ${
         bgColors[type]
       } ${
         isExiting
-          ? "translate-x-full opacity-0"
-          : "translate-x-0 opacity-100"
+          ? "scale-95 opacity-0 md:translate-x-full"
+          : "scale-100 opacity-100 md:translate-x-0"
       }`}
     >
       {icons[type]}
-      <span className="text-sm font-medium">{message}</span>
+      <span className="flex-1 text-sm font-medium">{message}</span>
       <button
         onClick={() => {
           setIsExiting(true);
@@ -90,9 +90,9 @@ export default function Toast({
             onClose?.();
           }, 300);
         }}
-        className="ml-2 text-white/80 transition hover:text-white"
+        className="touch-target ml-2 flex-shrink-0 text-white/80 transition hover:text-white"
       >
-        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+        <svg className="h-5 w-5 md:h-4 md:w-4" fill="currentColor" viewBox="0 0 20 20">
           <path
             fillRule="evenodd"
             d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
