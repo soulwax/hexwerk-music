@@ -57,3 +57,5 @@ ca.pem
 
 # db credentials
 drizzle.env.js
+
+.github/*.md
