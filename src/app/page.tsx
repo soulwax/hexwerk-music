@@ -114,16 +114,18 @@ function SearchPageContent() {
   return (
     <>
       <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
-          <div className="mx-auto max-w-7xl px-4 py-4">
+        {/* Mobile-optimized header */}
+        <header className="safe-top sticky top-0 z-40 border-b border-gray-800 bg-black/95 backdrop-blur-lg">
+          <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center gap-2">
-                <h1 className="accent-gradient text-glow text-2xl font-bold">
+                <h1 className="accent-gradient text-glow text-xl font-bold md:text-2xl">
                   🌟 Starchild Music
                 </h1>
               </Link>
 
-              <nav className="flex items-center gap-4">
+              {/* Desktop navigation - hidden on mobile */}
+              <nav className="hidden items-center gap-4 md:flex">
                 {session ? (
                   <>
                     <Link
@@ -167,22 +169,44 @@ function SearchPageContent() {
                   </Link>
                 )}
               </nav>
+
+              {/* Mobile queue button */}
+              {session && (
+                <button
+                  onClick={() => setShowQueue(!showQueue)}
+                  className="touch-target relative flex items-center justify-center text-gray-300 transition hover:text-white md:hidden"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                  {player.queue.length > 0 && (
+                    <span className="bg-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
+                      {player.queue.length}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
-          <div className="card slide-up mb-8 w-full p-6">
-            <div className="mb-4 flex gap-3">
+        <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-4 md:px-4 md:py-8">
+          <div className="card slide-up mb-4 w-full p-4 md:mb-8 md:p-6">
+            <div className="mb-4 flex flex-col gap-2 md:flex-row md:gap-3">
               <input
-                className="input-text flex-1"
+                className="input-text flex-1 text-base md:text-sm"
                 placeholder="Search for songs, artists, or albums..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
               />
               <button
-                className="btn-primary px-8"
+                className="btn-primary touch-target-lg w-full md:w-auto md:px-8"
                 onClick={() => void handleSearch()}
                 disabled={loading}
               >
@@ -197,7 +221,7 @@ function SearchPageContent() {
                   <button
                     key={search}
                     onClick={() => void handleSearch(search)}
-                    className="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-300 transition hover:bg-gray-700"
+                    className="touch-active rounded-full bg-gray-800 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-700 md:py-1"
                   >
                     {search}
                   </button>
@@ -236,7 +260,7 @@ function SearchPageContent() {
                       <button
                         onClick={() => void handleLoadMore()}
                         disabled={loadingMore}
-                        className="btn-primary px-8"
+                        className="btn-primary touch-target-lg w-full md:w-auto md:px-8"
                       >
                         {loadingMore
                           ? "Loading..."
