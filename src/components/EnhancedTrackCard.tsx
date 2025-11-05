@@ -106,21 +106,21 @@ export default function EnhancedTrackCard({
     "/placeholder.png";
 
   return (
-    <div className="group relative flex items-center gap-4 rounded-xl bg-gray-800 p-4 transition hover:bg-gray-700">
+    <div className="group relative flex items-center gap-3 rounded-xl bg-gray-800 p-3 transition hover:bg-gray-700 md:gap-4 md:p-4">
       <div className="relative flex-shrink-0">
         <Image
           src={coverImage}
           alt={track.title}
-          width={64}
-          height={64}
-          className="rounded-lg"
+          width={80}
+          height={80}
+          className="h-16 w-16 rounded-lg md:h-16 md:w-16"
         />
         <button
           onClick={() => onPlay(track)}
-          className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition group-hover:opacity-100"
+          className="touch-active absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition group-hover:opacity-100 md:opacity-0"
         >
           <svg
-            className="h-8 w-8 text-white"
+            className="h-10 w-10 text-white md:h-8 md:w-8"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -135,7 +135,7 @@ export default function EnhancedTrackCard({
 
       <div className="min-w-0 flex-1">
         <h3
-          className="cursor-pointer truncate font-semibold text-white hover:underline"
+          className="no-select cursor-pointer truncate text-base font-semibold text-white hover:underline md:text-base"
           onClick={() => onPlay(track)}
         >
           {track.title}
@@ -149,10 +149,10 @@ export default function EnhancedTrackCard({
       </div>
 
       {showActions && (
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-1 md:gap-2">
           <button
             onClick={toggleFavorite}
-            className={`rounded-full p-2 transition-colors ${
+            className={`touch-target touch-active rounded-full transition-colors ${
               favoriteData?.isFavorite
                 ? "text-red-500 hover:text-red-400"
                 : "text-gray-400 hover:text-white"
@@ -161,7 +161,7 @@ export default function EnhancedTrackCard({
           >
             {favoriteData?.isFavorite ? (
               <svg
-                className={`h-5 w-5 ${
+                className={`h-6 w-6 md:h-5 md:w-5 ${
                   isHeartAnimating ? "animate-heart-pulse" : ""
                 }`}
                 fill="currentColor"
@@ -175,7 +175,7 @@ export default function EnhancedTrackCard({
               </svg>
             ) : (
               <svg
-                className={`h-5 w-5 ${
+                className={`h-6 w-6 md:h-5 md:w-5 ${
                   isHeartAnimating ? "animate-heart-pulse" : ""
                 }`}
                 fill="none"
@@ -194,11 +194,11 @@ export default function EnhancedTrackCard({
 
           <button
             onClick={handleAddToQueue}
-            className="rounded-full p-2 text-gray-400 transition hover:text-white hover:scale-110"
+            className="touch-target touch-active rounded-full text-gray-400 transition hover:scale-110 hover:text-white"
             title="Add to queue"
           >
             <svg
-              className="h-5 w-5"
+              className="h-6 w-6 md:h-5 md:w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -218,9 +218,9 @@ export default function EnhancedTrackCard({
                 e.stopPropagation();
                 setShowMenu(!showMenu);
               }}
-              className="rounded-full p-2 text-gray-400 transition hover:text-white"
+              className="touch-target touch-active rounded-full text-gray-400 transition hover:text-white"
             >
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="h-6 w-6 md:h-5 md:w-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
               </svg>
             </button>
@@ -231,8 +231,8 @@ export default function EnhancedTrackCard({
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg">
-                  <div className="px-4 py-2 text-xs font-semibold uppercase text-gray-400">
+                <div className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg md:w-48">
+                  <div className="px-4 py-3 text-xs font-semibold uppercase text-gray-400 md:py-2">
                     Add to Playlist
                   </div>
                   {playlists && playlists.length > 0 ? (
@@ -240,14 +240,14 @@ export default function EnhancedTrackCard({
                       <button
                         key={playlist.id}
                         onClick={() => handleAddToPlaylist(playlist.id)}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-300 transition hover:bg-gray-800 hover:text-white"
+                        className="w-full px-4 py-3 text-left text-sm text-gray-300 transition hover:bg-gray-800 hover:text-white md:py-2"
                         disabled={addToPlaylist.isPending}
                       >
                         {playlist.name}
                       </button>
                     ))
                   ) : (
-                    <div className="px-4 py-2 text-sm text-gray-500">
+                    <div className="px-4 py-3 text-sm text-gray-500 md:py-2">
                       No playlists yet
                     </div>
                   )}
