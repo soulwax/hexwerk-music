@@ -2,7 +2,7 @@
 
 "use client";
 
-import type { Track } from "@/types";
+import type { SmartQueueSettings, Track } from "@/types";
 import { loadPersistedQueueState } from "./useQueuePersistence";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -12,6 +12,8 @@ interface UseAudioPlayerOptions {
   onTrackChange?: (track: Track | null) => void;
   onTrackEnd?: (track: Track) => void;
   onDuplicateTrack?: (track: Track) => void;
+  onAutoQueueTrigger?: (currentTrack: Track, queueLength: number) => Promise<Track[]>;
+  smartQueueSettings?: SmartQueueSettings;
 }
 
 const VOLUME_STORAGE_KEY = "hexmusic_volume";
@@ -33,6 +35,8 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [originalQueueOrder, setOriginalQueueOrder] = useState<Track[]>([]);
+  const [isAutoQueueing, setIsAutoQueueing] = useState(false);
+  const autoQueueTriggeredRef = useRef(false);
 
   // Load persisted settings and queue state
   useEffect(() => {
@@ -402,6 +406,58 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     seek(Math.max(0, currentTime - seconds));
   }, [currentTime, seek]);
 
+  // Smart Queue: Auto-add tracks when queue is low
+  useEffect(() => {
+    const checkAutoQueue = async () => {
+      // Don't trigger if already queuing or no settings provided
+      if (isAutoQueueing || !options.smartQueueSettings || !currentTrack) {
+        return;
+      }
+
+      const settings = options.smartQueueSettings;
+
+      // Check if auto-queue is enabled and threshold is met
+      if (settings.autoQueueEnabled && queue.length <= settings.autoQueueThreshold) {
+        // Prevent multiple simultaneous triggers
+        if (autoQueueTriggeredRef.current) return;
+        autoQueueTriggeredRef.current = true;
+        setIsAutoQueueing(true);
+
+        try {
+          // Call the callback to fetch recommendations
+          if (options.onAutoQueueTrigger) {
+            const recommendations = await options.onAutoQueueTrigger(
+              currentTrack,
+              queue.length,
+            );
+
+            // Add recommendations to queue
+            if (recommendations.length > 0) {
+              addToQueue(recommendations.slice(0, settings.autoQueueCount), false);
+            }
+          }
+        } catch (error) {
+          console.error("Auto-queue failed:", error);
+        } finally {
+          setIsAutoQueueing(false);
+          // Reset trigger flag after a delay to allow re-triggering
+          setTimeout(() => {
+            autoQueueTriggeredRef.current = false;
+          }, 5000);
+        }
+      }
+    };
+
+    void checkAutoQueue();
+  }, [
+    queue.length,
+    currentTrack,
+    isAutoQueueing,
+    options.smartQueueSettings,
+    options.onAutoQueueTrigger,
+    addToQueue,
+  ]);
+
   return {
     // State
     currentTrack,
@@ -416,6 +472,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     repeatMode,
     playbackRate,
     isLoading,
+    isAutoQueueing,
 
     // Actions
     loadTrack,

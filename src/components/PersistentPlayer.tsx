@@ -74,6 +74,8 @@ export default function PersistentPlayer() {
             // TODO: Implement save queue as playlist functionality
             console.log("Save queue as playlist - to be implemented");
           }}
+          onAddSimilarTracks={player.addSimilarTracks}
+          isAutoQueueing={player.isAutoQueueing}
         />
       )}
 

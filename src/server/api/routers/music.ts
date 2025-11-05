@@ -1,10 +1,11 @@
 // File: src/server/api/routers/music.ts
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import {
+  audioFeatures,
   favorites,
   listeningAnalytics,
   listeningHistory,
@@ -12,10 +13,19 @@ import {
   playerSessions,
   playlists,
   playlistTracks,
+  recommendationCache,
   searchHistory,
   userPreferences,
 } from "@/server/db/schema";
 import type { Track } from "@/types";
+import {
+  fetchDeezerRecommendations,
+  fetchHybridRecommendations,
+  filterRecommendations,
+  getCacheExpiryDate,
+  shuffleWithDiversity,
+} from "@/server/services/recommendations";
+import { ENABLE_AUDIO_FEATURES } from "@/config/features";
 
 const trackSchema = z.object({
   id: z.number(),
@@ -832,5 +842,296 @@ export const musicRouter = createTRPCRouter({
           artist: item.artistData,
           playCount: item.count,
         }));
+    }),
+
+  // ============================================
+  // SMART QUEUE & RECOMMENDATIONS
+  // ============================================
+
+  getRecommendations: protectedProcedure
+    .input(
+      z.object({
+        seedTrackId: z.number(),
+        limit: z.number().min(1).max(50).default(20),
+        excludeTrackIds: z.array(z.number()).optional(),
+        useCache: z.boolean().default(true),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Check cache first
+      if (input.useCache) {
+        const cached = await ctx.db.query.recommendationCache.findFirst({
+          where: and(
+            eq(recommendationCache.seedTrackId, input.seedTrackId),
+            sql`${recommendationCache.expiresAt} > NOW()`,
+          ),
+        });
+
+        if (cached) {
+          let tracks = cached.recommendedTracksData as Track[];
+
+          // Filter out excluded tracks
+          if (input.excludeTrackIds && input.excludeTrackIds.length > 0) {
+            tracks = tracks.filter((t) => !input.excludeTrackIds!.includes(t.id));
+          }
+
+          return tracks.slice(0, input.limit);
+        }
+      }
+
+      // Get user's top artists for personalization
+      const topArtists = await ctx.db
+        .select({
+          trackData: listeningAnalytics.trackData,
+        })
+        .from(listeningAnalytics)
+        .where(eq(listeningAnalytics.userId, ctx.session.user.id))
+        .limit(100);
+
+      const artistCounts = new Map<number, number>();
+      for (const item of topArtists) {
+        const track = item.trackData as Track;
+        artistCounts.set(track.artist.id, (artistCounts.get(track.artist.id) ?? 0) + 1);
+      }
+
+      const topArtistIds = Array.from(artistCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([id]) => id);
+
+      // Fetch fresh recommendations
+      const seedTrackResponse = await fetch(
+        `https://api.deezer.com/track/${input.seedTrackId}`,
+      );
+      const seedTrack = (await seedTrackResponse.json()) as Track;
+
+      const recommendations = await fetchHybridRecommendations(
+        seedTrack,
+        topArtistIds,
+        input.limit + 10, // Fetch extra for filtering
+      );
+
+      // Filter recommendations
+      const filtered = filterRecommendations(recommendations, {
+        excludeTrackIds: input.excludeTrackIds,
+      });
+
+      // Cache the results
+      await ctx.db.insert(recommendationCache).values({
+        seedTrackId: input.seedTrackId,
+        recommendedTrackIds: filtered.map((t) => t.id) as unknown as Record<string, unknown>,
+        recommendedTracksData: filtered as unknown as Record<string, unknown>,
+        source: "deezer",
+        expiresAt: getCacheExpiryDate(),
+      });
+
+      return filtered.slice(0, input.limit);
+    }),
+
+  getSimilarTracks: protectedProcedure
+    .input(
+      z.object({
+        trackId: z.number(),
+        limit: z.number().min(1).max(50).default(5),
+        excludeTrackIds: z.array(z.number()).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Simple wrapper around getRecommendations for UI clarity
+      return ctx.db.transaction(async () => {
+        // Check cache first
+        const cached = await ctx.db.query.recommendationCache.findFirst({
+          where: and(
+            eq(recommendationCache.seedTrackId, input.trackId),
+            sql`${recommendationCache.expiresAt} > NOW()`,
+          ),
+        });
+
+        if (cached) {
+          let tracks = cached.recommendedTracksData as Track[];
+
+          if (input.excludeTrackIds && input.excludeTrackIds.length > 0) {
+            tracks = tracks.filter((t) => !input.excludeTrackIds!.includes(t.id));
+          }
+
+          return tracks.slice(0, input.limit);
+        }
+
+        // Fetch from Deezer
+        const recommendations = await fetchDeezerRecommendations(
+          input.trackId,
+          input.limit + 5,
+        );
+
+        const filtered = filterRecommendations(recommendations, {
+          excludeTrackIds: input.excludeTrackIds,
+        });
+
+        // Cache the results
+        if (filtered.length > 0) {
+          await ctx.db.insert(recommendationCache).values({
+            seedTrackId: input.trackId,
+            recommendedTrackIds: filtered.map((t) => t.id) as unknown as Record<string, unknown>,
+            recommendedTracksData: filtered as unknown as Record<string, unknown>,
+            source: "deezer",
+            expiresAt: getCacheExpiryDate(),
+          });
+        }
+
+        return filtered.slice(0, input.limit);
+      });
+    }),
+
+  generateSmartMix: protectedProcedure
+    .input(
+      z.object({
+        seedTrackIds: z.array(z.number()).min(1).max(5),
+        limit: z.number().min(10).max(100).default(50),
+        diversity: z.enum(["strict", "balanced", "diverse"]).default("balanced"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const allRecommendations: Track[] = [];
+      const seenTrackIds = new Set<number>(input.seedTrackIds);
+
+      // Get recommendations for each seed track
+      for (const seedTrackId of input.seedTrackIds) {
+        const recs = await fetchDeezerRecommendations(seedTrackId, 20);
+        for (const track of recs) {
+          if (!seenTrackIds.has(track.id)) {
+            allRecommendations.push(track);
+            seenTrackIds.add(track.id);
+          }
+        }
+      }
+
+      // Apply diversity algorithm
+      let finalMix: Track[];
+      switch (input.diversity) {
+        case "strict":
+          // Only tracks similar to all seeds
+          finalMix = allRecommendations.slice(0, input.limit);
+          break;
+        case "balanced":
+          // Mix with some artist diversity
+          finalMix = shuffleWithDiversity(allRecommendations).slice(0, input.limit);
+          break;
+        case "diverse":
+          // Maximum variety, shuffle completely
+          finalMix = allRecommendations
+            .sort(() => Math.random() - 0.5)
+            .slice(0, input.limit);
+          break;
+      }
+
+      return {
+        tracks: finalMix,
+        seedCount: input.seedTrackIds.length,
+        totalCandidates: allRecommendations.length,
+      };
+    }),
+
+  getSmartQueueSettings: protectedProcedure.query(async ({ ctx }) => {
+    const prefs = await ctx.db.query.userPreferences.findFirst({
+      where: eq(userPreferences.userId, ctx.session.user.id),
+    });
+
+    if (!prefs) {
+      // Return defaults
+      return {
+        autoQueueEnabled: false,
+        autoQueueThreshold: 3,
+        autoQueueCount: 5,
+        smartMixEnabled: true,
+        similarityPreference: "balanced" as const,
+      };
+    }
+
+    return {
+      autoQueueEnabled: prefs.autoQueueEnabled,
+      autoQueueThreshold: prefs.autoQueueThreshold,
+      autoQueueCount: prefs.autoQueueCount,
+      smartMixEnabled: prefs.smartMixEnabled,
+      similarityPreference: prefs.similarityPreference as "strict" | "balanced" | "diverse",
+    };
+  }),
+
+  updateSmartQueueSettings: protectedProcedure
+    .input(
+      z.object({
+        autoQueueEnabled: z.boolean().optional(),
+        autoQueueThreshold: z.number().min(0).max(10).optional(),
+        autoQueueCount: z.number().min(1).max(20).optional(),
+        smartMixEnabled: z.boolean().optional(),
+        similarityPreference: z.enum(["strict", "balanced", "diverse"]).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure preferences exist
+      const existing = await ctx.db.query.userPreferences.findFirst({
+        where: eq(userPreferences.userId, ctx.session.user.id),
+      });
+
+      if (!existing) {
+        await ctx.db.insert(userPreferences).values({
+          userId: ctx.session.user.id,
+          ...input,
+        });
+      } else {
+        await ctx.db
+          .update(userPreferences)
+          .set(input)
+          .where(eq(userPreferences.userId, ctx.session.user.id));
+      }
+
+      return { success: true };
+    }),
+
+  // Clean up expired recommendation cache
+  cleanupRecommendationCache: protectedProcedure.mutation(async ({ ctx }) => {
+    await ctx.db
+      .delete(recommendationCache)
+      .where(lt(recommendationCache.expiresAt, new Date()));
+
+    return { success: true };
+  }),
+
+  // ============================================
+  // AUDIO FEATURES (Future - Essentia)
+  // ============================================
+
+  getAudioFeatures: protectedProcedure
+    .input(z.object({ trackId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      if (!ENABLE_AUDIO_FEATURES) {
+        return null;
+      }
+
+      const features = await ctx.db.query.audioFeatures.findFirst({
+        where: eq(audioFeatures.trackId, input.trackId),
+      });
+
+      return features ?? null;
+    }),
+
+  getBatchAudioFeatures: protectedProcedure
+    .input(z.object({ trackIds: z.array(z.number()).max(50) }))
+    .query(async ({ ctx, input }) => {
+      if (!ENABLE_AUDIO_FEATURES) {
+        return [];
+      }
+
+      // This would need a custom query with WHERE IN
+      // For now, fetch individually (can be optimized later)
+      const features = await Promise.all(
+        input.trackIds.map(async (trackId) => {
+          const feature = await ctx.db.query.audioFeatures.findFirst({
+            where: eq(audioFeatures.trackId, trackId),
+          });
+          return feature;
+        }),
+      );
+
+      return features.filter((f) => f !== undefined);
     }),
 });

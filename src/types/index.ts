@@ -103,6 +103,71 @@ export type ReorderPayload = {
 };
 
 
+// Smart Queue & Recommendations types
+
+export interface RecommendationContext {
+  source: 'deezer' | 'custom' | 'ml' | 'audio-features';
+  seedTrackId: number;
+  reason?: string; // Why this track was recommended
+  similarity?: number; // 0-1 similarity score (if available)
+}
+
+export interface RecommendedTrack extends Track {
+  recommendationContext?: RecommendationContext;
+}
+
+export interface SmartQueueSettings {
+  autoQueueEnabled: boolean;
+  autoQueueThreshold: number; // Add tracks when queue has <= N tracks
+  autoQueueCount: number; // Number of tracks to add
+  smartMixEnabled: boolean;
+  similarityPreference: 'strict' | 'balanced' | 'diverse';
+}
+
+export interface AudioFeatures {
+  trackId: number;
+  bpm?: number;
+  key?: string;
+  energy?: number;
+  danceability?: number;
+  valence?: number;
+  acousticness?: number;
+  instrumentalness?: number;
+  liveness?: number;
+  speechiness?: number;
+  loudness?: number;
+  spectralCentroid?: number;
+  analyzedAt: Date;
+  source: 'essentia' | 'spotify' | 'manual';
+}
+
+export interface RecommendationCacheEntry {
+  id: number;
+  seedTrackId: number;
+  recommendedTrackIds: number[];
+  recommendedTracksData: Track[];
+  source: 'deezer' | 'custom' | 'ml';
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+export type SimilarityMethod =
+  | 'same-artist'
+  | 'same-album'
+  | 'genre-match'
+  | 'bpm-match'
+  | 'key-match'
+  | 'energy-match'
+  | 'collaborative-filtering'
+  | 'audio-similarity';
+
+export interface SimilarTrackOptions {
+  limit?: number;
+  excludeTrackIds?: number[];
+  preferredMethods?: SimilarityMethod[];
+  useAudioFeatures?: boolean;
+}
+
 // Utility type guards
 
 export function isTrack(obj: unknown): obj is Track {
@@ -125,4 +190,7 @@ export function isSearchResponse(obj: unknown): obj is SearchResponse {
   );
 }
 
+export function isRecommendedTrack(obj: unknown): obj is RecommendedTrack {
+  return isTrack(obj) && 'recommendationContext' in obj;
+}
 

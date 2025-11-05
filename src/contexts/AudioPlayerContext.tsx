@@ -27,6 +27,7 @@ interface AudioPlayerContextType {
   repeatMode: "none" | "one" | "all";
   playbackRate: number;
   isLoading: boolean;
+  isAutoQueueing: boolean;
 
   // Audio element reference for visualizer and equalizer
   audioElement: HTMLAudioElement | null;
@@ -50,6 +51,10 @@ interface AudioPlayerContextType {
   setPlaybackRate: (rate: number) => void;
   skipForward: () => void;
   skipBackward: () => void;
+
+  // Smart Queue
+  addSimilarTracks: (trackId: number, count?: number) => Promise<void>;
+  generateSmartMix: (seedTrackIds: number[], count?: number) => Promise<void>;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(
@@ -60,12 +65,52 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const addToHistory = api.music.addToHistory.useMutation();
 
+  // Fetch smart queue settings
+  const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery(
+    undefined,
+    { enabled: !!session },
+  );
+
+  // Mutation for fetching recommendations
+  const getSimilarTracks = api.music.getSimilarTracks.useQuery;
+  const generateSmartMixMutation = api.music.generateSmartMix.useMutation();
+
+  // Auto-queue trigger callback
+  const handleAutoQueueTrigger = useCallback(
+    async (currentTrack: Track, queueLength: number) => {
+      if (!session || !smartQueueSettings) return [];
+
+      try {
+        // Fetch recommendations based on current track
+        const response = await fetch(
+          `/api/trpc/music.getSimilarTracks?input=${encodeURIComponent(
+            JSON.stringify({
+              trackId: currentTrack.id,
+              limit: smartQueueSettings.autoQueueCount,
+            }),
+          )}`,
+        );
+
+        if (!response.ok) return [];
+
+        const data = await response.json() as { result: { data: Track[] } };
+        return data.result.data ?? [];
+      } catch (error) {
+        console.error("Failed to fetch auto-queue recommendations:", error);
+        return [];
+      }
+    },
+    [session, smartQueueSettings],
+  );
+
   const player = useAudioPlayer({
     onTrackChange: (track) => {
       if (track && session) {
         addToHistory.mutate({ track });
       }
     },
+    onAutoQueueTrigger: handleAutoQueueTrigger,
+    smartQueueSettings: smartQueueSettings ?? undefined,
   });
 
   const play = useCallback(
@@ -107,6 +152,65 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     [player],
   );
 
+  // Smart Queue Functions
+  const addSimilarTracks = useCallback(
+    async (trackId: number, count: number = 5) => {
+      if (!session) return;
+
+      try {
+        const response = await fetch(
+          `/api/trpc/music.getSimilarTracks?input=${encodeURIComponent(
+            JSON.stringify({
+              trackId,
+              limit: count,
+              excludeTrackIds: [
+                ...(player.currentTrack ? [player.currentTrack.id] : []),
+                ...player.queue.map((t) => t.id),
+              ],
+            }),
+          )}`,
+        );
+
+        if (!response.ok) {
+          console.error("Failed to fetch similar tracks");
+          return;
+        }
+
+        const data = await response.json() as { result: { data: Track[] } };
+        const tracks = data.result.data ?? [];
+
+        if (tracks.length > 0) {
+          player.addToQueue(tracks, false);
+        }
+      } catch (error) {
+        console.error("Error adding similar tracks:", error);
+      }
+    },
+    [session, player],
+  );
+
+  const generateSmartMix = useCallback(
+    async (seedTrackIds: number[], count: number = 50) => {
+      if (!session) return;
+
+      try {
+        const result = await generateSmartMixMutation.mutateAsync({
+          seedTrackIds,
+          limit: count,
+          diversity: smartQueueSettings?.similarityPreference ?? "balanced",
+        });
+
+        if (result.tracks.length > 0) {
+          player.clearQueue();
+          player.addToQueue(result.tracks, false);
+        }
+      } catch (error) {
+        console.error("Error generating smart mix:", error);
+      }
+    },
+    [session, generateSmartMixMutation, smartQueueSettings, player],
+  );
+
   const value: AudioPlayerContextType = {
     // State
     currentTrack: player.currentTrack,
@@ -120,6 +224,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     repeatMode: player.repeatMode,
     playbackRate: player.playbackRate,
     isLoading: player.isLoading,
+    isAutoQueueing: player.isAutoQueueing,
 
     // Audio element reference
     audioElement: player.audioRef.current,
@@ -143,6 +248,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     setPlaybackRate: player.setPlaybackRate,
     skipForward: player.skipForward,
     skipBackward: player.skipBackward,
+
+    // Smart Queue
+    addSimilarTracks,
+    generateSmartMix,
   };
 
   return (

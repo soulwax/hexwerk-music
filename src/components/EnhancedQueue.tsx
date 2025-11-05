@@ -21,14 +21,19 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   GripVertical,
+  Loader2,
   Play,
   Save,
   Search,
+  Settings,
+  Sparkles,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { api } from "@/trpc/react";
 
 // Helper function to format duration in seconds to mm:ss
 const formatDuration = (seconds: number): string => {
@@ -151,6 +156,8 @@ interface EnhancedQueueProps {
   onReorder: (oldIndex: number, newIndex: number) => void;
   onPlayFrom: (index: number) => void;
   onSaveAsPlaylist?: () => void;
+  onAddSimilarTracks?: (trackId: number, count?: number) => Promise<void>;
+  isAutoQueueing?: boolean;
 }
 
 export function EnhancedQueue({
@@ -162,8 +169,16 @@ export function EnhancedQueue({
   onReorder,
   onPlayFrom,
   onSaveAsPlaylist,
+  onAddSimilarTracks,
+  isAutoQueueing,
 }: EnhancedQueueProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [addingSimilar, setAddingSimilar] = useState(false);
+
+  // Fetch smart queue settings
+  const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery();
+  const updateSettings = api.music.updateSmartQueueSettings.useMutation();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -189,6 +204,30 @@ export function EnhancedQueue({
     }
   };
 
+  // Handle adding similar tracks
+  const handleAddSimilar = async () => {
+    if (!currentTrack || !onAddSimilarTracks) return;
+
+    setAddingSimilar(true);
+    try {
+      await onAddSimilarTracks(
+        currentTrack.id,
+        smartQueueSettings?.autoQueueCount ?? 5,
+      );
+    } finally {
+      setAddingSimilar(false);
+    }
+  };
+
+  // Toggle auto-queue
+  const handleToggleAutoQueue = async () => {
+    if (!smartQueueSettings) return;
+
+    await updateSettings.mutateAsync({
+      autoQueueEnabled: !smartQueueSettings.autoQueueEnabled,
+    });
+  };
+
   // Filter queue based on search query
   const filteredQueue = searchQuery
     ? queue.filter(
@@ -208,10 +247,59 @@ export function EnhancedQueue({
       {/* Header */}
       <div className="flex flex-col gap-3 p-4 border-b border-gray-800">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">
-            Queue ({queue.length})
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-white">
+              Queue ({queue.length})
+            </h2>
+            {isAutoQueueing && (
+              <div className="flex items-center gap-2 text-xs text-purple-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Adding tracks...</span>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
+            {currentTrack && onAddSimilarTracks && (
+              <button
+                onClick={handleAddSimilar}
+                disabled={addingSimilar}
+                className="p-2 rounded-full hover:bg-gray-800 transition-colors text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                aria-label="Add similar tracks"
+                title="Add similar tracks"
+              >
+                {addingSimilar ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-5 w-5" />
+                )}
+              </button>
+            )}
+            {smartQueueSettings && (
+              <button
+                onClick={handleToggleAutoQueue}
+                className={`p-2 rounded-full hover:bg-gray-800 transition-colors ${
+                  smartQueueSettings.autoQueueEnabled
+                    ? "text-green-400 hover:text-green-300"
+                    : "text-gray-400 hover:text-white"
+                }`}
+                aria-label="Toggle auto-queue"
+                title={
+                  smartQueueSettings.autoQueueEnabled
+                    ? "Auto-queue enabled"
+                    : "Auto-queue disabled"
+                }
+              >
+                <Zap className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 rounded-full hover:bg-gray-800 transition-colors text-gray-400 hover:text-white"
+              aria-label="Queue settings"
+              title="Queue settings"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
             {onSaveAsPlaylist && queue.length > 0 && (
               <button
                 onClick={onSaveAsPlaylist}
@@ -261,6 +349,121 @@ export function EnhancedQueue({
                 <X className="h-4 w-4" />
               </button>
             )}
+          </div>
+        )}
+
+        {/* Settings Panel */}
+        {showSettings && smartQueueSettings && (
+          <div className="bg-gray-800 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white">Smart Queue Settings</h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Auto-queue Toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-gray-300">Auto-queue</label>
+                <button
+                  onClick={handleToggleAutoQueue}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    smartQueueSettings.autoQueueEnabled
+                      ? "bg-green-500"
+                      : "bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      smartQueueSettings.autoQueueEnabled
+                        ? "translate-x-6"
+                        : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="text-xs text-gray-400">
+                Automatically add similar tracks when queue is low
+              </p>
+            </div>
+
+            {/* Threshold Slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-gray-300">Trigger threshold</label>
+                <span className="text-sm text-white">{smartQueueSettings.autoQueueThreshold} tracks</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                value={smartQueueSettings.autoQueueThreshold}
+                onChange={async (e) => {
+                  await updateSettings.mutateAsync({
+                    autoQueueThreshold: parseInt(e.target.value),
+                  });
+                }}
+                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              />
+              <p className="text-xs text-gray-400">
+                Add tracks when queue has ≤ {smartQueueSettings.autoQueueThreshold} tracks
+              </p>
+            </div>
+
+            {/* Track Count Slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-gray-300">Tracks to add</label>
+                <span className="text-sm text-white">{smartQueueSettings.autoQueueCount}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                value={smartQueueSettings.autoQueueCount}
+                onChange={async (e) => {
+                  await updateSettings.mutateAsync({
+                    autoQueueCount: parseInt(e.target.value),
+                  });
+                }}
+                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Similarity Preference */}
+            <div className="space-y-2">
+              <label className="text-sm text-gray-300">Similarity</label>
+              <div className="grid grid-cols-3 gap-2">
+                {["strict", "balanced", "diverse"].map((pref) => (
+                  <button
+                    key={pref}
+                    onClick={async () => {
+                      await updateSettings.mutateAsync({
+                        similarityPreference: pref as "strict" | "balanced" | "diverse",
+                      });
+                    }}
+                    className={`px-3 py-2 text-xs rounded-lg transition-colors ${
+                      smartQueueSettings.similarityPreference === pref
+                        ? "bg-purple-600 text-white"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    }`}
+                  >
+                    {pref.charAt(0).toUpperCase() + pref.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400">
+                {smartQueueSettings.similarityPreference === "strict"
+                  ? "Very similar tracks only"
+                  : smartQueueSettings.similarityPreference === "balanced"
+                  ? "Mix of similar and varied tracks"
+                  : "Wide variety of tracks"}
+              </p>
+            </div>
           </div>
         )}
       </div>
