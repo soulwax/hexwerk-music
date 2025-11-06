@@ -65,7 +65,11 @@ export default function PersistentPlayer() {
         <MobilePlayer {...playerProps} />
       ) : (
         <div className="fixed right-0 bottom-0 left-0 z-50">
-          <MaturePlayer {...playerProps} />
+          <div className="container">
+            <div className="card p-3">
+              <MaturePlayer {...playerProps} />
+            </div>
+          </div>
         </div>
       )}
 

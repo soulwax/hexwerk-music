@@ -2,9 +2,9 @@
 
 "use client";
 
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 
 export default function MobileNavigation() {
   const pathname = usePathname();
@@ -111,13 +111,11 @@ export default function MobileNavigation() {
               key={tab.path}
               href={tab.path}
               className={`touch-target-lg flex flex-1 flex-col items-center justify-center gap-1 py-2 transition-all ${
-                active
-                  ? "text-accent scale-105"
-                  : "text-gray-400 hover:text-gray-200"
+                active ? "text-accent scale-105" : "text-gray-400 hover:text-gray-200"
               }`}
             >
-              <div className={active ? "text-accent" : ""}>{tab.icon}</div>
-              <span className="text-xs font-medium">{tab.name}</span>
+              <div className={active ? "text-accent" : "opacity-80"}>{tab.icon}</div>
+              <span className={`text-xs font-medium ${active ? "text-accent" : "text-gray-300"}`}>{tab.name}</span>
             </Link>
           );
         })}
