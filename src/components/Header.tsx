@@ -19,11 +19,16 @@ export default function Header() {
         <div className="container flex items-center justify-between py-3.5">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 font-bold text-white shadow-lg ring-2 ring-indigo-500/20 transition-all group-hover:scale-105 group-hover:shadow-indigo-500/50">
-              S
-            </div>
+            <Image
+              src="/AppIcons/Assets.xcassets/AppIcon.appiconset/48.png"
+              alt="Starchild Music"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-xl shadow-lg ring-2 ring-indigo-500/20 transition-all group-hover:scale-105 group-hover:shadow-indigo-500/50"
+              priority
+            />
             <span className="accent-gradient hidden text-lg font-bold md:block">
-              Starchild
+              Starchild Music
             </span>
           </Link>
 

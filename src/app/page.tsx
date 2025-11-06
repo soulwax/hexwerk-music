@@ -8,7 +8,6 @@ import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { searchTracks } from "@/utils/api";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
@@ -120,7 +119,11 @@ function SearchPageContent() {
               Discover Your Next Favorite Track
             </h1>
             <p className="text-base text-[var(--color-subtext)] md:text-lg">
-              Search millions of songs and create your perfect playlist
+              Search 50 million+ tracks. <b>If</b> you log in, you can do more but this is optional.
+              
+            </p>
+            <p className="text-base text-[var(--color-subtext)] md:text-lg">
+              Currently only supports Discord OAuth.
             </p>
           </div>
 
@@ -250,10 +253,10 @@ function SearchPageContent() {
                     </svg>
                   </div>
                   <h3 className="mb-2 text-xl font-bold text-[var(--color-text)]">
-                    Start Your Musical Journey
+                    Explore Starchild Music
                   </h3>
                   <p className="max-w-md text-[var(--color-subtext)]">
-                    Search for your favorite songs, artists, or albums to discover amazing music
+                    Just search for anything. Songs, artists, albums - Login for more convenience like playlists and persistence, but this is a work in progress.
                   </p>
                 </div>
               )}
