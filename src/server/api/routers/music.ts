@@ -1120,7 +1120,7 @@ export const musicRouter = createTRPCRouter({
         where: eq(users.userHash, input.userHash),
       });
 
-      if (!user || !user.profilePublic) {
+      if (!user?.profilePublic) {
         return null;
       }
 
@@ -1163,7 +1163,7 @@ export const musicRouter = createTRPCRouter({
         where: eq(users.userHash, input.userHash),
       });
 
-      if (!user || !user.profilePublic) {
+      if (!user?.profilePublic) {
         return [];
       }
 
@@ -1186,7 +1186,7 @@ export const musicRouter = createTRPCRouter({
         where: eq(users.userHash, input.userHash),
       });
 
-      if (!user || !user.profilePublic) {
+      if (!user?.profilePublic) {
         return [];
       }
 
@@ -1206,7 +1206,7 @@ export const musicRouter = createTRPCRouter({
         where: eq(users.userHash, input.userHash),
       });
 
-      if (!user || !user.profilePublic) {
+      if (!user?.profilePublic) {
         return [];
       }
 
