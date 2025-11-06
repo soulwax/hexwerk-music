@@ -4,6 +4,7 @@
 
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import type { Track } from "@/types";
+import { hapticLight, hapticMedium } from "@/utils/haptics";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -65,6 +66,32 @@ export default function MaturePlayer({
   const [isDragging, setIsDragging] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
   const volumeTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // Wrapper functions with haptic feedback
+  const handlePlayPause = () => {
+    hapticMedium();
+    onPlayPause();
+  };
+
+  const handleNext = () => {
+    hapticLight();
+    onNext();
+  };
+
+  const handlePrevious = () => {
+    hapticLight();
+    onPrevious();
+  };
+
+  const handleToggleShuffle = () => {
+    hapticLight();
+    onToggleShuffle();
+  };
+
+  const handleCycleRepeat = () => {
+    hapticLight();
+    onCycleRepeat();
+  };
 
   useKeyboardShortcuts({
     onPlayPause,
@@ -179,7 +206,7 @@ export default function MaturePlayer({
           <div className="flex items-center gap-2">
             {/* Shuffle */}
             <button
-              onClick={onToggleShuffle}
+              onClick={handleToggleShuffle}
               className={`rounded p-2 transition ${
                 isShuffled
                   ? "bg-accent/20 text-accent"
@@ -198,7 +225,7 @@ export default function MaturePlayer({
 
             {/* Previous */}
             <button
-              onClick={onPrevious}
+              onClick={handlePrevious}
               className="text-gray-400 transition hover:text-white"
               title="Previous (Shift + ←)"
             >
@@ -230,7 +257,7 @@ export default function MaturePlayer({
 
             {/* Play/Pause */}
             <button
-              onClick={onPlayPause}
+              onClick={handlePlayPause}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"
               title="Play/Pause (Space)"
             >
@@ -280,7 +307,7 @@ export default function MaturePlayer({
 
             {/* Next */}
             <button
-              onClick={onNext}
+              onClick={handleNext}
               className="text-gray-400 transition hover:text-white"
               disabled={queue.length === 0}
               title="Next (Shift + →)"
@@ -292,7 +319,7 @@ export default function MaturePlayer({
 
             {/* Repeat */}
             <button
-              onClick={onCycleRepeat}
+              onClick={handleCycleRepeat}
               className={`rounded p-2 transition ${
                 repeatMode !== "none"
                   ? "bg-accent/20 text-accent"

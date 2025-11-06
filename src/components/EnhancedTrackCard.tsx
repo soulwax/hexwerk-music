@@ -1,8 +1,10 @@
 // File: src/components/EnhancedTrackCard.tsx
 
 import { useToast } from "@/contexts/ToastContext";
+import { useWebShare } from "@/hooks/useWebShare";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
+import { hapticLight, hapticSuccess } from "@/utils/haptics";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -23,6 +25,7 @@ export default function EnhancedTrackCard({
   const [isHeartAnimating, setIsHeartAnimating] = useState(false);
   const utils = api.useUtils();
   const { showToast } = useToast();
+  const { share, isSupported: isShareSupported } = useWebShare();
 
   const { data: favoriteData } = api.music.isFavorite.useQuery(
     { trackId: track.id },
@@ -72,6 +75,13 @@ export default function EnhancedTrackCard({
   const toggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
 
+    // Trigger haptic feedback
+    if (favoriteData?.isFavorite) {
+      hapticLight();
+    } else {
+      hapticSuccess();
+    }
+
     // Trigger heart animation
     setIsHeartAnimating(true);
     setTimeout(() => setIsHeartAnimating(false), 600);
@@ -85,12 +95,34 @@ export default function EnhancedTrackCard({
 
   const handleAddToQueue = (e: React.MouseEvent) => {
     e.stopPropagation();
+    hapticLight();
     onAddToQueue(track);
     showToast(`Added "${track.title}" to queue`, "success");
   };
 
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    hapticLight();
+
+    const success = await share({
+      title: `${track.title} - ${track.artist.name}`,
+      text: `Check out "${track.title}" by ${track.artist.name} on Starchild Music!`,
+      url: window.location.href,
+    });
+
+    if (success) {
+      showToast("Track shared successfully!", "success");
+    }
+  };
+
   const handleAddToPlaylist = (playlistId: number) => {
+    hapticLight();
     addToPlaylist.mutate({ playlistId, track });
+  };
+
+  const handlePlay = () => {
+    hapticLight();
+    onPlay(track);
   };
 
   const formatDuration = (seconds: number) => {
@@ -118,7 +150,7 @@ export default function EnhancedTrackCard({
           quality={75}
         />
         <button
-          onClick={() => onPlay(track)}
+          onClick={handlePlay}
           className="touch-active absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition group-hover:opacity-100 md:opacity-0"
         >
           <svg
@@ -138,7 +170,7 @@ export default function EnhancedTrackCard({
       <div className="min-w-0 flex-1">
         <h3
           className="no-select cursor-pointer truncate text-base font-semibold text-white hover:underline md:text-base"
-          onClick={() => onPlay(track)}
+          onClick={handlePlay}
         >
           {track.title}
         </h3>
@@ -213,6 +245,28 @@ export default function EnhancedTrackCard({
               />
             </svg>
           </button>
+
+          {isShareSupported && (
+            <button
+              onClick={handleShare}
+              className="touch-target touch-active rounded-full text-gray-400 transition hover:scale-110 hover:text-white"
+              title="Share track"
+            >
+              <svg
+                className="h-6 w-6 md:h-5 md:w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+              </svg>
+            </button>
+          )}
 
           <div className="relative">
             <button

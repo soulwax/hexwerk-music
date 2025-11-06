@@ -3,6 +3,7 @@
 "use client";
 
 import type { Track } from "@/types";
+import { hapticLight, hapticMedium } from "@/utils/haptics";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -66,6 +67,32 @@ export default function MobilePlayer(props: MobilePlayerProps) {
   const dragStartY = useRef<number>(0);
   const isDragging = useRef(false);
   const progressRef = useRef<HTMLDivElement>(null);
+
+  // Wrapper functions with haptic feedback
+  const handlePlayPause = () => {
+    hapticMedium();
+    onPlayPause();
+  };
+
+  const handleNext = () => {
+    hapticLight();
+    onNext();
+  };
+
+  const handlePrevious = () => {
+    hapticLight();
+    onPrevious();
+  };
+
+  const handleToggleShuffle = () => {
+    hapticLight();
+    onToggleShuffle();
+  };
+
+  const handleCycleRepeat = () => {
+    hapticLight();
+    onCycleRepeat();
+  };
 
   useEffect(() => {
     if (isExpanded) {
@@ -170,7 +197,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onPlayPause();
+                handlePlayPause();
               }}
               className="touch-target-lg flex-shrink-0 text-white transition hover:scale-105"
             >
@@ -296,7 +323,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             {/* Main Controls */}
             <div className="flex items-center justify-center gap-4 px-8 py-6">
               <button
-                onClick={onToggleShuffle}
+                onClick={handleToggleShuffle}
                 className={`touch-target rounded-full p-3 transition ${
                   isShuffled
                     ? "bg-accent/20 text-accent"
@@ -313,7 +340,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               </button>
 
               <button
-                onClick={onPrevious}
+                onClick={handlePrevious}
                 className="touch-target-lg text-white transition hover:scale-105"
               >
                 <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
@@ -322,7 +349,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               </button>
 
               <button
-                onClick={onPlayPause}
+                onClick={handlePlayPause}
                 className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-black shadow-lg transition hover:scale-105 active:scale-95"
               >
                 {isPlaying ? (
@@ -345,7 +372,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               </button>
 
               <button
-                onClick={onNext}
+                onClick={handleNext}
                 disabled={queue.length === 0}
                 className="touch-target-lg text-white transition hover:scale-105 disabled:opacity-50"
               >
@@ -355,7 +382,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               </button>
 
               <button
-                onClick={onCycleRepeat}
+                onClick={handleCycleRepeat}
                 className={`touch-target rounded-full p-3 transition ${
                   repeatMode !== "none"
                     ? "bg-accent/20 text-accent"
