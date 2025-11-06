@@ -22,8 +22,8 @@
       "purpose": "any"
     },
     {
-      "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/96.png",
-      "sizes": "96x96",
+      "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/100.png",
+      "sizes": "100x100",
       "type": "image/png",
       "purpose": "any"
     },
@@ -46,8 +46,8 @@
       "purpose": "any"
     },
     {
-      "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/192.png",
-      "sizes": "192x192",
+      "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/196.png",
+      "sizes": "196x196",
       "type": "image/png",
       "purpose": "any"
     },
@@ -79,8 +79,8 @@
       "url": "/?action=search",
       "icons": [
         {
-          "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/96.png",
-          "sizes": "96x96",
+          "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/100.png",
+          "sizes": "100x100",
           "type": "image/png"
         }
       ]
