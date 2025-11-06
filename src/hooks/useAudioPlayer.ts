@@ -3,6 +3,7 @@
 "use client";
 
 import type { SmartQueueSettings, Track } from "@/types";
+import { getStreamUrlById } from "@/utils/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadPersistedQueueState } from "./useQueuePersistence";
 
@@ -107,6 +108,17 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       audioRef.current.playbackRate = playbackRate;
     }
   }, [volume, playbackRate]);
+
+  // Initialize audio source for restored track (from previous session)
+  useEffect(() => {
+    if (audioRef.current && currentTrack && !audioRef.current.src) {
+      // Only initialize if there's no source already set
+      // This happens when state is restored from localStorage
+      const streamUrl = getStreamUrlById(currentTrack.id.toString());
+      audioRef.current.src = streamUrl;
+      audioRef.current.load();
+    }
+  }, [currentTrack]);
 
   // Update audio element properties
   useEffect(() => {
