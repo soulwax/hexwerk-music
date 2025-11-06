@@ -36,6 +36,20 @@ export default function PublicProfilePage({
   const { data: playlists, isLoading: playlistsLoading } =
     api.music.getPublicPlaylists.useQuery({ userHash: userhash });
 
+  const { data: topTracks, isLoading: topTracksLoading } =
+    api.music.getPublicTopTracks.useQuery({
+      userHash: userhash,
+      limit: 6,
+      days: 30,
+    });
+
+  const { data: topArtists, isLoading: topArtistsLoading } =
+    api.music.getPublicTopArtists.useQuery({
+      userHash: userhash,
+      limit: 6,
+      days: 30,
+    });
+
   const handleShareProfile = async () => {
     haptic("light");
     await share({
@@ -194,6 +208,92 @@ export default function PublicProfilePage({
             <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-8 text-center">
               <div className="mb-2 text-4xl">🎵</div>
               <p className="text-gray-400">No recent tracks yet</p>
+            </div>
+          )}
+        </section>
+
+        {/* Top Tracks (Last 30 Days) */}
+        <section className="mb-12">
+          <h2 className="mb-6 text-2xl font-bold text-white">
+            🔥 Top Tracks (Last 30 Days)
+          </h2>
+          {topTracksLoading ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-24 animate-pulse rounded-lg bg-gray-800"
+                />
+              ))}
+            </div>
+          ) : topTracks && topTracks.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {topTracks.map((item, idx) => (
+                <div key={`top-${idx}`} className="relative">
+                  <EnhancedTrackCard
+                    track={item.track}
+                    onPlay={(track) => play(track)}
+                    onAddToQueue={(track) => addToQueue(track)}
+                  />
+                  <div className="absolute right-2 top-2 rounded-full bg-indigo-600 px-2 py-1 text-xs font-bold text-white shadow-lg">
+                    {item.playCount} plays
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-8 text-center">
+              <div className="mb-2 text-4xl">🎵</div>
+              <p className="text-gray-400">No top tracks yet</p>
+            </div>
+          )}
+        </section>
+
+        {/* Top Artists (Last 30 Days) */}
+        <section className="mb-12">
+          <h2 className="mb-6 text-2xl font-bold text-white">
+            ⭐ Top Artists (Last 30 Days)
+          </h2>
+          {topArtistsLoading ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-32 animate-pulse rounded-lg bg-gray-800"
+                />
+              ))}
+            </div>
+          ) : topArtists && topArtists.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+              {topArtists.map((item, idx) => (
+                <div
+                  key={`artist-${idx}`}
+                  className="group rounded-lg border border-gray-800 bg-gray-900/50 p-4 text-center transition-all hover:border-indigo-500 hover:bg-gray-800/50"
+                >
+                  <div className="mb-3 flex h-20 w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600">
+                    {item.artist.picture_medium || item.artist.picture ? (
+                      <Image
+                        src={item.artist.picture_medium ?? item.artist.picture ?? ""}
+                        alt={item.artist.name}
+                        width={80}
+                        height={80}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="text-4xl text-white/50">🎤</div>
+                    )}
+                  </div>
+                  <h3 className="mb-1 truncate font-semibold text-white">
+                    {item.artist.name}
+                  </h3>
+                  <p className="text-xs text-gray-400">{item.playCount} plays</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-8 text-center">
+              <div className="mb-2 text-4xl">🎤</div>
+              <p className="text-gray-400">No top artists yet</p>
             </div>
           )}
         </section>

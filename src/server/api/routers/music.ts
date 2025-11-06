@@ -1218,6 +1218,110 @@ export const musicRouter = createTRPCRouter({
       return userPlaylists;
     }),
 
+  getPublicTopTracks: publicProcedure
+    .input(
+      z.object({
+        userHash: z.string(),
+        limit: z.number().min(1).max(50).default(10),
+        days: z.number().min(1).max(365).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.userHash, input.userHash),
+      });
+
+      if (!user?.profilePublic) {
+        return [];
+      }
+
+      const since = new Date();
+      since.setDate(since.getDate() - input.days);
+
+      const topTracks = await ctx.db
+        .select({
+          trackId: listeningAnalytics.trackId,
+          trackData: listeningAnalytics.trackData,
+          playCount: sql<number>`COUNT(*)`,
+          totalDuration: sql<number>`SUM(${listeningAnalytics.duration})`,
+        })
+        .from(listeningAnalytics)
+        .where(
+          and(
+            eq(listeningAnalytics.userId, user.id),
+            sql`${listeningAnalytics.playedAt} >= ${since}`,
+          ),
+        )
+        .groupBy(listeningAnalytics.trackId, listeningAnalytics.trackData)
+        .orderBy(desc(sql`COUNT(*)`))
+        .limit(input.limit);
+
+      return topTracks.map((item) => ({
+        track: item.trackData as Track,
+        playCount: item.playCount,
+        totalDuration: item.totalDuration,
+      }));
+    }),
+
+  getPublicTopArtists: publicProcedure
+    .input(
+      z.object({
+        userHash: z.string(),
+        limit: z.number().min(1).max(50).default(10),
+        days: z.number().min(1).max(365).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.userHash, input.userHash),
+      });
+
+      if (!user?.profilePublic) {
+        return [];
+      }
+
+      const since = new Date();
+      since.setDate(since.getDate() - input.days);
+
+      const items = await ctx.db
+        .select({
+          trackData: listeningAnalytics.trackData,
+        })
+        .from(listeningAnalytics)
+        .where(
+          and(
+            eq(listeningAnalytics.userId, user.id),
+            sql`${listeningAnalytics.playedAt} >= ${since}`,
+          ),
+        );
+
+      // Group by artist in memory (since artist is nested in JSON)
+      const artistCounts = new Map<number, { name: string; count: number; artistData: Track["artist"] }>();
+
+      for (const item of items) {
+        const track = item.trackData as Track;
+        const artistId = track.artist.id;
+
+        if (!artistCounts.has(artistId)) {
+          artistCounts.set(artistId, {
+            name: track.artist.name,
+            count: 0,
+            artistData: track.artist,
+          });
+        }
+
+        artistCounts.get(artistId)!.count++;
+      }
+
+      return Array.from(artistCounts.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, input.limit)
+        .map((item) => ({
+          artist: item.artistData,
+          playCount: item.count,
+        }));
+    }),
+
   getCurrentUserHash: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.db.query.users.findFirst({
       where: eq(users.id, ctx.session.user.id),

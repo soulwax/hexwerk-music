@@ -28,7 +28,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   const [equalizerEnabled, setEqualizerEnabled] = useState(preferences?.equalizerEnabled ?? false);
   const [equalizerPreset, setEqualizerPreset] = useState(preferences?.equalizerPreset ?? "Flat");
   const [equalizerBands, setEqualizerBands] = useState<number[]>(
-    preferences?.equalizerBands ?? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    preferences?.equalizerBands ?? [0, 0, 0, 0, 0, 0, 0, 0, 0]
   );
   const [visualizerEnabled, setVisualizerEnabled] = useState(preferences?.visualizerEnabled ?? true);
   const [visualizerType, setVisualizerType] = useState<"bars" | "wave" | "circular">(
@@ -122,14 +122,14 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   };
 
   const equalizerPresets = [
-    { name: "Flat", bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-    { name: "Bass Boost", bands: [8, 6, 4, 2, 0, 0, 0, 0, 0, 0] },
-    { name: "Treble Boost", bands: [0, 0, 0, 0, 0, 0, 2, 4, 6, 8] },
-    { name: "Rock", bands: [6, 4, 2, 0, -2, -2, 0, 2, 4, 6] },
-    { name: "Pop", bands: [2, 4, 6, 4, 2, 0, 2, 4, 6, 4] },
-    { name: "Classical", bands: [4, 2, 0, 0, 0, 0, -2, -2, -2, -4] },
-    { name: "Jazz", bands: [4, 2, 0, 2, 4, 4, 2, 0, 2, 4] },
-    { name: "Vocal", bands: [-2, -2, 0, 2, 4, 4, 2, 0, -2, -2] },
+    { name: "Flat", bands: [0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { name: "Bass Boost", bands: [8, 6, 4, 2, 0, 0, 0, 0, 0] },
+    { name: "Treble Boost", bands: [0, 0, 0, 0, 0, 2, 4, 6, 8] },
+    { name: "Rock", bands: [6, 4, 2, 0, -2, -2, 0, 2, 4] },
+    { name: "Pop", bands: [2, 4, 6, 4, 2, 0, 2, 4, 6] },
+    { name: "Classical", bands: [4, 2, 0, 0, 0, 0, -2, -2, -2] },
+    { name: "Jazz", bands: [4, 2, 0, 2, 4, 4, 2, 0, 2] },
+    { name: "Vocal", bands: [-2, -2, 0, 2, 4, 4, 2, 0, -2] },
   ];
 
   const handlePresetChange = (preset: typeof equalizerPresets[0]) => {
@@ -176,7 +176,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
           </div>
 
           {/* Section Tabs */}
-          <div className="flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scroll-smooth">
             {sections.map((section) => (
               <button
                 key={section.id}
@@ -203,7 +203,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
           {activeSection === "profile" && (
             <div className="space-y-6">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-300">
+                <label className="mb-2 block text-sm font-medium text-gray-300 truncate">
                   Your Profile Link
                 </label>
                 <div className="flex gap-2">
@@ -211,7 +211,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                     type="text"
                     value={userHash ? `${window.location.origin}/${userHash}` : "Loading..."}
                     readOnly
-                    className="flex-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300"
+                    className="flex-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 truncate"
                   />
                   <button
                     onClick={copyProfileLink}
@@ -239,10 +239,10 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="block text-sm font-medium text-gray-300">Public Profile</span>
-                  <span className="text-xs text-gray-500">Allow others to view your profile</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-gray-300 truncate">Public Profile</span>
+                  <span className="block text-xs text-gray-500 truncate">Allow others to view your profile</span>
                 </div>
                 <button
                   onClick={() => {
@@ -391,7 +391,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                         { label: "2kHz", index: 6 },
                         { label: "4kHz", index: 7 },
                         { label: "8kHz", index: 8 },
-                        { label: "16kHz", index: 9 },
                       ].map(({ label, index }) => (
                         <div key={index} className="flex items-center gap-3">
                           <span className="w-12 text-xs text-gray-400">{label}</span>
@@ -419,10 +418,10 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
           {/* Smart Queue Section */}
           {activeSection === "queue" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="block text-sm font-medium text-gray-300">Auto Queue</span>
-                  <span className="text-xs text-gray-500">Automatically add tracks when queue is low</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-gray-300 truncate">Auto Queue</span>
+                  <span className="block text-xs text-gray-500 truncate">Automatically add tracks when queue is low</span>
                 </div>
                 <button
                   onClick={() => {
@@ -487,10 +486,10 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                 </>
               )}
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="block text-sm font-medium text-gray-300">Smart Mix</span>
-                  <span className="text-xs text-gray-500">Use AI recommendations</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-gray-300 truncate">Smart Mix</span>
+                  <span className="block text-xs text-gray-500 truncate">Use AI recommendations</span>
                 </div>
                 <button
                   onClick={() => {
@@ -561,10 +560,10 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="block text-sm font-medium text-gray-300">Compact Mode</span>
-                  <span className="text-xs text-gray-500">Smaller UI elements</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-gray-300 truncate">Compact Mode</span>
+                  <span className="block text-xs text-gray-500 truncate">Smaller UI elements</span>
                 </div>
                 <button
                   onClick={() => {
