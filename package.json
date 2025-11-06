@@ -55,7 +55,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@ducanh2912/next-pwa": "^10.2.9",
+    "@ducanh2912/next-pwa": "^8.7.0",
     "@eslint/eslintrc": "^3.3.1",
     "@next/bundle-analyzer": "^16.0.1",
     "@tailwindcss/postcss": "^4.1.16",
@@ -74,7 +74,8 @@
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^4.1.16",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.2"
+    "typescript-eslint": "^8.46.2",
+    "webpack": "^5.102.1"
   },
   "ct3aMetadata": {
     "initVersion": "7.39.3"
