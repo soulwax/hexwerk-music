@@ -5,7 +5,8 @@
  * for Docker builds.
  */
 import "./src/env.js";
-import withPWAInit from "next-pwa";
+// @ts-check
+import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
   dest: "public",
