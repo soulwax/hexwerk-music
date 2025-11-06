@@ -1,0 +1,1 @@
+ALTER TABLE "hexmusic-stream_user" ALTER COLUMN "userHash" SET NOT NULL;
