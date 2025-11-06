@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useSession } from "next-auth/react";
-import SettingsMenu from "./SettingsMenu";
 import { haptic } from "@/utils/haptics";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
+import SettingsMenu from "./SettingsMenu";
 
 export default function Header() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -14,13 +14,13 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-gray-800 bg-black/95 backdrop-blur-lg">
-        <div className="flex items-center justify-between px-4 py-3 md:px-6">
+        <div className="container flex items-center justify-between py-3">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold shadow-lg">
               S
             </div>
-            <span className="hidden text-xl font-bold text-white md:block">Starchild</span>
+            <span className="hidden text-lg font-bold text-white md:block accent-gradient">Starchild</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -57,7 +57,7 @@ export default function Header() {
                 haptic("medium");
                 setIsSettingsOpen(true);
               }}
-              className="touch-target flex items-center gap-2 rounded-full p-2 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+              className="btn-ghost touch-target"
               aria-label="Open settings"
             >
               <svg
@@ -79,7 +79,7 @@ export default function Header() {
             {session ? (
               <Link
                 href="/profile"
-                className="hidden items-center gap-2 rounded-full bg-gray-800 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-700 hover:text-white md:flex"
+                className="hidden items-center gap-2 btn-secondary md:flex"
               >
                 {session.user?.image ? (
                   <Image
@@ -97,11 +97,8 @@ export default function Header() {
                 <span>{session.user?.name}</span>
               </Link>
             ) : (
-              <Link
-                href="/api/auth/signin"
-                className="hidden rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 md:block"
-              >
-                Sign In
+              <Link href="/api/auth/signin" className="hidden md:block">
+                <button className="btn-primary">Sign In</button>
               </Link>
             )}
           </div>
