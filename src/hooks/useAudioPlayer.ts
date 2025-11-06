@@ -202,7 +202,18 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     const handleEnded = () => handleTrackEnd();
     const handleLoadStart = () => setIsLoading(true);
     const handleCanPlay = () => setIsLoading(false);
-    const handleError = () => {
+    const handleError = (e: Event) => {
+      // Ignore abort errors - these are normal when switching tracks quickly
+      const target = e.target as HTMLAudioElement;
+      const error = target.error;
+
+      if (error?.code === MediaError.MEDIA_ERR_ABORTED) {
+        // This is expected when switching tracks, not a real error
+        return;
+      }
+
+      // Log other errors for debugging
+      console.error("Audio error:", error?.message ?? "Unknown error");
       setIsLoading(false);
       setIsPlaying(false);
     };
@@ -232,8 +243,14 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     (track: Track, streamUrl: string) => {
       if (!audioRef.current) return;
 
+      // Pause and reset current audio to prevent "aborted" errors on rapid track changes
+      audioRef.current.pause();
+      audioRef.current.src = "";
+
       setHistory((prev) => (currentTrack ? [...prev, currentTrack] : prev));
       setCurrentTrack(track);
+
+      // Set new source and load
       audioRef.current.src = streamUrl;
       audioRef.current.load();
       onTrackChange?.(track);
