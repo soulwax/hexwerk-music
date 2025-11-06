@@ -265,6 +265,18 @@ export const musicRouter = createTRPCRouter({
         throw new Error("Playlist not found");
       }
 
+      // Check if track already exists in playlist
+      const existing = await ctx.db.query.playlistTracks.findFirst({
+        where: and(
+          eq(playlistTracks.playlistId, input.playlistId),
+          eq(playlistTracks.trackId, input.track.id),
+        ),
+      });
+
+      if (existing) {
+        return { success: true, alreadyExists: true };
+      }
+
       // Get max position
       const maxPos = await ctx.db
         .select({ max: sql<number>`max(${playlistTracks.position})` })

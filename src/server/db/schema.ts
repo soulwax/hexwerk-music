@@ -1,7 +1,7 @@
 // File: src/server/db/schema.ts
 
 import { relations, sql } from "drizzle-orm";
-import { index, pgTableCreator, primaryKey } from "drizzle-orm/pg-core";
+import { index, pgTableCreator, primaryKey, unique } from "drizzle-orm/pg-core";
 
 export const createTable = pgTableCreator((name) => `hexmusic-stream_${name}`);
 
@@ -103,6 +103,7 @@ export const favorites = createTable(
     index("favorite_user_idx").on(t.userId),
     index("favorite_track_idx").on(t.trackId),
     index("favorite_user_track_idx").on(t.userId, t.trackId),
+    unique("favorite_user_track_unique").on(t.userId, t.trackId),
   ],
 );
 
@@ -149,6 +150,7 @@ export const playlistTracks = createTable(
   (t) => [
     index("playlist_track_playlist_idx").on(t.playlistId),
     index("playlist_track_position_idx").on(t.playlistId, t.position),
+    unique("playlist_track_unique").on(t.playlistId, t.trackId),
   ],
 );
 
