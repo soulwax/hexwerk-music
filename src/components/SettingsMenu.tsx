@@ -46,7 +46,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
       setPlaybackRate(preferences.playbackRate);
       setEqualizerEnabled(preferences.equalizerEnabled);
       setEqualizerPreset(preferences.equalizerPreset);
-      setEqualizerBands(preferences.equalizerBands as number[]);
+      setEqualizerBands(preferences.equalizerBands!);
       setVisualizerEnabled(preferences.visualizerEnabled);
       setVisualizerType(preferences.visualizerType as "bars" | "wave" | "circular");
       setTheme(preferences.theme as "dark" | "light");
@@ -64,12 +64,30 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     }
   }, [queueSettings]);
 
-  const handleUpdatePreference = async (update: Partial<typeof preferences>) => {
+  const handleUpdatePreference = async (update: {
+    volume?: number;
+    playbackRate?: number;
+    repeatMode?: "none" | "one" | "all";
+    shuffleEnabled?: boolean;
+    equalizerEnabled?: boolean;
+    equalizerPreset?: string;
+    equalizerBands?: number[];
+    visualizerType?: "bars" | "wave" | "circular";
+    visualizerEnabled?: boolean;
+    compactMode?: boolean;
+    theme?: "dark" | "light";
+  }) => {
     haptic("light");
     await updatePreferences.mutateAsync(update);
   };
 
-  const handleUpdateQueueSettings = async (update: Partial<typeof queueSettings>) => {
+  const handleUpdateQueueSettings = async (update: {
+    autoQueueEnabled?: boolean;
+    autoQueueThreshold?: number;
+    autoQueueCount?: number;
+    smartMixEnabled?: boolean;
+    similarityPreference?: "strict" | "balanced" | "diverse";
+  }) => {
     haptic("light");
     await updateQueueSettings.mutateAsync(update);
   };
@@ -96,7 +114,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   const handlePresetChange = (preset: typeof equalizerPresets[0]) => {
     setEqualizerPreset(preset.name);
     setEqualizerBands(preset.bands);
-    handleUpdatePreference({ equalizerPreset: preset.name, equalizerBands: preset.bands });
+    void handleUpdatePreference({ equalizerPreset: preset.name, equalizerBands: preset.bands });
   };
 
   const handleBandChange = (index: number, value: number) => {
@@ -104,7 +122,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     newBands[index] = value;
     setEqualizerBands(newBands);
     setEqualizerPreset("Custom");
-    handleUpdatePreference({ equalizerPreset: "Custom", equalizerBands: newBands });
+    void handleUpdatePreference({ equalizerPreset: "Custom", equalizerBands: newBands });
   };
 
   if (!isOpen) return null;
@@ -177,7 +195,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value);
                     setVolume(val);
-                    handleUpdatePreference({ volume: val });
+                    void handleUpdatePreference({ volume: val });
                   }}
                   className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-700 accent-indigo-600"
                 />
@@ -197,7 +215,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   onChange={(e) => {
                     const val = parseFloat(e.target.value);
                     setPlaybackRate(val);
-                    handleUpdatePreference({ playbackRate: val });
+                    void handleUpdatePreference({ playbackRate: val });
                   }}
                   className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-700 accent-indigo-600"
                 />
@@ -219,7 +237,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   onClick={() => {
                     const newValue = !equalizerEnabled;
                     setEqualizerEnabled(newValue);
-                    handleUpdatePreference({ equalizerEnabled: newValue });
+                    void handleUpdatePreference({ equalizerEnabled: newValue });
                   }}
                   className={`touch-target relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     equalizerEnabled ? "bg-indigo-600" : "bg-gray-700"
@@ -258,25 +276,35 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                     <label className="mb-4 block text-sm font-medium text-gray-300">
                       Custom Bands {equalizerPreset === "Custom" && "(Custom)"}
                     </label>
-                    <div className="flex items-end justify-between gap-2">
-                      {equalizerBands.map((band, i) => (
-                        <div key={i} className="flex flex-1 flex-col items-center gap-2">
+                    <div className="space-y-3">
+                      {[
+                        { label: "32Hz", index: 0 },
+                        { label: "64Hz", index: 1 },
+                        { label: "125Hz", index: 2 },
+                        { label: "250Hz", index: 3 },
+                        { label: "500Hz", index: 4 },
+                        { label: "1kHz", index: 5 },
+                        { label: "2kHz", index: 6 },
+                        { label: "4kHz", index: 7 },
+                        { label: "8kHz", index: 8 },
+                        { label: "16kHz", index: 9 },
+                      ].map(({ label, index }) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <span className="w-12 text-xs text-gray-400">{label}</span>
                           <input
                             type="range"
                             min="-12"
                             max="12"
                             step="1"
-                            value={band}
-                            onChange={(e) => handleBandChange(i, parseInt(e.target.value))}
-                            className="h-24 w-2 cursor-pointer appearance-none rounded-full bg-gray-700 accent-indigo-600"
-                            style={{ writingMode: "bt-lr", WebkitAppearance: "slider-vertical" }}
+                            value={equalizerBands[index]}
+                            onChange={(e) => handleBandChange(index, parseInt(e.target.value))}
+                            className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-gray-700 accent-indigo-600"
                           />
-                          <span className="text-xs text-gray-500">{band > 0 ? `+${band}` : band}</span>
+                          <span className="w-10 text-right text-xs text-gray-500">
+                            {equalizerBands[index]! > 0 ? `+${equalizerBands[index]}` : equalizerBands[index]}dB
+                          </span>
                         </div>
                       ))}
-                    </div>
-                    <div className="mt-3 text-center text-xs text-gray-500">
-                      32Hz - 64Hz - 125Hz - 250Hz - 500Hz - 1kHz - 2kHz - 4kHz - 8kHz - 16kHz
                     </div>
                   </div>
                 </>
@@ -296,7 +324,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   onClick={() => {
                     const newValue = !autoQueueEnabled;
                     setAutoQueueEnabled(newValue);
-                    handleUpdateQueueSettings({ autoQueueEnabled: newValue });
+                    void handleUpdateQueueSettings({ autoQueueEnabled: newValue });
                   }}
                   className={`touch-target relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     autoQueueEnabled ? "bg-indigo-600" : "bg-gray-700"
@@ -327,7 +355,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                       onChange={(e) => {
                         const val = parseInt(e.target.value);
                         setAutoQueueThreshold(val);
-                        handleUpdateQueueSettings({ autoQueueThreshold: val });
+                        void handleUpdateQueueSettings({ autoQueueThreshold: val });
                       }}
                       className="h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-700 accent-indigo-600"
                     />
@@ -347,7 +375,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                       onChange={(e) => {
                         const val = parseInt(e.target.value);
                         setAutoQueueCount(val);
-                        handleUpdateQueueSettings({ autoQueueCount: val });
+                        void handleUpdateQueueSettings({ autoQueueCount: val });
                       }}
                       className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-700 accent-indigo-600"
                     />
@@ -364,7 +392,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   onClick={() => {
                     const newValue = !smartMixEnabled;
                     setSmartMixEnabled(newValue);
-                    handleUpdateQueueSettings({ smartMixEnabled: newValue });
+                    void handleUpdateQueueSettings({ smartMixEnabled: newValue });
                   }}
                   className={`touch-target relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     smartMixEnabled ? "bg-indigo-600" : "bg-gray-700"
@@ -387,7 +415,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                         key={pref}
                         onClick={() => {
                           setSimilarityPreference(pref);
-                          handleUpdateQueueSettings({ similarityPreference: pref });
+                          void handleUpdateQueueSettings({ similarityPreference: pref });
                         }}
                         className={`touch-target rounded-lg px-4 py-3 text-sm font-medium capitalize transition-all ${
                           similarityPreference === pref
@@ -415,7 +443,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                       key={t}
                       onClick={() => {
                         setTheme(t);
-                        handleUpdatePreference({ theme: t });
+                        void handleUpdatePreference({ theme: t });
                       }}
                       className={`touch-target rounded-lg px-4 py-3 text-sm font-medium capitalize transition-all ${
                         theme === t
@@ -438,7 +466,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   onClick={() => {
                     const newValue = !compactMode;
                     setCompactMode(newValue);
-                    handleUpdatePreference({ compactMode: newValue });
+                    void handleUpdatePreference({ compactMode: newValue });
                   }}
                   className={`touch-target relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     compactMode ? "bg-indigo-600" : "bg-gray-700"
@@ -463,7 +491,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   onClick={() => {
                     const newValue = !visualizerEnabled;
                     setVisualizerEnabled(newValue);
-                    handleUpdatePreference({ visualizerEnabled: newValue });
+                    void handleUpdatePreference({ visualizerEnabled: newValue });
                   }}
                   className={`touch-target relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     visualizerEnabled ? "bg-indigo-600" : "bg-gray-700"
@@ -486,7 +514,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                         key={type}
                         onClick={() => {
                           setVisualizerType(type);
-                          handleUpdatePreference({ visualizerType: type });
+                          void handleUpdatePreference({ visualizerType: type });
                         }}
                         className={`touch-target rounded-lg px-4 py-3 text-sm font-medium capitalize transition-all ${
                           visualizerType === type

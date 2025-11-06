@@ -5,6 +5,7 @@ import "@/styles/globals.css";
 import { Geist } from "next/font/google";
 import { type ReactNode } from "react";
 
+import Header from "@/components/Header";
 import InstallPrompt from "@/components/InstallPrompt";
 import MobileNavigation from "@/components/MobileNavigation";
 import PersistentPlayer from "@/components/PersistentPlayer";
@@ -62,6 +63,8 @@ export default function RootLayout({
           <TRPCReactProvider>
             <ToastProvider>
               <AudioPlayerProvider>
+                {/* Header with hamburger menu */}
+                <Header />
                 {/* Main content with bottom padding for player and mobile nav */}
                 <div className="pb-36 md:pb-24">{children}</div>
                 {/* Mobile bottom navigation */}

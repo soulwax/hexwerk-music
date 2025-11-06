@@ -47,6 +47,15 @@ export const users = createTable("user", (d) => ({
     })
     .default(sql`CURRENT_TIMESTAMP`),
   image: d.varchar({ length: 255 }),
+  userHash: d
+    .varchar({ length: 32 })
+    .unique()
+    .$defaultFn(() => {
+      // Generate a short, URL-friendly hash from UUID
+      return crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+    }),
+  profilePublic: d.boolean().default(true).notNull(),
+  bio: d.text(),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({

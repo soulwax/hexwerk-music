@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "link";
+import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import SettingsMenu from "./SettingsMenu";
 import { haptic } from "@/utils/haptics";
@@ -81,9 +82,11 @@ export default function Header() {
                 className="hidden items-center gap-2 rounded-full bg-gray-800 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-700 hover:text-white md:flex"
               >
                 {session.user?.image ? (
-                  <img
+                  <Image
                     src={session.user.image}
                     alt={session.user?.name ?? "User"}
+                    width={24}
+                    height={24}
                     className="h-6 w-6 rounded-full"
                   />
                 ) : (

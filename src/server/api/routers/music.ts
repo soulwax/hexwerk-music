@@ -17,6 +17,7 @@ import {
   recommendationCache,
   searchHistory,
   userPreferences,
+  users,
 } from "@/server/db/schema";
 import {
   fetchDeezerRecommendations,
@@ -1107,6 +1108,138 @@ export const musicRouter = createTRPCRouter({
 
     return { success: true };
   }),
+
+  // ============================================
+  // PUBLIC PROFILE
+  // ============================================
+
+  getPublicProfile: publicProcedure
+    .input(z.object({ userHash: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.userHash, input.userHash),
+      });
+
+      if (!user || !user.profilePublic) {
+        return null;
+      }
+
+      // Get user stats
+      const [favoriteCount, playlistCount, historyCount] = await Promise.all([
+        ctx.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(favorites)
+          .where(eq(favorites.userId, user.id))
+          .then((res) => res[0]?.count ?? 0),
+        ctx.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(playlists)
+          .where(and(eq(playlists.userId, user.id), eq(playlists.isPublic, true)))
+          .then((res) => res[0]?.count ?? 0),
+        ctx.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(listeningHistory)
+          .where(eq(listeningHistory.userId, user.id))
+          .then((res) => res[0]?.count ?? 0),
+      ]);
+
+      return {
+        userHash: user.userHash,
+        name: user.name,
+        image: user.image,
+        bio: user.bio,
+        stats: {
+          favorites: favoriteCount,
+          playlists: playlistCount,
+          tracksPlayed: historyCount,
+        },
+      };
+    }),
+
+  getPublicListeningHistory: publicProcedure
+    .input(z.object({ userHash: z.string(), limit: z.number().optional() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.userHash, input.userHash),
+      });
+
+      if (!user || !user.profilePublic) {
+        return [];
+      }
+
+      const history = await ctx.db.query.listeningHistory.findMany({
+        where: eq(listeningHistory.userId, user.id),
+        orderBy: desc(listeningHistory.playedAt),
+        limit: input.limit ?? 20,
+      });
+
+      return history.map((h) => ({
+        trackData: h.trackData,
+        playedAt: h.playedAt,
+      }));
+    }),
+
+  getPublicFavorites: publicProcedure
+    .input(z.object({ userHash: z.string(), limit: z.number().optional() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.userHash, input.userHash),
+      });
+
+      if (!user || !user.profilePublic) {
+        return [];
+      }
+
+      const favs = await ctx.db.query.favorites.findMany({
+        where: eq(favorites.userId, user.id),
+        orderBy: desc(favorites.createdAt),
+        limit: input.limit ?? 20,
+      });
+
+      return favs.map((f) => f.trackData);
+    }),
+
+  getPublicPlaylists: publicProcedure
+    .input(z.object({ userHash: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.userHash, input.userHash),
+      });
+
+      if (!user || !user.profilePublic) {
+        return [];
+      }
+
+      const userPlaylists = await ctx.db.query.playlists.findMany({
+        where: and(eq(playlists.userId, user.id), eq(playlists.isPublic, true)),
+        orderBy: desc(playlists.createdAt),
+      });
+
+      return userPlaylists;
+    }),
+
+  getCurrentUserHash: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.query.users.findFirst({
+      where: eq(users.id, ctx.session.user.id),
+    });
+    return user?.userHash ?? null;
+  }),
+
+  updateProfile: protectedProcedure
+    .input(
+      z.object({
+        bio: z.string().optional(),
+        profilePublic: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(users)
+        .set(input)
+        .where(eq(users.id, ctx.session.user.id));
+
+      return { success: true };
+    }),
 
   // ============================================
   // AUDIO FEATURES (Future - Essentia)
