@@ -6,8 +6,8 @@ import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import MaturePlayer from "./Player";
 import MobilePlayer from "./MobilePlayer";
+import MaturePlayer from "./Player";
 
 // Dynamic imports to prevent SSR issues with Web Audio API
 const AudioVisualizer = dynamic(
