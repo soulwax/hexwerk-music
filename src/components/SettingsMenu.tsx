@@ -12,10 +12,15 @@ interface SettingsMenuProps {
 export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   const { data: preferences } = api.music.getUserPreferences.useQuery();
   const { data: queueSettings } = api.music.getSmartQueueSettings.useQuery();
+  const { data: userHash } = api.music.getCurrentUserHash.useQuery();
   const updatePreferences = api.music.updatePreferences.useMutation();
   const updateQueueSettings = api.music.updateSmartQueueSettings.useMutation();
+  const updateProfile = api.music.updateProfile.useMutation();
 
-  const [activeSection, setActiveSection] = useState<string>("playback");
+  const [activeSection, setActiveSection] = useState<string>("profile");
+  const [bio, setBio] = useState("");
+  const [profilePublic, setProfilePublic] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   // Local state for settings
   const [volume, setVolume] = useState(preferences?.volume ?? 0.7);
@@ -93,12 +98,28 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   };
 
   const sections = [
+    { id: "profile", name: "Profile", icon: "👤" },
     { id: "playback", name: "Playback", icon: "🎵" },
     { id: "equalizer", name: "Equalizer", icon: "🎚️" },
     { id: "queue", name: "Smart Queue", icon: "🔀" },
     { id: "appearance", name: "Appearance", icon: "🎨" },
     { id: "visualizer", name: "Visualizer", icon: "📊" },
   ];
+
+  const copyProfileLink = async () => {
+    if (userHash) {
+      const profileUrl = `${window.location.origin}/${userHash}`;
+      await navigator.clipboard.writeText(profileUrl);
+      setCopied(true);
+      haptic("success");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    haptic("light");
+    await updateProfile.mutateAsync({ bio, profilePublic });
+  };
 
   const equalizerPresets = [
     { name: "Flat", bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
@@ -178,6 +199,89 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
 
         {/* Settings Content */}
         <div className="p-6 space-y-6">
+          {/* Profile Section */}
+          {activeSection === "profile" && (
+            <div className="space-y-6">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-300">
+                  Your Profile Link
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={userHash ? `${window.location.origin}/${userHash}` : "Loading..."}
+                    readOnly
+                    className="flex-1 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300"
+                  />
+                  <button
+                    onClick={copyProfileLink}
+                    disabled={!userHash}
+                    className="touch-target rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {copied ? "✓ Copied!" : "Copy"}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Share this link with others to show them your music profile
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-300">
+                  Bio
+                </label>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell people about your music taste..."
+                  className="w-full resize-none rounded-lg bg-gray-800 px-4 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="block text-sm font-medium text-gray-300">Public Profile</span>
+                  <span className="text-xs text-gray-500">Allow others to view your profile</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const newValue = !profilePublic;
+                    setProfilePublic(newValue);
+                    void handleUpdateProfile();
+                  }}
+                  className={`touch-target relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    profilePublic ? "bg-indigo-600" : "bg-gray-700"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      profilePublic ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <button
+                onClick={handleUpdateProfile}
+                className="touch-target w-full rounded-lg bg-indigo-600 px-4 py-3 font-medium text-white transition-colors hover:bg-indigo-700"
+              >
+                Save Profile Changes
+              </button>
+
+              {userHash && (
+                <a
+                  href={`/${userHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-lg border-2 border-gray-700 px-4 py-3 text-center font-medium text-white transition-colors hover:border-indigo-500 hover:bg-gray-800"
+                >
+                  👁️ View Your Public Profile
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Playback Section */}
           {activeSection === "playback" && (
             <div className="space-y-6">
