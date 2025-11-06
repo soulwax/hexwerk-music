@@ -156,6 +156,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               width={48}
               height={48}
               className="flex-shrink-0 rounded-lg"
+              priority
+              quality={75}
             />
             <div className="min-w-0 flex-1">
               <h4 className="truncate font-medium text-white">
@@ -250,6 +252,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                   height={400}
                   className="w-full rounded-2xl shadow-2xl"
                   priority
+                  quality={85}
                 />
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/60">

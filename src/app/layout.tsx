@@ -5,6 +5,7 @@ import "@/styles/globals.css";
 import { Geist } from "next/font/google";
 import { type ReactNode } from "react";
 
+import InstallPrompt from "@/components/InstallPrompt";
 import MobileNavigation from "@/components/MobileNavigation";
 import PersistentPlayer from "@/components/PersistentPlayer";
 import { SessionProvider } from "@/components/SessionProvider";
@@ -19,13 +20,30 @@ const geist = Geist({
 
 export const metadata = {
   title: "Starchild Music Stream",
-  description: "Modern music streaming application",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  description: "Modern music streaming and discovery platform with smart recommendations",
+  applicationName: "Starchild Music",
+  icons: [
+    { rel: "icon", url: "/favicon.ico" },
+    {
+      rel: "apple-touch-icon",
+      url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/180.png",
+    },
+  ],
+  manifest: "/manifest.json",
+  themeColor: "#4f46e5",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Starchild Music",
+  },
   viewport: {
     width: "device-width",
     initialScale: 1,
     maximumScale: 5,
     userScalable: true,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
@@ -34,6 +52,11 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={geist.variable} suppressHydrationWarning>
+      <head>
+        {/* Preconnect to external resources for faster loading */}
+        <link rel="preconnect" href="https://cdn-images.dzcdn.net" />
+        <link rel="dns-prefetch" href="https://api.deezer.com" />
+      </head>
       <body>
         <SessionProvider>
           <TRPCReactProvider>
@@ -45,6 +68,8 @@ export default function RootLayout({
                 <MobileNavigation />
                 {/* Persistent player - stays on all pages */}
                 <PersistentPlayer />
+                {/* PWA install prompt */}
+                <InstallPrompt />
               </AudioPlayerProvider>
             </ToastProvider>
           </TRPCReactProvider>

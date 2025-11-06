@@ -155,6 +155,8 @@ export default function MaturePlayer({
               width={56}
               height={56}
               className="rounded-lg"
+              priority
+              quality={75}
             />
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60">

@@ -26,6 +26,8 @@ export default function TrackCard({ track, onPlay }: TrackCardProps) {
         width={80}
         height={80}
         className="rounded-lg"
+        loading="lazy"
+        quality={75}
       />
       <div className="flex-1 overflow-hidden">
         <h3 className="truncate font-semibold text-white">{track.title}</h3>

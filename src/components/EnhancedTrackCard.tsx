@@ -114,6 +114,8 @@ export default function EnhancedTrackCard({
           width={80}
           height={80}
           className="h-16 w-16 rounded-lg md:h-16 md:w-16"
+          loading="lazy"
+          quality={75}
         />
         <button
           onClick={() => onPlay(track)}
