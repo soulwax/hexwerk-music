@@ -1,5 +1,6 @@
 "use client";
 
+import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { haptic } from "@/utils/haptics";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
@@ -10,24 +11,27 @@ import SettingsMenu from "./SettingsMenu";
 export default function Header() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { data: session } = useSession();
+  const player = useGlobalPlayer();
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-gray-800 bg-black/95 backdrop-blur-lg">
-        <div className="container flex items-center justify-between py-3">
+      <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-black/95 backdrop-blur-xl shadow-lg">
+        <div className="container flex items-center justify-between py-3.5">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold shadow-lg">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 font-bold text-white shadow-lg ring-2 ring-indigo-500/20 transition-all group-hover:scale-105 group-hover:shadow-indigo-500/50">
               S
             </div>
-            <span className="hidden text-lg font-bold text-white md:block accent-gradient">Starchild</span>
+            <span className="accent-gradient hidden text-lg font-bold md:block">
+              Starchild
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-6 md:flex">
             <Link
               href="/"
-              className="text-sm font-medium text-gray-300 transition-colors hover:text-white"
+              className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-white hover:scale-105"
             >
               Home
             </Link>
@@ -35,13 +39,13 @@ export default function Header() {
               <>
                 <Link
                   href="/library"
-                  className="text-sm font-medium text-gray-300 transition-colors hover:text-white"
+                  className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-white hover:scale-105"
                 >
                   Library
                 </Link>
                 <Link
                   href="/playlists"
-                  className="text-sm font-medium text-gray-300 transition-colors hover:text-white"
+                  className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-white hover:scale-105"
                 >
                   Playlists
                 </Link>
@@ -57,7 +61,7 @@ export default function Header() {
                 haptic("medium");
                 setIsSettingsOpen(true);
               }}
-              className="btn-ghost touch-target"
+              className="btn-ghost touch-target transition-all hover:scale-105"
               aria-label="Open settings"
             >
               <svg
@@ -79,7 +83,7 @@ export default function Header() {
             {session ? (
               <Link
                 href="/profile"
-                className="hidden items-center gap-2 btn-secondary md:flex"
+                className="btn-secondary hidden items-center gap-2 transition-all hover:scale-105 md:flex"
               >
                 {session.user?.image ? (
                   <Image
@@ -87,18 +91,20 @@ export default function Header() {
                     alt={session.user?.name ?? "User"}
                     width={24}
                     height={24}
-                    className="h-6 w-6 rounded-full"
+                    className="h-6 w-6 rounded-full ring-2 ring-white/10"
                   />
                 ) : (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-xs font-bold text-white shadow-lg">
                     {session.user?.name?.charAt(0).toUpperCase() ?? "U"}
                   </div>
                 )}
-                <span>{session.user?.name}</span>
+                <span className="text-sm">{session.user?.name}</span>
               </Link>
             ) : (
               <Link href="/api/auth/signin" className="hidden md:block">
-                <button className="btn-primary">Sign In</button>
+                <button className="btn-primary transition-all hover:scale-105">
+                  Sign In
+                </button>
               </Link>
             )}
           </div>

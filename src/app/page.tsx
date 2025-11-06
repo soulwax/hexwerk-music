@@ -113,114 +113,68 @@ function SearchPageContent() {
   return (
     <>
       <div className="flex min-h-screen flex-col">
-        {/* Mobile-optimized header */}
-        <header className="safe-top sticky top-0 z-40 border-b border-gray-800 bg-black/95 backdrop-blur-lg">
-          <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
-            <div className="flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-2">
-                <h1 className="accent-gradient text-glow text-xl font-bold md:text-2xl">
-                  🌟 Starchild Music
-                </h1>
-              </Link>
-
-              {/* Desktop navigation - hidden on mobile */}
-              <nav className="hidden items-center gap-4 md:flex">
-                {session ? (
-                  <>
-                    <Link
-                      href="/library"
-                      className="text-gray-300 transition hover:text-white"
-                    >
-                      Library
-                    </Link>
-                    <Link
-                      href="/playlists"
-                      className="text-gray-300 transition hover:text-white"
-                    >
-                      Playlists
-                    </Link>
-                    <button
-                      onClick={() => setShowQueue(!showQueue)}
-                      className="relative text-gray-300 transition hover:text-white"
-                    >
-                      Queue
-                      {player.queue.length > 0 && (
-                        <span className="bg-accent absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white">
-                          {player.queue.length}
-                        </span>
-                      )}
-                    </button>
-                    <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                      <span className="text-sm text-gray-400">
-                        {session.user?.name ?? session.user?.email}
-                      </span>
-                      <Link
-                        href="/api/auth/signout"
-                        className="text-sm text-gray-400 transition hover:text-white"
-                      >
-                        Sign Out
-                      </Link>
-                    </div>
-                  </>
-                ) : (
-                  <Link href="/api/auth/signin" className="btn-primary">
-                    Sign In
-                  </Link>
-                )}
-              </nav>
-
-              {/* Mobile queue button */}
-              {session && (
-                <button
-                  onClick={() => setShowQueue(!showQueue)}
-                  className="touch-target relative flex items-center justify-center text-gray-300 transition hover:text-white md:hidden"
-                >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                  {player.queue.length > 0 && (
-                    <span className="bg-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
-                      {player.queue.length}
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
+        <main className="container mx-auto w-full flex-1 py-6 md:py-8">
+          {/* Hero Section */}
+          <div className="mb-8 text-center md:mb-10">
+            <h1 className="accent-gradient mb-3 text-3xl font-bold md:text-4xl">
+              Discover Your Next Favorite Track
+            </h1>
+            <p className="text-base text-[var(--color-subtext)] md:text-lg">
+              Search millions of songs and create your perfect playlist
+            </p>
           </div>
-        </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-4 md:px-4 md:py-8">
-          <div className="card slide-up mb-4 w-full p-4 md:mb-8 md:p-6">
-            <div className="mb-4 flex flex-col gap-2 md:flex-row md:gap-3">
-              <input
-                className="input-text flex-1 text-base md:text-sm"
-                placeholder="Search for songs, artists, or albums..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
-              />
+          {/* Search Card */}
+          <div className="card slide-up mb-6 w-full p-5 shadow-xl md:mb-8 md:p-7">
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:gap-3">
+              <div className="relative flex-1">
+                <input
+                  className="input-text w-full pl-12 text-base md:text-sm"
+                  placeholder="Search for songs, artists, or albums..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
+                />
+                <svg
+                  className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--color-subtext)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
               <button
-                className="btn-primary touch-target-lg w-full md:w-auto md:px-8"
+                className="btn-primary touch-target-lg flex w-full items-center justify-center gap-2 md:w-auto md:px-8"
                 onClick={() => void handleSearch()}
                 disabled={loading}
               >
-                {loading ? "Searching..." : "Search"}
+                {loading ? (
+                  <>
+                    <div className="spinner spinner-sm"></div>
+                    <span>Searching...</span>
+                  </>
+                ) : (
+                  "Search"
+                )}
               </button>
             </div>
 
             {session && recentSearches && recentSearches.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                <span className="text-sm text-gray-400">Recent:</span>
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <span className="text-sm font-medium text-[var(--color-subtext)]">
+                  Recent:
+                </span>
                 {recentSearches.map((search) => (
                   <button
                     key={search}
                     onClick={() => void handleSearch(search)}
-                    className="touch-active rounded-full bg-gray-800 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-700 md:py-1"
+                    className="touch-active rounded-full bg-[var(--color-surface-2)] px-3 py-1.5 text-sm text-[var(--color-text)] ring-1 ring-white/5 transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-accent-light)] hover:ring-[var(--color-accent)]/30 md:py-1"
                   >
                     {search}
                   </button>
@@ -233,16 +187,21 @@ function SearchPageContent() {
             <div className={`${showQueue ? "w-full lg:w-2/3" : "w-full"}`}>
               {results.length > 0 ? (
                 <>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-white">
-                      Search Results ({results.length.toLocaleString()}
-                      {total > results.length
-                        ? ` of ${total.toLocaleString()}`
-                        : ""}
-                      )
-                    </h2>
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-[var(--color-text)] md:text-2xl">
+                        Search Results
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--color-subtext)]">
+                        {results.length.toLocaleString()}
+                        {total > results.length
+                          ? ` of ${total.toLocaleString()}`
+                          : ""}{" "}
+                        tracks found
+                      </p>
+                    </div>
                   </div>
-                  <div className="grid gap-3">
+                  <div className="grid gap-3 fade-in">
                     {results.map((track) => (
                       <EnhancedTrackCard
                         key={track.id}
@@ -255,36 +214,46 @@ function SearchPageContent() {
                   </div>
 
                   {hasMore && (
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-8 flex justify-center">
                       <button
                         onClick={() => void handleLoadMore()}
                         disabled={loadingMore}
-                        className="btn-primary touch-target-lg w-full md:w-auto md:px-8"
+                        className="btn-primary touch-target-lg flex w-full items-center justify-center gap-2 md:w-auto md:px-12"
                       >
-                        {loadingMore
-                          ? "Loading..."
-                          : `Load More (${(total - results.length).toLocaleString()} remaining)`}
+                        {loadingMore ? (
+                          <>
+                            <div className="spinner spinner-sm"></div>
+                            <span>Loading...</span>
+                          </>
+                        ) : (
+                          `Load More (${(total - results.length).toLocaleString()} remaining)`
+                        )}
                       </button>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="py-12 text-center">
-                  <svg
-                    className="mx-auto mb-4 h-16 w-16 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  <p className="text-gray-400">
-                    Search for your favorite music to get started
+                <div className="card flex flex-col items-center justify-center py-20 text-center">
+                  <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600/20 to-purple-600/20 ring-2 ring-[var(--color-accent)]/20">
+                    <svg
+                      className="h-12 w-12 text-[var(--color-accent)]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="mb-2 text-xl font-bold text-[var(--color-text)]">
+                    Start Your Musical Journey
+                  </h3>
+                  <p className="max-w-md text-[var(--color-subtext)]">
+                    Search for your favorite songs, artists, or albums to discover amazing music
                   </p>
                 </div>
               )}
@@ -292,36 +261,41 @@ function SearchPageContent() {
 
             {showQueue && (
               <div className="hidden w-1/3 lg:block">
-                <div className="card sticky top-24 p-6">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-white">
-                      Queue ({player.queue.length})
-                    </h2>
+                <div className="card sticky top-24 p-6 shadow-xl">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-[var(--color-text)]">
+                        Queue
+                      </h2>
+                      <p className="mt-0.5 text-xs text-[var(--color-subtext)]">
+                        {player.queue.length} track{player.queue.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
                     {player.queue.length > 0 && (
                       <button
                         onClick={player.clearQueue}
-                        className="text-sm text-gray-400 transition hover:text-white"
+                        className="btn-ghost text-xs transition-all hover:text-[var(--color-danger)]"
                       >
-                        Clear
+                        Clear All
                       </button>
                     )}
                   </div>
 
                   {player.queue.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-[calc(100vh-12rem)] overflow-y-auto scrollbar-hide">
                       {player.queue.map((track, idx) => (
                         <div
                           key={`${track.id}-${idx}`}
-                          className="flex items-center gap-2 rounded bg-gray-800/50 p-2"
+                          className="group flex items-center gap-3 rounded-lg bg-[var(--color-surface-2)] p-2.5 ring-1 ring-white/5 transition-all hover:bg-[var(--color-surface-hover)] hover:ring-[var(--color-accent)]/30"
                         >
-                          <span className="text-sm text-gray-500">
+                          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-subtext)] ring-1 ring-white/10">
                             {idx + 1}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm text-white">
+                            <p className="truncate text-sm font-medium text-[var(--color-text)] group-hover:text-[var(--color-accent-light)]">
                               {track.title}
                             </p>
-                            <p className="truncate text-xs text-gray-400">
+                            <p className="truncate text-xs text-[var(--color-subtext)]">
                               {track.artist.name}
                             </p>
                           </div>
@@ -329,9 +303,26 @@ function SearchPageContent() {
                       ))}
                     </div>
                   ) : (
-                    <p className="py-8 text-center text-sm text-gray-500">
-                      No tracks in queue
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-2)] ring-2 ring-white/5">
+                        <svg
+                          className="h-8 w-8 text-[var(--color-subtext)]"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 6h16M4 12h16M4 18h16"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-[var(--color-subtext)]">
+                        No tracks in queue
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

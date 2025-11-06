@@ -71,8 +71,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     { enabled: !!session },
   );
 
+  // TRPC utils for imperative calls
+  const utils = api.useUtils();
+
   // Mutation for fetching recommendations
-  // const getSimilarTracks = api.music.getSimilarTracks.useQuery;
   const generateSmartMixMutation = api.music.generateSmartMix.useMutation();
 
   // Auto-queue trigger callback
@@ -81,26 +83,19 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       if (!session || !smartQueueSettings) return [];
 
       try {
-        // Fetch recommendations based on current track
-        const response = await fetch(
-          `/api/trpc/music.getSimilarTracks?input=${encodeURIComponent(
-            JSON.stringify({
-              trackId: currentTrack.id,
-              limit: smartQueueSettings.autoQueueCount,
-            }),
-          )}`,
-        );
+        // Fetch recommendations based on current track using TRPC client
+        const tracks = await utils.client.music.getSimilarTracks.query({
+          trackId: currentTrack.id,
+          limit: smartQueueSettings.autoQueueCount,
+        });
 
-        if (!response.ok) return [];
-
-        const data = await response.json() as { result: { data: Track[] } };
-        return data.result.data ?? [];
+        return tracks ?? [];
       } catch (error) {
         console.error("Failed to fetch auto-queue recommendations:", error);
         return [];
       }
     },
-    [session, smartQueueSettings],
+    [session, smartQueueSettings, utils],
   );
 
   const player = useAudioPlayer({
@@ -158,35 +153,24 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       if (!session) return;
 
       try {
-        const response = await fetch(
-          `/api/trpc/music.getSimilarTracks?input=${encodeURIComponent(
-            JSON.stringify({
-              trackId,
-              limit: count,
-              excludeTrackIds: [
-                ...(player.currentTrack ? [player.currentTrack.id] : []),
-                ...player.queue.map((t) => t.id),
-              ],
-            }),
-          )}`,
-        );
+        // Use TRPC client to fetch similar tracks
+        const tracks = await utils.client.music.getSimilarTracks.query({
+          trackId,
+          limit: count,
+          excludeTrackIds: [
+            ...(player.currentTrack ? [player.currentTrack.id] : []),
+            ...player.queue.map((t) => t.id),
+          ],
+        });
 
-        if (!response.ok) {
-          console.error("Failed to fetch similar tracks");
-          return;
-        }
-
-        const data = await response.json() as { result: { data: Track[] } };
-        const tracks = data.result.data ?? [];
-
-        if (tracks.length > 0) {
+        if (tracks && tracks.length > 0) {
           player.addToQueue(tracks, false);
         }
       } catch (error) {
         console.error("Error adding similar tracks:", error);
       }
     },
-    [session, player],
+    [session, player, utils],
   );
 
   const generateSmartMix = useCallback(
