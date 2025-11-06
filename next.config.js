@@ -38,6 +38,11 @@ const config = {
         hostname: "api.deezer.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.discordapp.com",
+        pathname: "/**",
+      },
     ],
   },
 };
