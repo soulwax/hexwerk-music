@@ -3,8 +3,8 @@
 "use client";
 
 import { useAudioVisualizer } from "@/hooks/useAudioVisualizer";
+import { GripVertical, Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Maximize2, Minimize2, GripVertical } from "lucide-react";
 
 interface AudioVisualizerProps {
   audioElement: HTMLAudioElement | null;
@@ -27,6 +27,19 @@ interface Particle {
   size: number;
 }
 
+const VISUALIZER_TYPES = [
+  "bars",
+  "spectrum",
+  "oscilloscope",
+  "spectral-waves",
+  "radial-spectrum",
+  "wave",
+  "circular",
+  "waveform-mirror",
+  "particles",
+  "frequency-rings",
+] as const;
+
 export function AudioVisualizer({
   audioElement,
   isPlaying,
@@ -42,14 +55,31 @@ export function AudioVisualizer({
   const [isResizing, setIsResizing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [dimensions, setDimensions] = useState({ width, height });
+  const [currentType, setCurrentType] = useState(type);
+  const [showTypeLabel, setShowTypeLabel] = useState(false);
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const particlesRef = useRef<Particle[]>([]);
   const rotationRef = useRef(0);
+  const typeLabelTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const visualizer = useAudioVisualizer(audioElement, {
     fftSize: 2048,
     smoothingTimeConstant: 0.75,
   });
+
+  // Sync external type changes
+  useEffect(() => {
+    setCurrentType(type);
+  }, [type]);
+
+  // Cleanup type label timeout
+  useEffect(() => {
+    return () => {
+      if (typeLabelTimeoutRef.current) {
+        clearTimeout(typeLabelTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Initialize visualizer
   useEffect(() => {
@@ -65,6 +95,24 @@ export function AudioVisualizer({
       };
     }
   }, [audioElement, visualizer]);
+
+  // Handle cycling through visualizer types
+  const cycleVisualizerType = () => {
+    const currentIndex = VISUALIZER_TYPES.indexOf(currentType);
+    const nextIndex = (currentIndex + 1) % VISUALIZER_TYPES.length;
+    const nextType = VISUALIZER_TYPES[nextIndex]!;
+
+    setCurrentType(nextType);
+
+    // Show label briefly
+    setShowTypeLabel(true);
+    if (typeLabelTimeoutRef.current) {
+      clearTimeout(typeLabelTimeoutRef.current);
+    }
+    typeLabelTimeoutRef.current = setTimeout(() => {
+      setShowTypeLabel(false);
+    }, 1500);
+  };
 
   // Handle resize start
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -555,7 +603,7 @@ export function AudioVisualizer({
       void visualizer.resumeContext();
 
       const renderFrame = (data: Uint8Array) => {
-        switch (type) {
+        switch (currentType) {
           case "oscilloscope":
             renderOscilloscope(ctx, visualizer.getTimeDomainData(), canvas);
             break;
@@ -602,7 +650,7 @@ export function AudioVisualizer({
   }, [
     isPlaying,
     visualizer,
-    type,
+    currentType,
     renderBars,
     renderWave,
     renderCircular,
@@ -637,9 +685,22 @@ export function AudioVisualizer({
         ref={canvasRef}
         width={dimensions.width}
         height={dimensions.height}
-        className="rounded-lg"
+        onClick={cycleVisualizerType}
+        className="rounded-lg cursor-pointer"
         style={{ width: dimensions.width, height: dimensions.height }}
+        title="Click to cycle visualizer type"
       />
+
+      {/* Type Label Overlay */}
+      {showTypeLabel && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="rounded-lg bg-black/80 px-4 py-2 backdrop-blur-sm">
+            <p className="text-sm font-medium text-white capitalize">
+              {currentType.replace(/-/g, " ")}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Controls Overlay */}
       <div className="absolute top-2 right-2 flex gap-2">

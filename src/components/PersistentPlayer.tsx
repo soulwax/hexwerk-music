@@ -4,6 +4,7 @@
 
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import MobilePlayer from "./MobilePlayer";
@@ -30,6 +31,9 @@ export default function PersistentPlayer() {
   const [showQueue, setShowQueue] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
   const isMobile = useIsMobile();
+
+  // Fetch user preferences for visualizer settings
+  const { data: preferences } = api.music.getUserPreferences.useQuery();
 
   const playerProps = {
     currentTrack: player.currentTrack,
@@ -106,7 +110,7 @@ export default function PersistentPlayer() {
       )}
 
       {/* Audio Visualizer (embedded in player or as overlay) */}
-      {player.audioElement && player.currentTrack && (
+      {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && (
         <div className="fixed bottom-20 left-4 z-40 hidden lg:block">
           <div className="rounded-lg bg-black/80 p-2 backdrop-blur-lg">
             <AudioVisualizer
@@ -115,7 +119,7 @@ export default function PersistentPlayer() {
               width={200}
               height={60}
               barCount={24}
-              type="bars"
+              type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"}
             />
           </div>
         </div>

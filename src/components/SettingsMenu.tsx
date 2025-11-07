@@ -2,8 +2,8 @@
 
 import { api } from "@/trpc/react";
 import { haptic } from "@/utils/haptics";
-import { BarChart3, Music, Palette, Shuffle, Sliders, User, LogOut } from "lucide-react";
-import { useSession, signOut } from "next-auth/react";
+import { BarChart3, LogOut, Music, Palette, Shuffle, Sliders, User } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 interface SettingsMenuProps {
@@ -104,15 +104,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     haptic("light");
     await updateQueueSettings.mutateAsync(update);
   };
-
-  const sections = [
-    { id: "profile", name: "Profile", icon: User },
-    { id: "playback", name: "Playback", icon: Music },
-    { id: "equalizer", name: "Equalizer", icon: Sliders },
-    { id: "queue", name: "Smart Queue", icon: Shuffle },
-    { id: "appearance", name: "Appearance", icon: Palette },
-    { id: "visualizer", name: "Visualizer", icon: BarChart3 },
-  ];
 
   const toggleSection = (sectionId: string) => {
     haptic("light");
