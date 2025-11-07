@@ -226,7 +226,7 @@ export const userPreferences = createTable(
     equalizerEnabled: d.boolean().notNull().default(false),
     equalizerPreset: d.varchar({ length: 255 }).notNull().default("Flat"),
     equalizerBands: d.jsonb().$type<number[]>().default(sql`'[]'::jsonb`),
-    visualizerType: d.varchar({ length: 20 }).default("bars"), // 'bars' | 'wave' | 'circular'
+    visualizerType: d.varchar({ length: 30 }).default("bars"), // 'bars' | 'wave' | 'circular' | 'oscilloscope' | 'spectrum' | 'spectral-waves' | 'radial-spectrum' | 'particles' | 'waveform-mirror' | 'frequency-rings'
     visualizerEnabled: d.boolean().default(true).notNull(),
     compactMode: d.boolean().default(false).notNull(),
     theme: d.varchar({ length: 20 }).default("dark"), // 'dark' | 'light'
