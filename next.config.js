@@ -21,6 +21,11 @@ const withPWA = withPWAInit({
   fallbacks: {
     document: "/offline.html",
   },
+  // Use default workbox configuration which uses NetworkFirst for navigation
+  // This prevents aggressive caching that can cause loading loops
+  workboxOptions: {
+    disableDevLogs: true,
+  },
 });
 
 /** @type {import("next").NextConfig} */
