@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import MobilePlayer from "./MobilePlayer";
 import MaturePlayer from "./Player";
 
@@ -32,8 +33,13 @@ export default function PersistentPlayer() {
   const [showEqualizer, setShowEqualizer] = useState(false);
   const isMobile = useIsMobile();
 
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
   // Fetch user preferences for visualizer settings
-  const { data: preferences } = api.music.getUserPreferences.useQuery();
+  const { data: preferences } = api.music.getUserPreferences.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   // Mutation to update visualizer type
   const updatePreferences = api.music.updatePreferences.useMutation();
