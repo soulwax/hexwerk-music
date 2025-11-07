@@ -17,7 +17,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   const updateQueueSettings = api.music.updateSmartQueueSettings.useMutation();
   const updateProfile = api.music.updateProfile.useMutation();
 
-  const [activeSection, setActiveSection] = useState<string>("profile");
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["profile"]));
   const [bio, setBio] = useState("");
   const [profilePublic, setProfilePublic] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -106,6 +106,19 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     { id: "visualizer", name: "Visualizer", icon: "📊" },
   ];
 
+  const toggleSection = (sectionId: string) => {
+    haptic("light");
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
+  };
+
   const copyProfileLink = async () => {
     if (userHash) {
       const profileUrl = `${window.location.origin}/${userHash}`;
@@ -174,34 +187,31 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               </svg>
             </button>
           </div>
-
-          {/* Section Tabs */}
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scroll-smooth">
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                onClick={() => {
-                  haptic("light");
-                  setActiveSection(section.id);
-                }}
-                className={`touch-target whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                  activeSection === section.id
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/50"
-                    : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                }`}
-              >
-                <span className="mr-2">{section.icon}</span>
-                {section.name}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Settings Content */}
-        <div className="p-6 space-y-6">
+        {/* Accordion Sections */}
+        <div className="divide-y divide-gray-800">
           {/* Profile Section */}
-          {activeSection === "profile" && (
-            <div className="space-y-6">
+          <div>
+            <button
+              onClick={() => toggleSection("profile")}
+              className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👤</span>
+                <span className="text-lg font-semibold text-white">Profile</span>
+              </div>
+              <svg
+                className={`h-5 w-5 text-gray-400 transition-transform ${expandedSections.has("profile") ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {expandedSections.has("profile") && (
+              <div className="space-y-6 p-5 pt-0">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-300 truncate">
                   Your Profile Link
@@ -279,12 +289,31 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   👁️ View Your Public Profile
                 </a>
               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Playback Section */}
-          {activeSection === "playback" && (
-            <div className="space-y-6">
+          <div>
+            <button
+              onClick={() => toggleSection("playback")}
+              className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎵</span>
+                <span className="text-lg font-semibold text-white">Playback</span>
+              </div>
+              <svg
+                className={`h-5 w-5 text-gray-400 transition-transform ${expandedSections.has("playback") ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {expandedSections.has("playback") && (
+              <div className="space-y-6 p-5 pt-0">
               <div>
                 <label className="flex items-center justify-between text-sm font-medium text-gray-300">
                   <span>Volume</span>
@@ -329,12 +358,31 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   <span>2.0x</span>
                 </div>
               </div>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Equalizer Section */}
-          {activeSection === "equalizer" && (
-            <div className="space-y-6">
+          <div>
+            <button
+              onClick={() => toggleSection("equalizer")}
+              className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎚️</span>
+                <span className="text-lg font-semibold text-white">Equalizer</span>
+              </div>
+              <svg
+                className={`h-5 w-5 text-gray-400 transition-transform ${expandedSections.has("equalizer") ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {expandedSections.has("equalizer") && (
+              <div className="space-y-6 p-5 pt-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-300">Enable Equalizer</span>
                 <button
@@ -412,12 +460,31 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   </div>
                 </>
               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Smart Queue Section */}
-          {activeSection === "queue" && (
-            <div className="space-y-6">
+          <div>
+            <button
+              onClick={() => toggleSection("queue")}
+              className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🔀</span>
+                <span className="text-lg font-semibold text-white">Smart Queue</span>
+              </div>
+              <svg
+                className={`h-5 w-5 text-gray-400 transition-transform ${expandedSections.has("queue") ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {expandedSections.has("queue") && (
+              <div className="space-y-6 p-5 pt-0">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <span className="block text-sm font-medium text-gray-300 truncate">Auto Queue</span>
@@ -532,12 +599,31 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Appearance Section */}
-          {activeSection === "appearance" && (
-            <div className="space-y-6">
+          <div>
+            <button
+              onClick={() => toggleSection("appearance")}
+              className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎨</span>
+                <span className="text-lg font-semibold text-white">Appearance</span>
+              </div>
+              <svg
+                className={`h-5 w-5 text-gray-400 transition-transform ${expandedSections.has("appearance") ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {expandedSections.has("appearance") && (
+              <div className="space-y-6 p-5 pt-0">
               <div>
                 <label className="mb-3 block text-sm font-medium text-gray-300">Theme</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -582,12 +668,31 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   />
                 </button>
               </div>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Visualizer Section */}
-          {activeSection === "visualizer" && (
-            <div className="space-y-6">
+          <div>
+            <button
+              onClick={() => toggleSection("visualizer")}
+              className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📊</span>
+                <span className="text-lg font-semibold text-white">Visualizer</span>
+              </div>
+              <svg
+                className={`h-5 w-5 text-gray-400 transition-transform ${expandedSections.has("visualizer") ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {expandedSections.has("visualizer") && (
+              <div className="space-y-6 p-5 pt-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-300">Enable Visualizer</span>
                 <button
@@ -631,8 +736,9 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

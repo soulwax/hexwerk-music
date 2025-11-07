@@ -155,7 +155,7 @@ export default function MaturePlayer({
       {/* Progress Bar */}
       <div
         ref={progressRef}
-        className="group relative h-1 w-full cursor-pointer bg-gray-700 transition-all hover:h-1.5"
+        className="group relative h-1.5 w-full cursor-pointer bg-gray-700/50 transition-all hover:h-2"
         onClick={handleProgressClick}
         onMouseDown={() => setIsDragging(true)}
         onMouseUp={() => setIsDragging(false)}
@@ -163,11 +163,11 @@ export default function MaturePlayer({
         onMouseLeave={() => setIsDragging(false)}
       >
         <div
-          className="accent-gradient h-full transition-all"
+          className="accent-gradient h-full transition-all shadow-sm"
           style={{ width: `${progress}%` }}
         />
         <div
-          className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-lg transition-all group-hover:opacity-100"
+          className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-70 shadow-lg transition-all group-hover:scale-125 group-hover:opacity-100"
           style={{ left: `${progress}%`, transform: "translate(-50%, -50%)" }}
         />
       </div>
@@ -363,9 +363,9 @@ export default function MaturePlayer({
           </div>
 
           {/* Time Display */}
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-300">
             <span>{formatTime(currentTime)}</span>
-            <span>/</span>
+            <span className="text-gray-500">/</span>
             <span>{formatTime(duration)}</span>
           </div>
         </div>
