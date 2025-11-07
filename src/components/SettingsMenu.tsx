@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { api } from "@/trpc/react";
 import { haptic } from "@/utils/haptics";
-import { User, Music, Sliders, Shuffle, Palette, BarChart3 } from "lucide-react";
+import { BarChart3, Music, Palette, Shuffle, Sliders, User } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 interface SettingsMenuProps {
   isOpen: boolean;
@@ -11,9 +12,18 @@ interface SettingsMenuProps {
 }
 
 export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
-  const { data: preferences } = api.music.getUserPreferences.useQuery();
-  const { data: queueSettings } = api.music.getSmartQueueSettings.useQuery();
-  const { data: userHash } = api.music.getCurrentUserHash.useQuery();
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
+  const { data: preferences } = api.music.getUserPreferences.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: queueSettings } = api.music.getSmartQueueSettings.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: userHash } = api.music.getCurrentUserHash.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const updatePreferences = api.music.updatePreferences.useMutation();
   const updateQueueSettings = api.music.updateSmartQueueSettings.useMutation();
   const updateProfile = api.music.updateProfile.useMutation();
@@ -32,8 +42,8 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     preferences?.equalizerBands ?? [0, 0, 0, 0, 0, 0, 0, 0, 0]
   );
   const [visualizerEnabled, setVisualizerEnabled] = useState(preferences?.visualizerEnabled ?? true);
-  const [visualizerType, setVisualizerType] = useState<"bars" | "wave" | "circular">(
-    (preferences?.visualizerType as "bars" | "wave" | "circular") ?? "bars"
+  const [visualizerType, setVisualizerType] = useState<"bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings">(
+    (preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"
   );
   const [compactMode, setCompactMode] = useState(preferences?.compactMode ?? false);
   const [autoQueueEnabled, setAutoQueueEnabled] = useState(queueSettings?.autoQueueEnabled ?? false);
@@ -53,7 +63,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
       setEqualizerPreset(preferences.equalizerPreset);
       setEqualizerBands(preferences.equalizerBands!);
       setVisualizerEnabled(preferences.visualizerEnabled);
-      setVisualizerType(preferences.visualizerType as "bars" | "wave" | "circular");
+      setVisualizerType(preferences.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings");
       setCompactMode(preferences.compactMode);
     }
   }, [preferences]);
@@ -76,12 +86,12 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     equalizerEnabled?: boolean;
     equalizerPreset?: string;
     equalizerBands?: number[];
-    visualizerType?: "bars" | "wave" | "circular";
+    visualizerType?: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings";
     visualizerEnabled?: boolean;
     compactMode?: boolean;
   }) => {
     haptic("light");
-    await updatePreferences.mutateAsync(update);
+    await updatePreferences.mutateAsync(update as Parameters<typeof updatePreferences.mutateAsync>[0]);
   };
 
   const handleUpdateQueueSettings = async (update: {
@@ -158,6 +168,59 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   };
 
   if (!isOpen) return null;
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
+          onClick={onClose}
+        />
+
+        {/* Settings Panel */}
+        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md transform overflow-y-auto bg-gradient-to-b from-gray-900 to-black shadow-2xl transition-transform md:max-w-lg">
+          {/* Header */}
+          <div className="sticky top-0 z-10 border-b border-gray-800 bg-black/95 backdrop-blur-lg">
+            <div className="flex items-center justify-between p-4">
+              <h2 className="text-2xl font-bold text-white">Settings</h2>
+              <button
+                onClick={() => {
+                  haptic("light");
+                  onClose();
+                }}
+                className="touch-target rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Login Prompt */}
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <User className="h-16 w-16 text-gray-600 mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Login Required</h3>
+            <p className="text-gray-400 mb-6">
+              Please log in to access settings and customize your experience.
+            </p>
+            <button
+              onClick={() => {
+                haptic("light");
+                // User will need to click the login button in the header
+                onClose();
+              }}
+              className="rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white transition-colors hover:bg-indigo-700"
+            >
+              Close Settings
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -692,21 +755,32 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               {visualizerEnabled && (
                 <div>
                   <label className="mb-3 block text-sm font-medium text-gray-300">Visualizer Type</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["bars", "wave", "circular"] as const).map((type) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "bars", label: "Bars" },
+                      { value: "spectrum", label: "Spectrum" },
+                      { value: "oscilloscope", label: "Oscilloscope" },
+                      { value: "wave", label: "Wave" },
+                      { value: "circular", label: "Circular" },
+                      { value: "radial-spectrum", label: "Radial" },
+                      { value: "spectral-waves", label: "Spectral Waves" },
+                      { value: "waveform-mirror", label: "Mirror" },
+                      { value: "particles", label: "Particles" },
+                      { value: "frequency-rings", label: "Rings" },
+                    ].map((type) => (
                       <button
-                        key={type}
+                        key={type.value}
                         onClick={() => {
-                          setVisualizerType(type);
-                          void handleUpdatePreference({ visualizerType: type });
+                          setVisualizerType(type.value as typeof visualizerType);
+                          void handleUpdatePreference({ visualizerType: type.value as typeof visualizerType });
                         }}
-                        className={`touch-target rounded-lg px-4 py-3 text-sm font-medium capitalize transition-all ${
-                          visualizerType === type
+                        className={`touch-target rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                          visualizerType === type.value
                             ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/50"
                             : "bg-gray-800 text-gray-300 hover:bg-gray-700"
                         }`}
                       >
-                        {type}
+                        {type.label}
                       </button>
                     ))}
                   </div>
