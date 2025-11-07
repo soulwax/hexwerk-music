@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/trpc/react";
 import { haptic } from "@/utils/haptics";
+import { User, Music, Sliders, Shuffle, Palette, BarChart3 } from "lucide-react";
 
 interface SettingsMenuProps {
   isOpen: boolean;
@@ -34,7 +35,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   const [visualizerType, setVisualizerType] = useState<"bars" | "wave" | "circular">(
     (preferences?.visualizerType as "bars" | "wave" | "circular") ?? "bars"
   );
-  const [theme, setTheme] = useState<"dark" | "light">((preferences?.theme as "dark" | "light") ?? "dark");
   const [compactMode, setCompactMode] = useState(preferences?.compactMode ?? false);
   const [autoQueueEnabled, setAutoQueueEnabled] = useState(queueSettings?.autoQueueEnabled ?? false);
   const [autoQueueThreshold, setAutoQueueThreshold] = useState(queueSettings?.autoQueueThreshold ?? 3);
@@ -54,7 +54,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
       setEqualizerBands(preferences.equalizerBands!);
       setVisualizerEnabled(preferences.visualizerEnabled);
       setVisualizerType(preferences.visualizerType as "bars" | "wave" | "circular");
-      setTheme(preferences.theme as "dark" | "light");
       setCompactMode(preferences.compactMode);
     }
   }, [preferences]);
@@ -80,7 +79,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     visualizerType?: "bars" | "wave" | "circular";
     visualizerEnabled?: boolean;
     compactMode?: boolean;
-    theme?: "dark" | "light";
   }) => {
     haptic("light");
     await updatePreferences.mutateAsync(update);
@@ -98,12 +96,12 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   };
 
   const sections = [
-    { id: "profile", name: "Profile", icon: "👤" },
-    { id: "playback", name: "Playback", icon: "🎵" },
-    { id: "equalizer", name: "Equalizer", icon: "🎚️" },
-    { id: "queue", name: "Smart Queue", icon: "🔀" },
-    { id: "appearance", name: "Appearance", icon: "🎨" },
-    { id: "visualizer", name: "Visualizer", icon: "📊" },
+    { id: "profile", name: "Profile", icon: User },
+    { id: "playback", name: "Playback", icon: Music },
+    { id: "equalizer", name: "Equalizer", icon: Sliders },
+    { id: "queue", name: "Smart Queue", icon: Shuffle },
+    { id: "appearance", name: "Appearance", icon: Palette },
+    { id: "visualizer", name: "Visualizer", icon: BarChart3 },
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -198,7 +196,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">👤</span>
+                <User className="h-5 w-5 text-gray-400" />
                 <span className="text-lg font-semibold text-white">Profile</span>
               </div>
               <svg
@@ -286,7 +284,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                   rel="noopener noreferrer"
                   className="block rounded-lg border-2 border-gray-700 px-4 py-3 text-center font-medium text-white transition-colors hover:border-indigo-500 hover:bg-gray-800"
                 >
-                  👁️ View Your Public Profile
+                  View Your Public Profile
                 </a>
               )}
               </div>
@@ -300,7 +298,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🎵</span>
+                <Music className="h-5 w-5 text-gray-400" />
                 <span className="text-lg font-semibold text-white">Playback</span>
               </div>
               <svg
@@ -369,7 +367,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🎚️</span>
+                <Sliders className="h-5 w-5 text-gray-400" />
                 <span className="text-lg font-semibold text-white">Equalizer</span>
               </div>
               <svg
@@ -471,7 +469,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🔀</span>
+                <Shuffle className="h-5 w-5 text-gray-400" />
                 <span className="text-lg font-semibold text-white">Smart Queue</span>
               </div>
               <svg
@@ -610,7 +608,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🎨</span>
+                <Palette className="h-5 w-5 text-gray-400" />
                 <span className="text-lg font-semibold text-white">Appearance</span>
               </div>
               <svg
@@ -624,28 +622,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
             </button>
             {expandedSections.has("appearance") && (
               <div className="space-y-6 p-5 pt-0">
-              <div>
-                <label className="mb-3 block text-sm font-medium text-gray-300">Theme</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["dark", "light"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => {
-                        setTheme(t);
-                        void handleUpdatePreference({ theme: t });
-                      }}
-                      className={`touch-target rounded-lg px-4 py-3 text-sm font-medium capitalize transition-all ${
-                        theme === t
-                          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/50"
-                          : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                      }`}
-                    >
-                      {t === "dark" ? "🌙" : "☀️"} {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <span className="block text-sm font-medium text-gray-300 truncate">Compact Mode</span>
@@ -679,7 +655,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-gray-800/50"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">📊</span>
+                <BarChart3 className="h-5 w-5 text-gray-400" />
                 <span className="text-lg font-semibold text-white">Visualizer</span>
               </div>
               <svg
