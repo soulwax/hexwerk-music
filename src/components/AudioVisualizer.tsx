@@ -15,6 +15,7 @@ interface AudioVisualizerProps {
   barColor?: string;
   barGap?: number;
   type?: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings";
+  onTypeChange?: (type: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") => void;
 }
 
 interface Particle {
@@ -49,6 +50,7 @@ export function AudioVisualizer({
   barColor = "rgba(99, 102, 241, 0.8)",
   barGap = 2,
   type = "bars",
+  onTypeChange,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -103,6 +105,9 @@ export function AudioVisualizer({
     const nextType = VISUALIZER_TYPES[nextIndex]!;
 
     setCurrentType(nextType);
+
+    // Notify parent component of type change
+    onTypeChange?.(nextType);
 
     // Show label briefly
     setShowTypeLabel(true);

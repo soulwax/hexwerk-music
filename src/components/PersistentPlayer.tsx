@@ -35,6 +35,9 @@ export default function PersistentPlayer() {
   // Fetch user preferences for visualizer settings
   const { data: preferences } = api.music.getUserPreferences.useQuery();
 
+  // Mutation to update visualizer type
+  const updatePreferences = api.music.updatePreferences.useMutation();
+
   const playerProps = {
     currentTrack: player.currentTrack,
     queue: player.queue,
@@ -120,6 +123,9 @@ export default function PersistentPlayer() {
               height={60}
               barCount={24}
               type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"}
+              onTypeChange={(newType) => {
+                updatePreferences.mutate({ visualizerType: newType });
+              }}
             />
           </div>
         </div>
