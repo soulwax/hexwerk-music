@@ -2,8 +2,8 @@
 
 import { api } from "@/trpc/react";
 import { haptic } from "@/utils/haptics";
-import { BarChart3, Music, Palette, Shuffle, Sliders, User } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { BarChart3, Music, Palette, Shuffle, Sliders, User, LogOut } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 interface SettingsMenuProps {
@@ -789,6 +789,21 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Sign Out Button */}
+        <div className="sticky bottom-0 border-t border-gray-800 bg-black/95 backdrop-blur-lg p-4">
+          <button
+            onClick={async () => {
+              haptic("medium");
+              await signOut({ redirect: false });
+              onClose();
+            }}
+            className="flex w-full items-center justify-center gap-3 rounded-lg bg-red-600/10 px-4 py-3 font-medium text-red-500 transition-all hover:bg-red-600/20 hover:text-red-400"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Sign Out</span>
+          </button>
         </div>
       </div>
     </>
