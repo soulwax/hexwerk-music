@@ -145,16 +145,9 @@ function SearchPageContent() {
           {/* Search Card */}
           <div className="card slide-up mb-6 w-full p-5 shadow-xl md:mb-8 md:p-7">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:gap-3">
-              <div className="relative flex-1">
-                <input
-                  className="input-text w-full pl-12 text-base md:text-sm"
-                  placeholder="Search for songs, artists, or albums..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
-                />
+              <div className="flex flex-1 items-center gap-3">
                 <svg
-                  className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--color-subtext)]"
+                  className="h-6 w-6 flex-shrink-0 text-[var(--color-accent)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -166,6 +159,13 @@ function SearchPageContent() {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
+                <input
+                  className="input-text w-full text-base md:text-sm"
+                  placeholder="Search for songs, artists, or albums..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
+                />
               </div>
               <button
                 className="btn-primary touch-target-lg flex w-full items-center justify-center gap-2 md:w-auto md:px-8"
