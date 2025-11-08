@@ -4,7 +4,15 @@
 
 import { useAudioVisualizer } from "@/hooks/useAudioVisualizer";
 import { GripVertical, Maximize2, Minimize2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BarsRenderer } from "./visualizers/BarsRenderer";
+import { SpectrumRenderer } from "./visualizers/SpectrumRenderer";
+import { WaveRenderer } from "./visualizers/WaveRenderer";
+import { CircularRenderer } from "./visualizers/CircularRenderer";
+import { SpectralWavesRenderer } from "./visualizers/SpectralWavesRenderer";
+import { RadialSpectrumRenderer } from "./visualizers/RadialSpectrumRenderer";
+import { ParticleRenderer } from "./visualizers/ParticleRenderer";
+import { FrequencyRingsRenderer } from "./visualizers/FrequencyRingsRenderer";
 
 interface AudioVisualizerProps {
   audioElement: HTMLAudioElement | null;
@@ -16,16 +24,6 @@ interface AudioVisualizerProps {
   barGap?: number;
   type?: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings";
   onTypeChange?: (type: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") => void;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  size: number;
 }
 
 const VISUALIZER_TYPES = [
@@ -60,14 +58,34 @@ export function AudioVisualizer({
   const [currentType, setCurrentType] = useState(type);
   const [showTypeLabel, setShowTypeLabel] = useState(false);
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
-  const particlesRef = useRef<Particle[]>([]);
-  const rotationRef = useRef(0);
   const typeLabelTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // Renderer instances
+  const barsRendererRef = useRef<BarsRenderer | null>(null);
+  const spectrumRendererRef = useRef<SpectrumRenderer | null>(null);
+  const waveRendererRef = useRef<WaveRenderer | null>(null);
+  const circularRendererRef = useRef<CircularRenderer | null>(null);
+  const spectralWavesRendererRef = useRef<SpectralWavesRenderer | null>(null);
+  const radialSpectrumRendererRef = useRef<RadialSpectrumRenderer | null>(null);
+  const particleRendererRef = useRef<ParticleRenderer | null>(null);
+  const frequencyRingsRendererRef = useRef<FrequencyRingsRenderer | null>(null);
 
   const visualizer = useAudioVisualizer(audioElement, {
     fftSize: 2048,
     smoothingTimeConstant: 0.75,
   });
+
+  // Initialize renderers
+  useEffect(() => {
+    barsRendererRef.current = new BarsRenderer(barCount);
+    spectrumRendererRef.current = new SpectrumRenderer(barCount, barGap);
+    waveRendererRef.current = new WaveRenderer();
+    circularRendererRef.current = new CircularRenderer(barCount);
+    spectralWavesRendererRef.current = new SpectralWavesRenderer();
+    radialSpectrumRendererRef.current = new RadialSpectrumRenderer(barCount);
+    particleRendererRef.current = new ParticleRenderer(barCount, barGap, barColor);
+    frequencyRingsRendererRef.current = new FrequencyRingsRenderer(8);
+  }, [barCount, barGap, barColor]);
 
   // Sync external type changes
   useEffect(() => {
@@ -168,434 +186,15 @@ export function AudioVisualizer({
     setIsExpanded(!isExpanded);
   };
 
-  // Render oscilloscope (classic Winamp style)
-  const renderOscilloscope = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw grid
-      ctx.strokeStyle = "rgba(99, 102, 241, 0.1)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i < canvas.height; i += 20) {
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(canvas.width, i);
-        ctx.stroke();
-      }
 
-      // Draw waveform
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = barColor;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = barColor;
-      ctx.beginPath();
 
-      const sliceWidth = canvas.width / data.length;
-      let x = 0;
 
-      for (let i = 0; i < data.length; i++) {
-        const v = (data[i] ?? 128) / 128.0;
-        const y = (v * canvas.height) / 2;
 
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
 
-        x += sliceWidth;
-      }
 
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    },
-    [barColor]
-  );
 
-  // Render spectrum analyzer (Winamp style)
-  const renderSpectrum = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width - barGap * (barCount - 1)) / barCount;
-      const dataStep = Math.floor(data.length / barCount);
-
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = i * dataStep;
-        const value = data[dataIndex] ?? 0;
-        const barHeight = (value / 255) * canvas.height;
-
-        const x = i * (barWidth + barGap);
-        const y = canvas.height - barHeight;
-
-        // Color based on frequency (low = red, mid = yellow, high = blue)
-        const hue = (i / barCount) * 180 + 200;
-        const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
-        gradient.addColorStop(0, `hsla(${hue}, 80%, 60%, 1)`);
-        gradient.addColorStop(1, `hsla(${hue}, 80%, 40%, 0.4)`);
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        // Add peak indicators
-        if (barHeight > canvas.height * 0.7) {
-          ctx.fillStyle = `hsla(${hue}, 100%, 80%, 1)`;
-          ctx.fillRect(x, y - 3, barWidth, 3);
-        }
-      }
-    },
-    [barCount, barGap]
-  );
-
-  // Render spectral waves
-  const renderSpectralWaves = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const numWaves = 5;
-      const dataStep = Math.floor(data.length / barCount);
-
-      for (let w = 0; w < numWaves; w++) {
-        const alpha = 1 - w * 0.15;
-        const offset = w * 15;
-
-        ctx.beginPath();
-        ctx.strokeStyle = barColor.replace(/[\d.]+\)$/g, `${alpha})`);
-        ctx.lineWidth = 3 - w * 0.4;
-        ctx.shadowBlur = 10 - w * 2;
-        ctx.shadowColor = barColor;
-
-        for (let i = 0; i < barCount; i++) {
-          const dataIndex = i * dataStep;
-          const value = data[dataIndex] ?? 0;
-          const amplitude = (value / 255) * (canvas.height / 4);
-
-          const x = (i / barCount) * canvas.width;
-          const y = canvas.height / 2 + Math.sin((i / barCount) * Math.PI * 4 + w) * amplitude + offset;
-
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-    },
-    [barCount, barColor]
-  );
-
-  // Render radial spectrum
-  const renderRadialSpectrum = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const maxRadius = Math.min(canvas.width, canvas.height) / 2 - 20;
-      const minRadius = 30;
-
-      const barAngle = (Math.PI * 2) / barCount;
-      const dataStep = Math.floor(data.length / barCount);
-
-      // Draw concentric circles
-      ctx.strokeStyle = "rgba(99, 102, 241, 0.1)";
-      ctx.lineWidth = 1;
-      for (let r = minRadius; r <= maxRadius; r += 30) {
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      // Draw spectrum bars
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = i * dataStep;
-        const value = data[dataIndex] ?? 0;
-        const barLength = (value / 255) * (maxRadius - minRadius);
-
-        const angle = i * barAngle - Math.PI / 2 + rotationRef.current;
-        const x1 = centerX + Math.cos(angle) * minRadius;
-        const y1 = centerY + Math.sin(angle) * minRadius;
-        const x2 = centerX + Math.cos(angle) * (minRadius + barLength);
-        const y2 = centerY + Math.sin(angle) * (minRadius + barLength);
-
-        const hue = (i / barCount) * 360;
-        const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-        gradient.addColorStop(0, `hsla(${hue}, 80%, 50%, 0.3)`);
-        gradient.addColorStop(1, `hsla(${hue}, 80%, 60%, 1)`);
-
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 4;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = `hsla(${hue}, 80%, 60%, 0.8)`;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-
-      rotationRef.current += 0.005;
-    },
-    [barCount]
-  );
-
-  // Render particles
-  const renderParticles = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Spawn new particles based on audio
-      const avgAmplitude = data.reduce((sum, val) => sum + val, 0) / data.length;
-      if (avgAmplitude > 30 && particlesRef.current.length < 200) {
-        for (let i = 0; i < 3; i++) {
-          particlesRef.current.push({
-            x: Math.random() * canvas.width,
-            y: canvas.height,
-            vx: (Math.random() - 0.5) * 2,
-            vy: -Math.random() * 5 - 2,
-            life: 1,
-            maxLife: Math.random() * 60 + 40,
-            size: Math.random() * 3 + 1,
-          });
-        }
-      }
-
-      // Update and draw particles
-      particlesRef.current = particlesRef.current.filter((particle) => {
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        particle.vy += 0.1; // gravity
-        particle.life++;
-
-        const lifeRatio = Math.max(0, 1 - particle.life / particle.maxLife);
-        const alpha = lifeRatio * 0.8;
-        const radius = Math.max(0.1, particle.size * lifeRatio);
-
-        ctx.fillStyle = barColor.replace(/[\d.]+\)$/g, `${alpha})`);
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = barColor;
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        return particle.life < particle.maxLife && particle.y < canvas.height + 10;
-      });
-      ctx.shadowBlur = 0;
-
-      // Draw frequency bars in background
-      const barWidth = (canvas.width - barGap * (barCount - 1)) / barCount;
-      const dataStep = Math.floor(data.length / barCount);
-
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = i * dataStep;
-        const value = data[dataIndex] ?? 0;
-        const barHeight = (value / 255) * (canvas.height / 3);
-
-        const x = i * (barWidth + barGap);
-        const y = canvas.height - barHeight;
-
-        ctx.fillStyle = barColor.replace(/[\d.]+\)$/g, "0.2)");
-        ctx.fillRect(x, y, barWidth, barHeight);
-      }
-    },
-    [barCount, barGap, barColor]
-  );
-
-  // Render waveform mirror
-  const renderWaveformMirror = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const centerY = canvas.height / 2;
-      const sliceWidth = canvas.width / data.length;
-
-      // Draw top waveform
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = barColor;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = barColor;
-      ctx.beginPath();
-
-      let x = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = (data[i] ?? 128) / 128.0 - 1;
-        const y = centerY + (v * canvas.height) / 4;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
-      }
-      ctx.stroke();
-
-      // Draw mirrored waveform
-      ctx.beginPath();
-      x = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = (data[i] ?? 128) / 128.0 - 1;
-        const y = centerY - (v * canvas.height) / 4;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
-      }
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Draw center line
-      ctx.strokeStyle = "rgba(99, 102, 241, 0.3)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, centerY);
-      ctx.lineTo(canvas.width, centerY);
-      ctx.stroke();
-    },
-    [barColor]
-  );
-
-  // Render frequency rings
-  const renderFrequencyRings = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const maxRadius = Math.min(canvas.width, canvas.height) / 2 - 10;
-
-      const numRings = 8;
-      const dataStep = Math.floor(data.length / numRings);
-
-      for (let i = 0; i < numRings; i++) {
-        const dataIndex = i * dataStep;
-        const value = data[dataIndex] ?? 0;
-        const radius = ((i + 1) / numRings) * maxRadius;
-        const lineWidth = (value / 255) * 8 + 1;
-
-        const hue = (i / numRings) * 360;
-        ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${0.8 - i * 0.08})`;
-        ctx.lineWidth = lineWidth;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = `hsla(${hue}, 80%, 60%, 0.6)`;
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-    },
-    []
-  );
-
-  // Render bars visualization (enhanced)
-  const renderBars = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const barWidth = (canvas.width - barGap * (barCount - 1)) / barCount;
-      const dataStep = Math.floor(data.length / barCount);
-
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = i * dataStep;
-        const value = data[dataIndex] ?? 0;
-        const barHeight = (value / 255) * canvas.height;
-
-        const x = i * (barWidth + barGap);
-        const y = canvas.height - barHeight;
-
-        const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
-        gradient.addColorStop(0, barColor);
-        gradient.addColorStop(1, barColor.replace("0.8", "0.4"));
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = barColor;
-        ctx.fillRect(x, y, barWidth, barHeight);
-        ctx.shadowBlur = 0;
-      }
-    },
-    [barCount, barGap, barColor]
-  );
-
-  // Render wave visualization
-  const renderWave = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = barColor;
-      ctx.beginPath();
-
-      const sliceWidth = canvas.width / data.length;
-      let x = 0;
-
-      for (let i = 0; i < data.length; i++) {
-        const value = (data[i] ?? 128) / 128.0;
-        const y = (value * canvas.height) / 2;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
-      }
-
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-    },
-    [barColor]
-  );
-
-  // Render circular visualization
-  const renderCircular = useCallback(
-    (ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const radius = Math.min(canvas.width, canvas.height) / 3;
-
-      const barAngle = (Math.PI * 2) / barCount;
-      const dataStep = Math.floor(data.length / barCount);
-
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = i * dataStep;
-        const value = data[dataIndex] ?? 0;
-        const barLength = (value / 255) * radius;
-
-        const angle = i * barAngle - Math.PI / 2;
-        const x1 = centerX + Math.cos(angle) * radius;
-        const y1 = centerY + Math.sin(angle) * radius;
-        const x2 = centerX + Math.cos(angle) * (radius + barLength);
-        const y2 = centerY + Math.sin(angle) * (radius + barLength);
-
-        const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-        gradient.addColorStop(0, barColor.replace("0.8", "0.3"));
-        gradient.addColorStop(1, barColor);
-
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-    },
-    [barCount, barColor]
-  );
 
   // Start/stop visualization based on playing state
   useEffect(() => {
@@ -610,36 +209,38 @@ export function AudioVisualizer({
 
       const renderFrame = (data: Uint8Array) => {
         switch (currentType) {
-          case "oscilloscope":
-            renderOscilloscope(ctx, visualizer.getTimeDomainData(), canvas);
+          case "bars":
+            barsRendererRef.current?.render(ctx, data, canvas, barCount, barGap);
             break;
           case "spectrum":
-            renderSpectrum(ctx, data, canvas);
+            spectrumRendererRef.current?.render(ctx, data, canvas);
             break;
-          case "spectral-waves":
-            renderSpectralWaves(ctx, data, canvas);
-            break;
-          case "radial-spectrum":
-            renderRadialSpectrum(ctx, data, canvas);
-            break;
-          case "particles":
-            renderParticles(ctx, data, canvas);
-            break;
-          case "waveform-mirror":
-            renderWaveformMirror(ctx, visualizer.getTimeDomainData(), canvas);
-            break;
-          case "frequency-rings":
-            renderFrequencyRings(ctx, data, canvas);
+          case "oscilloscope":
+            waveRendererRef.current?.renderOscilloscope(ctx, visualizer.getTimeDomainData(), canvas);
             break;
           case "wave":
-            renderWave(ctx, visualizer.getTimeDomainData(), canvas);
+            waveRendererRef.current?.renderWave(ctx, visualizer.getTimeDomainData(), canvas);
+            break;
+          case "waveform-mirror":
+            waveRendererRef.current?.renderWaveformMirror(ctx, visualizer.getTimeDomainData(), canvas);
             break;
           case "circular":
-            renderCircular(ctx, data, canvas);
+            circularRendererRef.current?.render(ctx, data, canvas, barCount);
             break;
-          case "bars":
+          case "spectral-waves":
+            spectralWavesRendererRef.current?.render(ctx, data, canvas, barCount);
+            break;
+          case "radial-spectrum":
+            radialSpectrumRendererRef.current?.render(ctx, data, canvas, barCount);
+            break;
+          case "particles":
+            particleRendererRef.current?.render(ctx, data, canvas);
+            break;
+          case "frequency-rings":
+            frequencyRingsRendererRef.current?.render(ctx, data, canvas);
+            break;
           default:
-            renderBars(ctx, data, canvas);
+            barsRendererRef.current?.render(ctx, data, canvas, barCount, barGap);
             break;
         }
       };
@@ -653,21 +254,7 @@ export function AudioVisualizer({
     return () => {
       visualizer.stopVisualization();
     };
-  }, [
-    isPlaying,
-    visualizer,
-    currentType,
-    renderBars,
-    renderWave,
-    renderCircular,
-    renderOscilloscope,
-    renderSpectrum,
-    renderSpectralWaves,
-    renderRadialSpectrum,
-    renderParticles,
-    renderWaveformMirror,
-    renderFrequencyRings,
-  ]);
+  }, [isPlaying, visualizer, currentType, barCount, barGap]);
 
   if (!visualizer.isInitialized) {
     return (
