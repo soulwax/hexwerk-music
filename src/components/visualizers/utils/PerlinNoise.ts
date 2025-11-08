@@ -5,14 +5,14 @@ export class PerlinNoise {
   private permutation: number[] = [];
   private p: number[] = [];
 
-  constructor(seed: number = 0) {
+  constructor(seed = 0) {
     // Generate permutation table
     for (let i = 0; i < 256; i++) {
       this.permutation[i] = i;
     }
 
     // Shuffle using seed
-    let random = this.seededRandom(seed);
+    const random = this.seededRandom(seed);
     for (let i = 255; i > 0; i--) {
       const j = Math.floor(random() * (i + 1));
       [this.permutation[i], this.permutation[j]] = [this.permutation[j]!, this.permutation[i]!];

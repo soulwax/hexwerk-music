@@ -6,8 +6,8 @@ export class MathUtils {
   static fastInvSqrt(x: number): number {
     const threehalfs = 1.5;
     const x2 = x * 0.5;
-    let i = new Float32Array([x]);
-    let view = new Int32Array(i.buffer);
+    const i = new Float32Array([x]);
+    const view = new Int32Array(i.buffer);
     view[0] = 0x5f3759df - (view[0]! >> 1);
     let y = new Float32Array(view.buffer)[0]!;
     y = y * (threehalfs - (x2 * y * y));
