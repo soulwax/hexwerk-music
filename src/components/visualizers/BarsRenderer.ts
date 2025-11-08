@@ -8,18 +8,18 @@ export class BarsRenderer {
   private peakDecay: number[] = [];
   private barVelocities: number[] = [];
   private noise: PerlinNoise;
-  private time: number = 0;
-  private chromaticShift: number = 0;
-  private plasmaTime: number = 0;
+  private time = 0;
+  private chromaticShift = 0;
+  private plasmaTime = 0;
 
-  constructor(barCount: number = 64) {
-    this.peakHistory = new Array(barCount).fill(0);
-    this.peakDecay = new Array(barCount).fill(0);
-    this.barVelocities = new Array(barCount).fill(0);
+  constructor(barCount = 64) {
+    this.peakHistory = new Array<number>(barCount).fill(0);
+    this.peakDecay = new Array<number>(barCount).fill(0);
+    this.barVelocities = new Array<number>(barCount).fill(0);
     this.noise = new PerlinNoise(Math.random() * 1000);
   }
 
-  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount: number = 64, barGap: number = 2): void {
+  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount = 64, barGap = 2): void {
     this.time += 0.02;
     this.plasmaTime += 0.05;
     this.chromaticShift = Math.sin(this.time * 0.5) * 3;
@@ -240,9 +240,9 @@ export class BarsRenderer {
 
   public updateConfig(barCount: number): void {
     if (this.peakHistory.length !== barCount) {
-      this.peakHistory = new Array(barCount).fill(0);
-      this.peakDecay = new Array(barCount).fill(0);
-      this.barVelocities = new Array(barCount).fill(0);
+      this.peakHistory = new Array<number>(barCount).fill(0);
+      this.peakDecay = new Array<number>(barCount).fill(0);
+      this.barVelocities = new Array<number>(barCount).fill(0);
     }
   }
 }
