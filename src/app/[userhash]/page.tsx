@@ -79,9 +79,10 @@ export default function PublicProfilePage({
           <p className="text-gray-400">
             This profile doesn&apos;t exist or is private.
           </p>
+          {/* make text white */}
           <Link
             href="/"
-            className="mt-6 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white transition-colors hover:bg-indigo-700"
+            className="mt-6 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-medium transition-colors hover:bg-indigo-600 !text-white"
           >
             Go Home
           </Link>
