@@ -27,46 +27,48 @@ const EnhancedQueue = dynamic(
   { ssr: false },
 );
 
-const EQUALIZER_PANEL_STORAGE_KEY = 'persistent-player-equalizer-open';
-const QUEUE_PANEL_STORAGE_KEY = 'persistent-player-queue-open';
-
 export default function PersistentPlayer() {
   const player = useGlobalPlayer();
   const isMobile = useIsMobile();
 
-  // Initialize state from localStorage
-  const [showQueue, setShowQueue] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const saved = localStorage.getItem(QUEUE_PANEL_STORAGE_KEY);
-    return saved === 'true';
-  });
-
-  const [showEqualizer, setShowEqualizer] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const saved = localStorage.getItem(EQUALIZER_PANEL_STORAGE_KEY);
-    return saved === 'true';
-  });
-
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
 
-  // Fetch user preferences for visualizer settings
+  // Fetch user preferences for visualizer settings and panel visibility
   const { data: preferences } = api.music.getUserPreferences.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
-  // Mutation to update visualizer type
+  // Mutation to update preferences
   const updatePreferences = api.music.updatePreferences.useMutation();
 
-  // Persist equalizer panel state to localStorage
-  useEffect(() => {
-    localStorage.setItem(EQUALIZER_PANEL_STORAGE_KEY, String(showEqualizer));
-  }, [showEqualizer]);
+  // Initialize state from database preferences, with fallback to false
+  const [showQueue, setShowQueue] = useState(false);
+  const [showEqualizer, setShowEqualizer] = useState(false);
 
-  // Persist queue panel state to localStorage
+  // Sync state with database preferences when they load
   useEffect(() => {
-    localStorage.setItem(QUEUE_PANEL_STORAGE_KEY, String(showQueue));
+    if (preferences) {
+      setShowQueue(preferences.queuePanelOpen ?? false);
+      setShowEqualizer(preferences.equalizerPanelOpen ?? false);
+    }
+  }, [preferences]);
+
+  // Persist queue panel state to database
+  useEffect(() => {
+    if (isAuthenticated && preferences && showQueue !== preferences.queuePanelOpen) {
+      updatePreferences.mutate({ queuePanelOpen: showQueue });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showQueue]);
+
+  // Persist equalizer panel state to database
+  useEffect(() => {
+    if (isAuthenticated && preferences && showEqualizer !== preferences.equalizerPanelOpen) {
+      updatePreferences.mutate({ equalizerPanelOpen: showEqualizer });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEqualizer]);
 
   const playerProps = {
     currentTrack: player.currentTrack,
