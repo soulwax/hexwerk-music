@@ -1,7 +1,7 @@
 // File: src/components/visualizers/WaveRenderer.ts
 
 export class WaveRenderer {
-  private timeOffset: number = 0;
+  private timeOffset = 0;
 
   public renderWave(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement): void {
     // Dark gradient background
