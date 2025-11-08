@@ -9,14 +9,14 @@ interface RingParticle {
 }
 
 export class FrequencyRingsRenderer {
-  private rotationOffset: number = 0;
+  private rotationOffset = 0;
   private pulsePhases: number[] = [];
   private particles: RingParticle[] = [];
   private intensityHistory: number[] = [];
 
-  constructor(numRings: number = 8) {
-    this.pulsePhases = new Array(numRings).fill(0);
-    this.intensityHistory = new Array(numRings).fill(0);
+  constructor(numRings = 8) {
+    this.pulsePhases = new Array<number>(numRings).fill(0);
+    this.intensityHistory = new Array<number>(numRings).fill(0);
   }
 
   public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement): void {
@@ -58,11 +58,12 @@ export class FrequencyRingsRenderer {
       const smoothValue = this.intensityHistory[i] ?? 0;
 
       // Update pulse phase for each ring
-      this.pulsePhases[i] = (this.pulsePhases[i] ?? 0) + 0.03 + smoothValue * 0.05;
+      const currentPhase = (this.pulsePhases[i] ?? 0) + 0.03 + smoothValue * 0.05;
+      this.pulsePhases[i] = currentPhase;
 
       // Calculate ring properties
       const baseRadius = ((i + 1) / numRings) * maxRadius;
-      const pulseAmount = Math.sin(this.pulsePhases[i]) * smoothValue * 15;
+      const pulseAmount = Math.sin(currentPhase) * smoothValue * 15;
       const radius = baseRadius + pulseAmount;
 
       // Dynamic line width based on amplitude
@@ -128,7 +129,7 @@ export class FrequencyRingsRenderer {
       if (smoothValue > 0.8) {
         const numRipples = 3;
         for (let r = 0; r < numRipples; r++) {
-          const ripplePhase = (this.pulsePhases[i] + r * Math.PI * 0.66) % (Math.PI * 2);
+          const ripplePhase = (currentPhase + r * Math.PI * 0.66) % (Math.PI * 2);
           const rippleRadius = radius + Math.sin(ripplePhase) * 8;
           const rippleAlpha = (1 - Math.abs(Math.sin(ripplePhase))) * smoothValue * 0.3;
 
@@ -224,7 +225,7 @@ export class FrequencyRingsRenderer {
   }
 
   public updateRingCount(numRings: number): void {
-    this.pulsePhases = new Array(numRings).fill(0);
-    this.intensityHistory = new Array(numRings).fill(0);
+    this.pulsePhases = new Array<number>(numRings).fill(0);
+    this.intensityHistory = new Array<number>(numRings).fill(0);
   }
 }
