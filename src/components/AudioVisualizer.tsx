@@ -370,14 +370,15 @@ export function AudioVisualizer({
         particle.vy += 0.1; // gravity
         particle.life++;
 
-        const lifeRatio = 1 - particle.life / particle.maxLife;
+        const lifeRatio = Math.max(0, 1 - particle.life / particle.maxLife);
         const alpha = lifeRatio * 0.8;
+        const radius = Math.max(0.1, particle.size * lifeRatio);
 
         ctx.fillStyle = barColor.replace(/[\d.]+\)$/g, `${alpha})`);
         ctx.shadowBlur = 10;
         ctx.shadowColor = barColor;
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size * lifeRatio, 0, Math.PI * 2);
+        ctx.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
         ctx.fill();
 
         return particle.life < particle.maxLife && particle.y < canvas.height + 10;
