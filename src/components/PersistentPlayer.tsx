@@ -6,7 +6,7 @@ import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import MobilePlayer from "./MobilePlayer";
 import MaturePlayer from "./Player";
@@ -27,11 +27,25 @@ const EnhancedQueue = dynamic(
   { ssr: false },
 );
 
+const EQUALIZER_PANEL_STORAGE_KEY = 'persistent-player-equalizer-open';
+const QUEUE_PANEL_STORAGE_KEY = 'persistent-player-queue-open';
+
 export default function PersistentPlayer() {
   const player = useGlobalPlayer();
-  const [showQueue, setShowQueue] = useState(false);
-  const [showEqualizer, setShowEqualizer] = useState(false);
   const isMobile = useIsMobile();
+
+  // Initialize state from localStorage
+  const [showQueue, setShowQueue] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem(QUEUE_PANEL_STORAGE_KEY);
+    return saved === 'true';
+  });
+
+  const [showEqualizer, setShowEqualizer] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem(EQUALIZER_PANEL_STORAGE_KEY);
+    return saved === 'true';
+  });
 
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
@@ -43,6 +57,16 @@ export default function PersistentPlayer() {
 
   // Mutation to update visualizer type
   const updatePreferences = api.music.updatePreferences.useMutation();
+
+  // Persist equalizer panel state to localStorage
+  useEffect(() => {
+    localStorage.setItem(EQUALIZER_PANEL_STORAGE_KEY, String(showEqualizer));
+  }, [showEqualizer]);
+
+  // Persist queue panel state to localStorage
+  useEffect(() => {
+    localStorage.setItem(QUEUE_PANEL_STORAGE_KEY, String(showQueue));
+  }, [showQueue]);
 
   const playerProps = {
     currentTrack: player.currentTrack,
