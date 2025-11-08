@@ -1,15 +1,15 @@
 // File: src/components/visualizers/RadialSpectrumRenderer.ts
 
 export class RadialSpectrumRenderer {
-  private rotationAngle: number = 0;
+  private rotationAngle = 0;
   private particleRings: Array<{ angle: number; radius: number; life: number; hue: number }> = [];
   private peakHistory: number[] = [];
 
-  constructor(barCount: number = 64) {
-    this.peakHistory = new Array(barCount).fill(0);
+  constructor(barCount = 64) {
+    this.peakHistory = new Array<number>(barCount).fill(0);
   }
 
-  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount: number = 64): void {
+  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount = 64): void {
     // Radial gradient background
     const bgGradient = ctx.createRadialGradient(
       canvas.width / 2,
@@ -63,10 +63,11 @@ export class RadialSpectrumRenderer {
       const barLength = normalizedValue * (maxRadius - minRadius);
 
       // Update peak history
-      if (barLength > this.peakHistory[i]) {
+      const currentPeak = this.peakHistory[i] ?? 0;
+      if (barLength > currentPeak) {
         this.peakHistory[i] = barLength;
       } else {
-        this.peakHistory[i] = Math.max(0, this.peakHistory[i] - 1.5);
+        this.peakHistory[i] = Math.max(0, currentPeak - 1.5);
       }
 
       const angle = i * barAngle - Math.PI / 2 + this.rotationAngle;
@@ -98,9 +99,9 @@ export class RadialSpectrumRenderer {
       ctx.stroke();
 
       // Draw peak indicator with glow
-      if (this.peakHistory[i] > 5) {
-        const peakX = centerX + Math.cos(angle) * (minRadius + this.peakHistory[i]);
-        const peakY = centerY + Math.sin(angle) * (minRadius + this.peakHistory[i]);
+      if (currentPeak > 5) {
+        const peakX = centerX + Math.cos(angle) * (minRadius + currentPeak);
+        const peakY = centerY + Math.sin(angle) * (minRadius + currentPeak);
 
         ctx.shadowBlur = 25;
         ctx.shadowColor = `hsla(${hue}, 100%, 70%, 0.9)`;
@@ -194,6 +195,6 @@ export class RadialSpectrumRenderer {
   }
 
   public updateBarCount(barCount: number): void {
-    this.peakHistory = new Array(barCount).fill(0);
+    this.peakHistory = new Array<number>(barCount).fill(0);
   }
 }
