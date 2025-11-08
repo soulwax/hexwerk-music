@@ -1,15 +1,15 @@
 // File: src/components/visualizers/CircularRenderer.ts
 
 export class CircularRenderer {
-  private rotationOffset: number = 0;
-  private pulsePhase: number = 0;
+  private rotationOffset = 0;
+  private pulsePhase = 0;
   private peakHistory: number[] = [];
 
-  constructor(barCount: number = 64) {
-    this.peakHistory = new Array(barCount).fill(0);
+  constructor(barCount = 64) {
+    this.peakHistory = new Array<number>(barCount).fill(0);
   }
 
-  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount: number = 64): void {
+  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount = 64): void {
     // Dynamic gradient background
     const bgGradient = ctx.createRadialGradient(
       canvas.width / 2,
@@ -62,10 +62,11 @@ export class CircularRenderer {
       const barLength = normalizedValue * radius * 1.2;
 
       // Update peak tracking
-      if (barLength > this.peakHistory[i]) {
+      const currentPeak = this.peakHistory[i] ?? 0;
+      if (barLength > currentPeak) {
         this.peakHistory[i] = barLength;
       } else {
-        this.peakHistory[i] = Math.max(0, this.peakHistory[i] - 2);
+        this.peakHistory[i] = Math.max(0, currentPeak - 2);
       }
 
       const angle = i * barAngle - Math.PI / 2 + this.rotationOffset;
@@ -97,9 +98,9 @@ export class CircularRenderer {
       ctx.stroke();
 
       // Draw peak indicator
-      if (this.peakHistory[i] > 0) {
-        const peakX = centerX + Math.cos(angle) * (radius + this.peakHistory[i]);
-        const peakY = centerY + Math.sin(angle) * (radius + this.peakHistory[i]);
+      if (currentPeak > 0) {
+        const peakX = centerX + Math.cos(angle) * (radius + currentPeak);
+        const peakY = centerY + Math.sin(angle) * (radius + currentPeak);
 
         ctx.shadowBlur = 20;
         ctx.shadowColor = `hsla(${hue}, 100%, 70%, 0.9)`;
@@ -155,6 +156,6 @@ export class CircularRenderer {
   }
 
   public updateBarCount(barCount: number): void {
-    this.peakHistory = new Array(barCount).fill(0);
+    this.peakHistory = new Array<number>(barCount).fill(0);
   }
 }
