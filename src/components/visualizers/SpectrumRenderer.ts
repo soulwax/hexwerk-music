@@ -6,11 +6,11 @@ export class SpectrumRenderer {
   private peakHistory: number[] = [];
   private peakDecay: number[] = [];
 
-  constructor(barCount: number = 64, barGap: number = 2) {
+  constructor(barCount = 64, barGap = 2) {
     this.barCount = barCount;
     this.barGap = barGap;
-    this.peakHistory = new Array(barCount).fill(0);
-    this.peakDecay = new Array(barCount).fill(0);
+    this.peakHistory = new Array<number>(barCount).fill(0);
+    this.peakDecay = new Array<number>(barCount).fill(0);
   }
 
   public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement): void {
@@ -34,12 +34,14 @@ export class SpectrumRenderer {
       const y = canvas.height - barHeight;
 
       // Update peak tracking
-      if (barHeight > this.peakHistory[i]) {
+      const currentPeak = this.peakHistory[i] ?? 0;
+      if (barHeight > currentPeak) {
         this.peakHistory[i] = barHeight;
         this.peakDecay[i] = 0;
       } else {
-        this.peakDecay[i] += 1;
-        this.peakHistory[i] = Math.max(0, this.peakHistory[i] - this.peakDecay[i] * 0.5);
+        const decay = this.peakDecay[i] ?? 0;
+        this.peakDecay[i] = decay + 1;
+        this.peakHistory[i] = Math.max(0, currentPeak - (decay + 1) * 0.5);
       }
 
       // Calculate colors based on frequency position
@@ -70,7 +72,7 @@ export class SpectrumRenderer {
       ctx.globalAlpha = 1;
 
       // Draw peak indicator
-      const peakY = canvas.height - this.peakHistory[i];
+      const peakY = canvas.height - (this.peakHistory[i] ?? 0);
       ctx.shadowBlur = 15;
       ctx.shadowColor = `hsla(${hue}, 100%, 70%, 0.9)`;
       ctx.fillStyle = `hsla(${hue + 20}, 90%, 75%, 0.9)`;
@@ -83,8 +85,8 @@ export class SpectrumRenderer {
   public updateConfig(barCount: number, barGap: number): void {
     if (this.barCount !== barCount) {
       this.barCount = barCount;
-      this.peakHistory = new Array(barCount).fill(0);
-      this.peakDecay = new Array(barCount).fill(0);
+      this.peakHistory = new Array<number>(barCount).fill(0);
+      this.peakDecay = new Array<number>(barCount).fill(0);
     }
     this.barGap = barGap;
   }

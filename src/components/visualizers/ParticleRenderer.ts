@@ -21,7 +21,7 @@ export class ParticleRenderer {
   private barGap: number;
   private barColor: string;
 
-  constructor(barCount: number = 24, barGap: number = 2, barColor: string = 'rgba(79, 70, 229, 0.8)') {
+  constructor(barCount = 24, barGap = 2, barColor = 'rgba(79, 70, 229, 0.8)') {
     this.barCount = barCount;
     this.barGap = barGap;
     this.barColor = barColor;
@@ -269,6 +269,7 @@ export class ParticleRenderer {
       for (let j = i + 1; j < this.particles.length && j < i + 5; j += 2) {
         const p1 = this.particles[i];
         const p2 = this.particles[j];
+        if (!p1 || !p2) continue;
         const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
         if (dist < 80) {
           const alpha = (1 - dist / 80) * 0.3;
