@@ -2,20 +2,18 @@
 
 "use client";
 
-import { useEqualizer } from "@/hooks/useEqualizer";
 import { Power, RotateCcw } from "lucide-react";
 import { useEffect } from "react";
+import type { useEqualizer } from "@/hooks/useEqualizer";
 
 interface EqualizerProps {
-  audioElement: HTMLAudioElement | null;
+  equalizer: ReturnType<typeof useEqualizer>;
   onClose: () => void;
 }
 
-export function Equalizer({ audioElement, onClose }: EqualizerProps) {
-  const equalizer = useEqualizer(audioElement);
-
+export function Equalizer({ equalizer, onClose }: EqualizerProps) {
   useEffect(() => {
-    if (audioElement && !equalizer.isInitialized) {
+    if (!equalizer.isInitialized) {
       const handleInteraction = () => {
         equalizer.initialize();
       };
@@ -26,7 +24,7 @@ export function Equalizer({ audioElement, onClose }: EqualizerProps) {
         document.removeEventListener("click", handleInteraction);
       };
     }
-  }, [audioElement, equalizer]);
+  }, [equalizer]);
 
   const formatFrequency = (freq: number): string => {
     if (freq >= 1000) {

@@ -4,6 +4,7 @@
 
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useEqualizer } from "@/hooks/useEqualizer";
 import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
@@ -41,6 +42,9 @@ export default function PersistentPlayer() {
 
   // Mutation to update preferences
   const updatePreferences = api.music.updatePreferences.useMutation();
+
+  // Initialize equalizer hook (persists across panel open/close)
+  const equalizer = useEqualizer(player.audioElement);
 
   // Initialize state from database preferences, with fallback to false
   const [showQueue, setShowQueue] = useState(false);
@@ -137,9 +141,9 @@ export default function PersistentPlayer() {
       )}
 
       {/* Equalizer Panel */}
-      {showEqualizer && player.audioElement && (
+      {showEqualizer && (
         <Equalizer
-          audioElement={player.audioElement}
+          equalizer={equalizer}
           onClose={() => setShowEqualizer(false)}
         />
       )}
