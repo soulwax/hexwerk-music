@@ -1,10 +1,10 @@
 // File: src/components/visualizers/SpectralWavesRenderer.ts
 
 export class SpectralWavesRenderer {
-  private timeOffset: number = 0;
+  private timeOffset = 0;
   private wavePhases: number[] = [0, 0, 0, 0, 0, 0];
 
-  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount: number = 64): void {
+  public render(ctx: CanvasRenderingContext2D, data: Uint8Array, canvas: HTMLCanvasElement, barCount = 64): void {
     // Gradient background with depth
     const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     bgGradient.addColorStop(0, 'rgba(5, 15, 35, 0.96)');
@@ -132,7 +132,7 @@ export class SpectralWavesRenderer {
 
       if (normalizedValue > 0.6) {
         const x = (i / barCount) * canvas.width;
-        const mainWave = Math.sin((i / barCount) * Math.PI * 4 + this.timeOffset + this.wavePhases[0]);
+        const mainWave = Math.sin((i / barCount) * Math.PI * 4 + this.timeOffset + (this.wavePhases[0] ?? 0));
         const baseAmplitude = normalizedValue * (canvas.height / 3);
         const y = canvas.height / 2 + mainWave * baseAmplitude;
 
