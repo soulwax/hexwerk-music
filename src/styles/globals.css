@@ -56,12 +56,17 @@ body {
   color: #fff;
 }
 
-a {
+/* Scoped link styles - apply .content wrapper to use these */
+.content a,
+.link {
   color: var(--color-accent);
   text-decoration: none;
   transition: color .15s ease;
 }
-a:hover { color: var(--color-accent-light); }
+.content a:hover,
+.link:hover { 
+  color: var(--color-accent-light); 
+}
 
 /* Accessibility: visible focus styles */
 :focus-visible {
