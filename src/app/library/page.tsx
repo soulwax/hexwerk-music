@@ -2,9 +2,12 @@
 
 "use client";
 
+import { EmptyState } from "@/components/EmptyState";
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
+import { LoadingState } from "@/components/LoadingSpinner";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { api } from "@/trpc/react";
+import { Heart, Clock } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -99,9 +102,7 @@ export default function LibraryPage() {
         {activeTab === "favorites" && (
           <div>
             {favoritesLoading ? (
-              <div className="py-12 text-center">
-                <div className="border-accent inline-block h-8 w-8 animate-spin rounded-full border-b-2"></div>
-              </div>
+              <LoadingState message="Loading your favorites..." />
             ) : favorites && favorites.length > 0 ? (
               <div className="grid gap-3">
                 {favorites.map((fav) => (
@@ -114,25 +115,16 @@ export default function LibraryPage() {
                 ))}
               </div>
             ) : (
-              <div className="py-12 text-center">
-                <svg
-                  className="mx-auto mb-4 h-16 w-16 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
-                <p className="mb-2 text-gray-400">No favorites yet</p>
-                <Link href="/" className="text-accent hover:underline">
-                  Search for music to add favorites
-                </Link>
-              </div>
+              <EmptyState
+                icon={<Heart className="h-16 w-16" />}
+                title="No favorites yet"
+                description="Tracks you favorite will appear here"
+                action={
+                  <Link href="/" className="text-accent hover:underline">
+                    Search for music to add favorites
+                  </Link>
+                }
+              />
             )}
           </div>
         )}
@@ -140,9 +132,7 @@ export default function LibraryPage() {
         {activeTab === "history" && (
           <div>
             {historyLoading ? (
-              <div className="py-12 text-center">
-                <div className="border-accent inline-block h-8 w-8 animate-spin rounded-full border-b-2"></div>
-              </div>
+              <LoadingState message="Loading your history..." />
             ) : history && history.length > 0 ? (
               <div className="grid gap-3">
                 {history.map((item) => (
@@ -155,25 +145,16 @@ export default function LibraryPage() {
                 ))}
               </div>
             ) : (
-              <div className="py-12 text-center">
-                <svg
-                  className="mx-auto mb-4 h-16 w-16 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="mb-2 text-gray-400">No listening history yet</p>
-                <Link href="/" className="text-accent hover:underline">
-                  Start listening to music
-                </Link>
-              </div>
+              <EmptyState
+                icon={<Clock className="h-16 w-16" />}
+                title="No listening history yet"
+                description="Your recently played tracks will appear here"
+                action={
+                  <Link href="/" className="text-accent hover:underline">
+                    Start listening to music
+                  </Link>
+                }
+              />
             )}
           </div>
         )}
