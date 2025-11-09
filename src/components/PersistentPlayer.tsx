@@ -136,6 +136,12 @@ export default function PersistentPlayer() {
               /* No similar tracks available */
             })
           }
+          onGenerateSmartMix={
+            player.generateSmartMix ??
+            (() => {
+              /* Smart mix not available */
+            })
+          }
           isAutoQueueing={player.isAutoQueueing ?? false}
         />
       )}

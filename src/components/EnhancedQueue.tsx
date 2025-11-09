@@ -153,6 +153,7 @@ interface EnhancedQueueProps {
   onPlayFrom: (index: number) => void;
   onSaveAsPlaylist?: () => void;
   onAddSimilarTracks?: (trackId: number, count?: number) => Promise<void>;
+  onGenerateSmartMix?: (seedTrackIds: number[], count?: number) => Promise<void>;
   isAutoQueueing?: boolean;
 }
 
@@ -166,11 +167,13 @@ export function EnhancedQueue({
   onPlayFrom,
   onSaveAsPlaylist,
   onAddSimilarTracks,
+  onGenerateSmartMix,
   isAutoQueueing,
 }: EnhancedQueueProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [addingSimilar, setAddingSimilar] = useState(false);
+  const [generatingMix, setGeneratingMix] = useState(false);
 
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
@@ -220,6 +223,25 @@ export function EnhancedQueue({
     }
   };
 
+  // Handle generating smart mix from queue
+  const handleGenerateSmartMix = async () => {
+    if (!onGenerateSmartMix || queue.length === 0) return;
+
+    setGeneratingMix(true);
+    try {
+      // Use current track and first few tracks from queue as seeds
+      const seedTracks = [
+        ...(currentTrack ? [currentTrack] : []),
+        ...queue.slice(0, 4), // Take first 4 tracks from queue
+      ];
+      const seedTrackIds = [...new Set(seedTracks.map((t) => t.id))]; // Remove duplicates
+
+      await onGenerateSmartMix(seedTrackIds, 50);
+    } finally {
+      setGeneratingMix(false);
+    }
+  };
+
   // Toggle auto-queue
   const handleToggleAutoQueue = async () => {
     if (!smartQueueSettings) return;
@@ -266,12 +288,27 @@ export function EnhancedQueue({
                 disabled={addingSimilar}
                 className="p-2 rounded-full hover:bg-gray-800 transition-colors text-purple-400 hover:text-purple-300 disabled:opacity-50"
                 aria-label="Add similar tracks"
-                title="Add similar tracks"
+                title="Add similar tracks to queue"
               >
                 {addingSimilar ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <Sparkles className="h-5 w-5" />
+                )}
+              </button>
+            )}
+            {queue.length > 0 && onGenerateSmartMix && (
+              <button
+                onClick={handleGenerateSmartMix}
+                disabled={generatingMix}
+                className="p-2 rounded-full hover:bg-gray-800 transition-colors text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
+                aria-label="Generate smart mix"
+                title="Generate smart mix based on queue"
+              >
+                {generatingMix ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Zap className="h-5 w-5 fill-current" />
                 )}
               </button>
             )}

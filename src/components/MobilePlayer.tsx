@@ -5,6 +5,7 @@
 import type { Track } from "@/types";
 import { hapticLight, hapticMedium } from "@/utils/haptics";
 import { formatTime } from "@/utils/time";
+import { PLAYBACK_RATES } from "@/config/player";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
