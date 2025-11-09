@@ -11,6 +11,17 @@ import { loadPersistedQueueState } from "./useQueuePersistence";
 
 type RepeatMode = "none" | "one" | "all";
 
+interface UseAudioPlayerOptions {
+  onTrackChange?: (track: Track) => void;
+  onTrackEnd?: (track: Track) => void;
+  onDuplicateTrack?: (track: Track) => void;
+  onAutoQueueTrigger?: (
+    currentTrack: Track,
+    currentQueueLength: number
+  ) => Promise<Track[]>;
+  smartQueueSettings?: SmartQueueSettings;
+}
+
 export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const {
     onTrackChange,
