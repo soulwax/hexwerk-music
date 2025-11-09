@@ -31,21 +31,22 @@ export const metadata = {
     },
   ],
   manifest: "/manifest.json",
-  themeColor: "#4f46e5",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Starchild Music",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
   other: {
     "mobile-web-app-capable": "yes",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: "#4f46e5",
 };
 
 export default function RootLayout({

@@ -3,6 +3,7 @@
 "use client";
 
 import type { Track } from "@/types";
+import { formatTime } from "@/utils/time";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -85,13 +86,6 @@ export default function EnhancedPlayer({
     if (audioRef.current) {
       audioRef.current.volume = vol;
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    if (!isFinite(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleEnded = () => {

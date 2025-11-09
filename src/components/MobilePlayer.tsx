@@ -4,6 +4,7 @@
 
 import type { Track } from "@/types";
 import { hapticLight, hapticMedium } from "@/utils/haptics";
+import { formatTime } from "@/utils/time";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -104,13 +105,6 @@ export default function MobilePlayer(props: MobilePlayerProps) {
       document.body.style.overflow = "";
     };
   }, [isExpanded]);
-
-  const formatTime = (seconds: number) => {
-    if (!isFinite(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -455,7 +449,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                       onClick={() => setShowSpeedMenu(false)}
                     />
                     <div className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg">
-                      {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                      {PLAYBACK_RATES.map((rate) => (
                         <button
                           key={rate}
                           onClick={() => {

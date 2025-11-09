@@ -4,9 +4,11 @@
 
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useEqualizer } from "@/hooks/useEqualizer";
 import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import MobilePlayer from "./MobilePlayer";
 import MaturePlayer from "./Player";
 
@@ -28,12 +30,49 @@ const EnhancedQueue = dynamic(
 
 export default function PersistentPlayer() {
   const player = useGlobalPlayer();
-  const [showQueue, setShowQueue] = useState(false);
-  const [showEqualizer, setShowEqualizer] = useState(false);
   const isMobile = useIsMobile();
 
-  // Fetch user preferences for visualizer settings
-  const { data: preferences } = api.music.getUserPreferences.useQuery();
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
+  // Fetch user preferences for visualizer settings and panel visibility
+  const { data: preferences } = api.music.getUserPreferences.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  // Mutation to update preferences
+  const updatePreferences = api.music.updatePreferences.useMutation();
+
+  // Initialize equalizer hook (persists across panel open/close)
+  const equalizer = useEqualizer(player.audioElement);
+
+  // Initialize state from database preferences, with fallback to false
+  const [showQueue, setShowQueue] = useState(false);
+  const [showEqualizer, setShowEqualizer] = useState(false);
+
+  // Sync state with database preferences when they load
+  useEffect(() => {
+    if (preferences) {
+      setShowQueue(preferences.queuePanelOpen ?? false);
+      setShowEqualizer(preferences.equalizerPanelOpen ?? false);
+    }
+  }, [preferences]);
+
+  // Persist queue panel state to database
+  useEffect(() => {
+    if (isAuthenticated && preferences && showQueue !== preferences.queuePanelOpen) {
+      updatePreferences.mutate({ queuePanelOpen: showQueue });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQueue]);
+
+  // Persist equalizer panel state to database
+  useEffect(() => {
+    if (isAuthenticated && preferences && showEqualizer !== preferences.equalizerPanelOpen) {
+      updatePreferences.mutate({ equalizerPanelOpen: showEqualizer });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEqualizer]);
 
   const playerProps = {
     currentTrack: player.currentTrack,
@@ -102,9 +141,9 @@ export default function PersistentPlayer() {
       )}
 
       {/* Equalizer Panel */}
-      {showEqualizer && player.audioElement && (
+      {showEqualizer && (
         <Equalizer
-          audioElement={player.audioElement}
+          equalizer={equalizer}
           onClose={() => setShowEqualizer(false)}
         />
       )}
@@ -120,6 +159,9 @@ export default function PersistentPlayer() {
               height={60}
               barCount={24}
               type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"}
+              onTypeChange={(newType) => {
+                updatePreferences.mutate({ visualizerType: newType });
+              }}
             />
           </div>
         </div>

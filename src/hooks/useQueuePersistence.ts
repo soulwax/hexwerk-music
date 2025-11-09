@@ -2,6 +2,8 @@
 
 "use client";
 
+import { STORAGE_KEYS } from "@/config/storage";
+import { localStorage } from "@/services/storage";
 import type { Track } from "@/types";
 import { useEffect } from "react";
 
@@ -14,7 +16,6 @@ interface QueueState {
   repeatMode: "none" | "one" | "all";
 }
 
-const QUEUE_STORAGE_KEY = "hexmusic_queue_state";
 const PERSIST_DEBOUNCE_MS = 500;
 
 let persistTimer: NodeJS.Timeout | null = null;
@@ -22,17 +23,14 @@ let persistTimer: NodeJS.Timeout | null = null;
 export function useQueuePersistence(state: QueueState) {
   // Persist queue state on changes (debounced)
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     if (persistTimer) {
       clearTimeout(persistTimer);
     }
 
     persistTimer = setTimeout(() => {
-      try {
-        localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(state));
-      } catch (error) {
-        console.error("Failed to persist queue state:", error);
+      const result = localStorage.set(STORAGE_KEYS.QUEUE_STATE, state);
+      if (!result.success) {
+        console.error("Failed to persist queue state:", result.error);
       }
     }, PERSIST_DEBOUNCE_MS);
 
@@ -45,25 +43,23 @@ export function useQueuePersistence(state: QueueState) {
 }
 
 export function loadPersistedQueueState(): QueueState | null {
-  if (typeof window === "undefined") return null;
+  const result = localStorage.get<QueueState>(STORAGE_KEYS.QUEUE_STATE);
 
-  try {
-    const saved = localStorage.getItem(QUEUE_STORAGE_KEY);
-    if (saved) {
-      return JSON.parse(saved) as QueueState;
-    }
-  } catch (error) {
-    console.error("Failed to load queue state:", error);
+  if (result.success && result.data !== null) {
+    return result.data;
   }
+
+  if (!result.success) {
+    console.error("Failed to load queue state:", result.error);
+  }
+
   return null;
 }
 
 export function clearPersistedQueueState(): void {
-  if (typeof window === "undefined") return;
+  const result = localStorage.remove(STORAGE_KEYS.QUEUE_STATE);
 
-  try {
-    localStorage.removeItem(QUEUE_STORAGE_KEY);
-  } catch (error) {
-    console.error("Failed to clear queue state:", error);
+  if (!result.success) {
+    console.error("Failed to clear queue state:", result.error);
   }
 }

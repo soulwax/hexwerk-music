@@ -3,6 +3,8 @@
 "use client";
 
 import type { Track } from "@/types";
+import { getCoverImage } from "@/utils/images";
+import { formatDuration } from "@/utils/time";
 import {
   DndContext,
   closestCenter,
@@ -33,14 +35,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { api } from "@/trpc/react";
-
-// Helper function to format duration in seconds to mm:ss
-const formatDuration = (seconds: number): string => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-};
 
 interface QueueItemProps {
   track: Track;
@@ -72,7 +68,7 @@ function SortableQueueItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const coverImage = track.album.cover_small ?? track.album.cover;
+  const coverImage = getCoverImage(track, "small");
 
   return (
     <div
@@ -176,8 +172,13 @@ export function EnhancedQueue({
   const [showSettings, setShowSettings] = useState(false);
   const [addingSimilar, setAddingSimilar] = useState(false);
 
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
   // Fetch smart queue settings
-  const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery();
+  const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const updateSettings = api.music.updateSmartQueueSettings.useMutation();
 
   const sensors = useSensors(

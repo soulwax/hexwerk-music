@@ -1,6 +1,7 @@
 // File: src/components/TrackCard.tsx
 
 import type { Track } from "@/types";
+import { getCoverImage } from "@/utils/images";
 import Image from "next/image";
 
 export interface TrackCardProps {
@@ -9,11 +10,7 @@ export interface TrackCardProps {
 }
 
 export default function TrackCard({ track, onPlay }: TrackCardProps) {
-  const coverImage =
-    track.album.cover_medium ??
-    track.album.cover_small ??
-    track.album.cover ??
-    "/placeholder.png";
+  const coverImage = getCoverImage(track);
 
   return (
     <div

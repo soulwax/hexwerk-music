@@ -2,6 +2,8 @@
 
 "use client";
 
+import { STORAGE_KEYS } from "@/config/storage";
+import { localStorage } from "@/services/storage";
 import type { SmartQueueSettings, Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -10,19 +12,15 @@ import { loadPersistedQueueState } from "./useQueuePersistence";
 type RepeatMode = "none" | "one" | "all";
 
 interface UseAudioPlayerOptions {
-  onTrackChange?: (track: Track | null) => void;
+  onTrackChange?: (track: Track) => void;
   onTrackEnd?: (track: Track) => void;
   onDuplicateTrack?: (track: Track) => void;
   onAutoQueueTrigger?: (
     currentTrack: Track,
-    queueLength: number
+    currentQueueLength: number
   ) => Promise<Track[]>;
   smartQueueSettings?: SmartQueueSettings;
 }
-
-const VOLUME_STORAGE_KEY = "hexmusic_volume";
-const PLAYBACK_RATE_KEY = "hexmusic_playback_rate";
-const QUEUE_STORAGE_KEY = "hexmusic_queue_state";
 
 export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const {
@@ -51,53 +49,45 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
   // Load persisted settings and queue state
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedVolume = localStorage.getItem(VOLUME_STORAGE_KEY);
-      const savedRate = localStorage.getItem(PLAYBACK_RATE_KEY);
+    const savedVolume = localStorage.getOrDefault(STORAGE_KEYS.VOLUME, 0.7);
+    const savedRate = localStorage.getOrDefault(STORAGE_KEYS.PLAYBACK_RATE, 1);
 
-      if (savedVolume) setVolume(parseFloat(savedVolume));
-      if (savedRate) setPlaybackRate(parseFloat(savedRate));
+    setVolume(savedVolume);
+    setPlaybackRate(savedRate);
 
-      // Load persisted queue state
-      const persistedState = loadPersistedQueueState();
-      if (persistedState) {
-        setQueue(persistedState.queue);
-        setHistory(persistedState.history);
-        setCurrentTrack(persistedState.currentTrack);
-        setIsShuffled(persistedState.isShuffled);
-        setRepeatMode(persistedState.repeatMode);
-        // Don't auto-restore currentTime to avoid unexpected jumps
-      }
+    // Load persisted queue state
+    const persistedState = loadPersistedQueueState();
+    if (persistedState) {
+      setQueue(persistedState.queue);
+      setHistory(persistedState.history);
+      setCurrentTrack(persistedState.currentTrack);
+      setIsShuffled(persistedState.isShuffled);
+      setRepeatMode(persistedState.repeatMode);
+      // Don't auto-restore currentTime to avoid unexpected jumps
     }
   }, []);
 
   // Persist volume
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(VOLUME_STORAGE_KEY, volume.toString());
-    }
+    localStorage.set(STORAGE_KEYS.VOLUME, volume);
   }, [volume]);
 
   // Persist playback rate
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(PLAYBACK_RATE_KEY, playbackRate.toString());
-    }
+    localStorage.set(STORAGE_KEYS.PLAYBACK_RATE, playbackRate);
   }, [playbackRate]);
 
   // Persist queue state
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const queueState = {
-        queue,
-        history,
-        currentTrack,
-        currentTime,
-        isShuffled,
-        repeatMode,
-      };
-      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queueState));
-    }
+    const queueState = {
+      queue,
+      history,
+      currentTrack,
+      currentTime,
+      isShuffled,
+      repeatMode,
+    };
+    localStorage.set(STORAGE_KEYS.QUEUE_STATE, queueState);
   }, [queue, history, currentTrack, currentTime, isShuffled, repeatMode]);
 
   // Initialize audio element

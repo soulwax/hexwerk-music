@@ -5,6 +5,8 @@ import { useWebShare } from "@/hooks/useWebShare";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { hapticLight, hapticSuccess } from "@/utils/haptics";
+import { getCoverImage } from "@/utils/images";
+import { formatDuration } from "@/utils/time";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -125,17 +127,7 @@ export default function EnhancedTrackCard({
     onPlay(track);
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const coverImage =
-    track.album.cover_medium ??
-    track.album.cover_small ??
-    track.album.cover ??
-    "/placeholder.png";
+  const coverImage = getCoverImage(track);
 
   return (
     <div className="card group relative flex items-center gap-3 p-3 transition-all duration-200 hover:scale-[1.01] hover:shadow-lg md:gap-4 md:p-4">
