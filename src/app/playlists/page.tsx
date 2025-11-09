@@ -2,8 +2,11 @@
 
 "use client";
 
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingState } from "@/components/LoadingSpinner";
 import { useToast } from "@/contexts/ToastContext";
 import { api } from "@/trpc/react";
+import { Music, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -133,9 +136,7 @@ export default function PlaylistsPage() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="border-accent inline-block h-8 w-8 animate-spin rounded-full border-b-2"></div>
-          </div>
+          <LoadingState message="Loading your playlists..." />
         ) : playlists && playlists.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {playlists.map((playlist) => (
@@ -207,22 +208,20 @@ export default function PlaylistsPage() {
             ))}
           </div>
         ) : (
-          <div className="py-12 text-center">
-            <svg
-              className="mx-auto mb-4 h-16 w-16 text-gray-600"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
-            </svg>
-            <p className="mb-4 text-gray-400">No playlists yet</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn-primary"
-            >
-              Create Your First Playlist
-            </button>
-          </div>
+          <EmptyState
+            icon={<Music className="h-16 w-16" />}
+            title="No playlists yet"
+            description="Create your first playlist to organize your favorite tracks"
+            action={
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                Create Your First Playlist
+              </button>
+            }
+          />
         )}
       </main>
 
