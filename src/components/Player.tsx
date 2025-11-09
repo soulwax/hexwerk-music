@@ -2,6 +2,7 @@
 
 "use client";
 
+import { PLAYBACK_RATES } from "@/config/player";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import type { Track } from "@/types";
 import { hapticLight, hapticMedium } from "@/utils/haptics";
@@ -388,7 +389,7 @@ export default function MaturePlayer({
                   onClick={() => setShowSpeedMenu(false)}
                 />
                 <div className="absolute bottom-full right-0 z-20 mb-2 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg">
-                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                  {PLAYBACK_RATES.map((rate) => (
                     <button
                       key={rate}
                       onClick={() => {
