@@ -5,6 +5,7 @@
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import type { Track } from "@/types";
 import { hapticLight, hapticMedium } from "@/utils/haptics";
+import { formatTime } from "@/utils/time";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -105,13 +106,6 @@ export default function MaturePlayer({
     onToggleShuffle,
     onToggleRepeat: onCycleRepeat,
   });
-
-  const formatTime = (seconds: number) => {
-    if (!isFinite(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!progressRef.current || !duration) return;
