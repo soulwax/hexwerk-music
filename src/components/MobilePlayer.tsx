@@ -449,7 +449,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                       onClick={() => setShowSpeedMenu(false)}
                     />
                     <div className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg">
-                      {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                      {PLAYBACK_RATES.map((rate) => (
                         <button
                           key={rate}
                           onClick={() => {
