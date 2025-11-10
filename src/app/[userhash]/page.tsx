@@ -44,14 +44,12 @@ export default function PublicProfilePage({
     api.music.getPublicTopTracks.useQuery({
       userHash: userhash,
       limit: 6,
-      days: 30,
     });
 
   const { data: topArtists, isLoading: topArtistsLoading } =
     api.music.getPublicTopArtists.useQuery({
       userHash: userhash,
       limit: 6,
-      days: 30,
     });
 
   const handleShareProfile = async () => {
