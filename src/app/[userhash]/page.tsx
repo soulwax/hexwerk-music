@@ -117,7 +117,7 @@ export default function PublicProfilePage({
         />
 
         <Section
-          title="🔥 Top Tracks (Last 30 Days)"
+          title="🔥 Top Tracks (All Time)"
           loading={topTracksLoading}
           items={topTracks}
           renderItem={(item, idx) => (
@@ -137,7 +137,7 @@ export default function PublicProfilePage({
         />
 
         <Section
-          title="⭐ Top Artists (Last 30 Days)"
+          title="⭐ Top Artists (All Time)"
           loading={topArtistsLoading}
           items={topArtists}
           renderItem={(item, idx) => (
@@ -202,19 +202,64 @@ export default function PublicProfilePage({
               className="group rounded-lg border border-gray-800 bg-gray-900/50 p-4 transition-all hover:border-indigo-500 hover:bg-gray-800/50"
             >
               <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600">
-                {playlist.coverImage ? (
-                  <Image
-                    src={playlist.coverImage}
-                    alt={playlist.name}
-                    width={200}
-                    height={200}
-                    className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-6xl text-white/50">
-                    🎵
-                  </div>
-                )}
+                {(() => {
+                  // Check if coverImage is a JSON array of album covers
+                  let albumCovers: string[] = [];
+                  try {
+                    if (playlist.coverImage?.startsWith("[")) {
+                      albumCovers = JSON.parse(playlist.coverImage) as string[];
+                    }
+                  } catch {
+                    // Not JSON, treat as single image
+                  }
+
+                  if (albumCovers.length > 0) {
+                    // Render 2x2 grid of album covers
+                    return (
+                      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5">
+                        {albumCovers.slice(0, 4).map((cover, i) => (
+                          <div key={i} className="relative h-full w-full overflow-hidden">
+                            <Image
+                              src={cover}
+                              alt={`${playlist.name} track ${i + 1}`}
+                              fill
+                              sizes="100px"
+                              className="object-cover transition-transform group-hover:scale-110"
+                              unoptimized
+                            />
+                          </div>
+                        ))}
+                        {/* Fill remaining slots with placeholder */}
+                        {Array.from({ length: 4 - albumCovers.length }).map((_, i) => (
+                          <div
+                            key={`placeholder-${i}`}
+                            className="flex h-full w-full items-center justify-center bg-gray-800/50 text-2xl text-white/30"
+                          >
+                            🎵
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  } else if (playlist.coverImage) {
+                    // Single cover image
+                    return (
+                      <Image
+                        src={playlist.coverImage}
+                        alt={playlist.name}
+                        width={200}
+                        height={200}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                      />
+                    );
+                  } else {
+                    // No cover image
+                    return (
+                      <div className="flex h-full items-center justify-center text-6xl text-white/50">
+                        🎵
+                      </div>
+                    );
+                  }
+                })()}
               </div>
               <h3 className="mb-1 font-semibold text-white line-clamp-1">
                 {playlist.name}
