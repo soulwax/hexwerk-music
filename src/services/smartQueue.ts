@@ -401,43 +401,91 @@ export async function getSmartQueueRecommendations(
 }
 
 /**
- * Fetch tracks from Deezer's radio endpoint (fallback)
+ * Fetch similar tracks using Deezer artist recommendations (fallback)
+ * Uses artist top tracks and related artists since radio endpoint is deprecated
  */
 async function fetchDeezerRadio(
   trackId: number,
   limit: number
 ): Promise<Track[]> {
-  const url = `https://api.deezer.com/track/${trackId}/radio?limit=${Math.min(limit, 40)}`;
-  console.log("[SmartQueue] 📻 Fetching Deezer radio:", {
+  console.log("[SmartQueue] 📻 Fetching Deezer recommendations:", {
     trackId,
     limit,
-    url,
   });
 
   try {
-    const response = await fetch(url);
+    // First, fetch the track to get the artist ID
+    const trackResponse = await fetch(`https://api.deezer.com/track/${trackId}`);
 
-    console.log("[SmartQueue] 📡 Deezer radio response:", {
-      status: response.status,
-      ok: response.ok,
-    });
-
-    if (!response.ok) {
-      console.log("[SmartQueue] ⚠️ Deezer radio request failed");
+    if (!trackResponse.ok) {
+      console.log("[SmartQueue] ⚠️ Failed to fetch track details");
       return [];
     }
 
-    const data = (await response.json()) as { data: Track[] };
-    const tracks = data.data ?? [];
+    const trackData = (await trackResponse.json()) as Track;
+    const artistId = trackData.artist.id;
 
-    console.log("[SmartQueue] ✅ Deezer radio tracks received:", {
+    console.log("[SmartQueue] 👤 Got artist:", {
+      artistId,
+      artistName: trackData.artist.name,
+    });
+
+    // Fetch artist's top tracks
+    const topTracksResponse = await fetch(
+      `https://api.deezer.com/artist/${artistId}/top?limit=${Math.min(limit, 50)}`
+    );
+
+    if (!topTracksResponse.ok) {
+      console.log("[SmartQueue] ⚠️ Failed to fetch artist top tracks");
+      return [];
+    }
+
+    const topTracksData = (await topTracksResponse.json()) as { data: Track[] };
+    let tracks = topTracksData.data ?? [];
+
+    // Filter out the current track
+    tracks = tracks.filter(t => t.id !== trackId);
+
+    console.log("[SmartQueue] ✅ Deezer recommendations received:", {
       count: tracks.length,
       tracks: tracks.slice(0, 3).map(t => `${t.title} - ${t.artist.name}`),
     });
 
-    return tracks;
+    // If we need more tracks, fetch from related artists
+    if (tracks.length < limit) {
+      console.log("[SmartQueue] 🔍 Fetching related artists for more variety...");
+
+      const relatedResponse = await fetch(
+        `https://api.deezer.com/artist/${artistId}/related`
+      );
+
+      if (relatedResponse.ok) {
+        const relatedData = (await relatedResponse.json()) as { data: Array<{ id: number }> };
+        const relatedArtists = relatedData.data ?? [];
+
+        // Get top tracks from first related artist
+        if (relatedArtists[0]) {
+          const relatedTracksResponse = await fetch(
+            `https://api.deezer.com/artist/${relatedArtists[0].id}/top?limit=${limit - tracks.length}`
+          );
+
+          if (relatedTracksResponse.ok) {
+            const relatedTracksData = (await relatedTracksResponse.json()) as { data: Track[] };
+            const relatedTracks = relatedTracksData.data ?? [];
+            tracks.push(...relatedTracks);
+
+            console.log("[SmartQueue] ✅ Added tracks from related artists:", {
+              addedCount: relatedTracks.length,
+              totalCount: tracks.length,
+            });
+          }
+        }
+      }
+    }
+
+    return tracks.slice(0, limit);
   } catch (error) {
-    console.error("[SmartQueue] ❌ Failed to fetch Deezer radio:", error);
+    console.error("[SmartQueue] ❌ Failed to fetch Deezer recommendations:", error);
     return [];
   }
 }
