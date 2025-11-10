@@ -175,7 +175,7 @@ export class FrequencyRingsRenderer {
 
         ctx.fillStyle = particleGradient;
         ctx.beginPath();
-        ctx.arc(px, py, size * 1.5, 0, Math.PI * 2);
+        ctx.arc(px, py, Math.max(0, size * 1.5), 0, Math.PI * 2);
         ctx.fill();
 
         newParticles.push(particle);
