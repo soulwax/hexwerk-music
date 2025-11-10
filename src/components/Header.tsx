@@ -2,6 +2,7 @@
 
 import { LogOut, User } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import { api } from "@/trpc/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -10,6 +11,11 @@ export default function Header() {
   const { data: session } = useSession();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch current user's profile info to get their userHash
+  const { data: userProfile } = api.music.getCurrentUserProfile.useQuery(undefined, {
+    enabled: !!session,
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -114,9 +120,9 @@ export default function Header() {
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-800 bg-gray-900 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-1">
-                      {session?.user?.id && (
+                      {userProfile?.userHash && (
                         <Link
-                          href={`/profile/${session.user.id}`}
+                          href={`/${userProfile.userHash}`}
                           onClick={() => setShowUserMenu(false)}
                           className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
                         >
