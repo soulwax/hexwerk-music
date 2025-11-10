@@ -210,22 +210,50 @@ export function EnhancedQueue({
 
   // Handle adding similar tracks
   const handleAddSimilar = async () => {
-    if (!currentTrack || !onAddSimilarTracks) return;
+    console.log("[EnhancedQueue] 🎯 Add Similar Tracks button clicked");
+
+    if (!currentTrack || !onAddSimilarTracks) {
+      console.log("[EnhancedQueue] ❌ Cannot add similar tracks:", {
+        hasCurrentTrack: !!currentTrack,
+        hasCallback: !!onAddSimilarTracks,
+      });
+      return;
+    }
+
+    console.log("[EnhancedQueue] 📋 Request details:", {
+      trackId: currentTrack.id,
+      trackTitle: currentTrack.title,
+      trackArtist: currentTrack.artist.name,
+      count: smartQueueSettings?.autoQueueCount ?? 5,
+    });
 
     setAddingSimilar(true);
     try {
+      console.log("[EnhancedQueue] 🚀 Calling onAddSimilarTracks callback...");
       await onAddSimilarTracks(
         currentTrack.id,
         smartQueueSettings?.autoQueueCount ?? 5,
       );
+      console.log("[EnhancedQueue] ✅ Successfully added similar tracks");
+    } catch (error) {
+      console.error("[EnhancedQueue] ❌ Error adding similar tracks:", error);
     } finally {
       setAddingSimilar(false);
+      console.log("[EnhancedQueue] 🏁 Add similar tracks operation completed");
     }
   };
 
   // Handle generating smart mix from queue
   const handleGenerateSmartMix = async () => {
-    if (!onGenerateSmartMix || queue.length === 0) return;
+    console.log("[EnhancedQueue] ⚡ Generate Smart Mix button clicked");
+
+    if (!onGenerateSmartMix || queue.length === 0) {
+      console.log("[EnhancedQueue] ❌ Cannot generate smart mix:", {
+        hasCallback: !!onGenerateSmartMix,
+        queueLength: queue.length,
+      });
+      return;
+    }
 
     setGeneratingMix(true);
     try {
@@ -236,19 +264,48 @@ export function EnhancedQueue({
       ];
       const seedTrackIds = [...new Set(seedTracks.map((t) => t.id))]; // Remove duplicates
 
+      console.log("[EnhancedQueue] 📋 Smart mix details:", {
+        seedCount: seedTracks.length,
+        seedTrackIds,
+        seedTitles: seedTracks.map(t => `${t.title} - ${t.artist.name}`),
+        targetCount: 50,
+      });
+
+      console.log("[EnhancedQueue] 🚀 Calling onGenerateSmartMix callback...");
       await onGenerateSmartMix(seedTrackIds, 50);
+      console.log("[EnhancedQueue] ✅ Successfully generated smart mix");
+    } catch (error) {
+      console.error("[EnhancedQueue] ❌ Error generating smart mix:", error);
     } finally {
       setGeneratingMix(false);
+      console.log("[EnhancedQueue] 🏁 Generate smart mix operation completed");
     }
   };
 
   // Toggle auto-queue
   const handleToggleAutoQueue = async () => {
-    if (!smartQueueSettings) return;
+    console.log("[EnhancedQueue] 🔄 Auto-queue toggle clicked");
 
-    await updateSettings.mutateAsync({
-      autoQueueEnabled: !smartQueueSettings.autoQueueEnabled,
+    if (!smartQueueSettings) {
+      console.log("[EnhancedQueue] ❌ No smart queue settings available");
+      return;
+    }
+
+    const newValue = !smartQueueSettings.autoQueueEnabled;
+    console.log("[EnhancedQueue] 📋 Toggling auto-queue:", {
+      currentValue: smartQueueSettings.autoQueueEnabled,
+      newValue,
     });
+
+    try {
+      console.log("[EnhancedQueue] 🚀 Calling updateSettings mutation...");
+      await updateSettings.mutateAsync({
+        autoQueueEnabled: newValue,
+      });
+      console.log("[EnhancedQueue] ✅ Auto-queue setting updated successfully");
+    } catch (error) {
+      console.error("[EnhancedQueue] ❌ Error updating auto-queue setting:", error);
+    }
   };
 
   // Filter queue based on search query

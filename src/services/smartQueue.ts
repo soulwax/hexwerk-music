@@ -7,6 +7,14 @@ import type { Track } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
 
+// Log configuration on module load (client-side only)
+if (typeof window !== "undefined") {
+  console.log("[SmartQueue] 🔧 Service initialized with config:", {
+    apiBaseUrl: API_BASE_URL,
+    hasEnvVar: !!process.env.NEXT_PUBLIC_API_URL,
+  });
+}
+
 /**
  * Get authentication token from session storage or localStorage
  */
@@ -30,6 +38,12 @@ async function apiRequest<T>(
 ): Promise<T> {
   const token = getAuthToken();
 
+  console.log("[SmartQueue API] 🌐 Making API request:", {
+    url: `${API_BASE_URL}${endpoint}`,
+    method: options.method ?? "GET",
+    hasToken: !!token,
+  });
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -44,12 +58,21 @@ async function apiRequest<T>(
     headers,
   });
 
+  console.log("[SmartQueue API] 📡 API response:", {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+  });
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText })) as { message?: string };
+    console.error("[SmartQueue API] ❌ API error:", error);
     throw new Error(error.message ?? `API Error: ${response.status}`);
   }
 
-  return response.json() as Promise<T>;
+  const data = await response.json() as Promise<T>;
+  console.log("[SmartQueue API] ✅ Response data received");
+  return data;
 }
 
 /**
@@ -161,14 +184,26 @@ export async function searchHexMusicTracks(
   query: string,
   limit = 20
 ): Promise<HexMusicTrack[]> {
+  console.log("[SmartQueue] 🔍 Searching HexMusic:", {
+    query,
+    limit,
+    apiUrl: API_BASE_URL,
+  });
+
   try {
     const response = await apiRequest<{ tracks: HexMusicTrack[] }>(
       `/hexmusic/songs?query=${encodeURIComponent(query)}&limit=${limit}`
     );
 
-    return response.tracks || [];
+    const tracks = response.tracks || [];
+    console.log("[SmartQueue] ✅ HexMusic search results:", {
+      count: tracks.length,
+      tracks: tracks.slice(0, 3).map(t => `${t.name} - ${t.artist}`),
+    });
+
+    return tracks;
   } catch (error) {
-    console.error("Failed to search HexMusic tracks:", error);
+    console.error("[SmartQueue] ❌ Failed to search HexMusic tracks:", error);
     return [];
   }
 }
@@ -297,37 +332,69 @@ export async function getSmartQueueRecommendations(
     useAudioFeatures = true,
   } = options;
 
+  console.log("[SmartQueue] 🎯 getSmartQueueRecommendations called", {
+    track: `${currentTrack.title} - ${currentTrack.artist.name}`,
+    trackId: currentTrack.id,
+    count,
+    similarityLevel,
+    useAudioFeatures,
+  });
+
   try {
     // Try to get recommendations using HexMusic's powerful system
     const query = `${currentTrack.artist.name} ${currentTrack.title}`;
+    console.log("[SmartQueue] 🔍 Searching HexMusic with query:", query);
 
     // Search for the current track to get context
     const hexTracks = await searchHexMusicTracks(query, count * 2);
+    console.log("[SmartQueue] 📦 HexMusic search results:", {
+      count: hexTracks.length,
+      targetCount: count * 2,
+    });
 
     if (hexTracks.length > 0) {
+      console.log("[SmartQueue] 🔄 Converting HexMusic tracks to Deezer format...");
       // Convert HexMusic recommendations to Deezer tracks
       const recommendedTracks = await convertHexMusicToTracks(hexTracks);
+      console.log("[SmartQueue] ✅ Converted tracks:", {
+        count: recommendedTracks.length,
+      });
 
       // Filter out the current track
       const filteredTracks = recommendedTracks.filter(
         track => track.id !== currentTrack.id
       );
+      console.log("[SmartQueue] 🔍 After filtering current track:", {
+        before: recommendedTracks.length,
+        after: filteredTracks.length,
+      });
 
       // Apply similarity level filtering
+      console.log("[SmartQueue] 🎚️ Applying similarity filter:", similarityLevel);
       const finalTracks = applySimilarityFilter(
         filteredTracks,
         currentTrack,
         similarityLevel
       );
+      console.log("[SmartQueue] 📊 After similarity filtering:", {
+        count: finalTracks.length,
+      });
 
-      return finalTracks.slice(0, count);
+      const result = finalTracks.slice(0, count);
+      console.log("[SmartQueue] ✅ Returning recommendations:", {
+        count: result.length,
+        tracks: result.map(t => `${t.title} - ${t.artist.name}`),
+      });
+      return result;
     }
 
+    console.log("[SmartQueue] ⚠️ No HexMusic results, falling back to Deezer radio");
     // Fallback to Deezer radio if HexMusic fails
     return await fetchDeezerRadio(currentTrack.id, count);
   } catch (error) {
-    console.error("Failed to get smart queue recommendations:", error);
+    console.error("[SmartQueue] ❌ Failed to get smart queue recommendations:", error);
 
+    console.log("[SmartQueue] 🔄 Attempting final fallback to Deezer radio");
     // Final fallback
     return await fetchDeezerRadio(currentTrack.id, count);
   }
@@ -340,17 +407,37 @@ async function fetchDeezerRadio(
   trackId: number,
   limit: number
 ): Promise<Track[]> {
-  try {
-    const response = await fetch(
-      `https://api.deezer.com/track/${trackId}/radio?limit=${Math.min(limit, 40)}`
-    );
+  const url = `https://api.deezer.com/track/${trackId}/radio?limit=${Math.min(limit, 40)}`;
+  console.log("[SmartQueue] 📻 Fetching Deezer radio:", {
+    trackId,
+    limit,
+    url,
+  });
 
-    if (!response.ok) return [];
+  try {
+    const response = await fetch(url);
+
+    console.log("[SmartQueue] 📡 Deezer radio response:", {
+      status: response.status,
+      ok: response.ok,
+    });
+
+    if (!response.ok) {
+      console.log("[SmartQueue] ⚠️ Deezer radio request failed");
+      return [];
+    }
 
     const data = (await response.json()) as { data: Track[] };
-    return data.data ?? [];
+    const tracks = data.data ?? [];
+
+    console.log("[SmartQueue] ✅ Deezer radio tracks received:", {
+      count: tracks.length,
+      tracks: tracks.slice(0, 3).map(t => `${t.title} - ${t.artist.name}`),
+    });
+
+    return tracks;
   } catch (error) {
-    console.error("Failed to fetch Deezer radio:", error);
+    console.error("[SmartQueue] ❌ Failed to fetch Deezer radio:", error);
     return [];
   }
 }
@@ -394,31 +481,63 @@ export async function generateSmartMix(
   seedTracks: Track[],
   count = 20
 ): Promise<Track[]> {
-  if (seedTracks.length === 0) return [];
+  console.log("[SmartQueue] ⚡ generateSmartMix called", {
+    seedCount: seedTracks.length,
+    targetCount: count,
+    seeds: seedTracks.map(t => `${t.title} - ${t.artist.name}`),
+  });
+
+  if (seedTracks.length === 0) {
+    console.log("[SmartQueue] ❌ No seed tracks provided");
+    return [];
+  }
 
   try {
     // Get recommendations for each seed track
     const allRecommendations: Track[] = [];
     const tracksPerSeed = Math.ceil(count / seedTracks.length);
 
-    for (const seedTrack of seedTracks) {
+    console.log("[SmartQueue] 📋 Will fetch", tracksPerSeed, "tracks per seed");
+
+    for (let i = 0; i < seedTracks.length; i++) {
+      const seedTrack = seedTracks[i];
+      if (!seedTrack) continue;
+
+      console.log(`[SmartQueue] 🔍 Processing seed ${i + 1}/${seedTracks.length}:`, {
+        track: `${seedTrack.title} - ${seedTrack.artist.name}`,
+      });
+
       const recommendations = await getSmartQueueRecommendations(
         seedTrack,
         { count: tracksPerSeed, similarityLevel: "balanced" }
       );
 
+      console.log(`[SmartQueue] 📦 Received ${recommendations.length} recommendations for seed ${i + 1}`);
       allRecommendations.push(...recommendations);
     }
+
+    console.log("[SmartQueue] 📊 Total recommendations collected:", allRecommendations.length);
 
     // Remove duplicates
     const uniqueTracks = Array.from(
       new Map(allRecommendations.map(track => [track.id, track])).values()
     );
 
+    console.log("[SmartQueue] 🔍 After deduplication:", {
+      before: allRecommendations.length,
+      after: uniqueTracks.length,
+    });
+
     // Shuffle for variety
-    return shuffleArray(uniqueTracks).slice(0, count);
+    const shuffled = shuffleArray(uniqueTracks).slice(0, count);
+    console.log("[SmartQueue] ✅ Returning smart mix:", {
+      count: shuffled.length,
+      targetCount: count,
+    });
+
+    return shuffled;
   } catch (error) {
-    console.error("Failed to generate smart mix:", error);
+    console.error("[SmartQueue] ❌ Failed to generate smart mix:", error);
     return [];
   }
 }

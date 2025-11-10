@@ -165,22 +165,47 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Smart Queue Functions
   const addSimilarTracks = useCallback(
     async (trackId: number, count = 5) => {
-      if (!session) return;
+      console.log("[AudioPlayerContext] 🎵 addSimilarTracks called", {
+        trackId,
+        count,
+        hasSession: !!session,
+      });
+
+      if (!session) {
+        console.log("[AudioPlayerContext] ❌ No session, cannot add similar tracks");
+        return;
+      }
 
       try {
         // Find the track to get recommendations for
         const track = player.queue.find((t) => t.id === trackId) ?? player.currentTrack;
 
         if (!track) {
-          console.error("Track not found for smart queue");
+          console.error("[AudioPlayerContext] ❌ Track not found for smart queue:", {
+            searchedTrackId: trackId,
+            currentTrackId: player.currentTrack?.id,
+            queueSize: player.queue.length,
+          });
           return;
         }
 
+        console.log("[AudioPlayerContext] 📋 Found track:", {
+          id: track.id,
+          title: track.title,
+          artist: track.artist.name,
+        });
+
+        console.log("[AudioPlayerContext] 🚀 Calling getSmartQueueRecommendations service...");
         // Use smart queue service for intelligent recommendations
         const tracks = await getSmartQueueRecommendations(track, {
           count,
           similarityLevel: smartQueueSettings?.similarityPreference ?? "balanced",
           useAudioFeatures: smartQueueSettings?.smartMixEnabled ?? false,
+        });
+
+        console.log("[AudioPlayerContext] 📦 Received recommendations:", {
+          count: tracks.length,
+          tracks: tracks.map(t => `${t.title} - ${t.artist.name}`),
         });
 
         if (tracks.length > 0) {
@@ -191,14 +216,27 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
           ]);
           const newTracks = tracks.filter((t) => !existingIds.has(t.id));
 
+          console.log("[AudioPlayerContext] 🔍 After filtering duplicates:", {
+            original: tracks.length,
+            filtered: newTracks.length,
+            existingCount: existingIds.size,
+          });
+
           if (newTracks.length > 0) {
+            console.log("[AudioPlayerContext] ➕ Adding tracks to queue...");
             player.addToQueue(newTracks, false);
+            console.log("[AudioPlayerContext] ✅ Tracks added successfully");
+          } else {
+            console.log("[AudioPlayerContext] ⚠️ No new tracks to add (all were duplicates)");
           }
+        } else {
+          console.log("[AudioPlayerContext] ⚠️ No recommendations received");
         }
       } catch (error) {
-        console.error("Error adding similar tracks:", error);
+        console.error("[AudioPlayerContext] ❌ Error adding similar tracks:", error);
 
         // Fallback to basic TRPC endpoint if smart queue fails
+        console.log("[AudioPlayerContext] 🔄 Attempting fallback to tRPC endpoint...");
         try {
           const fallbackTracks = await utils.client.music.getSimilarTracks.query({
             trackId,
@@ -209,11 +247,16 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
             ],
           });
 
+          console.log("[AudioPlayerContext] 📦 Fallback tracks received:", {
+            count: fallbackTracks?.length ?? 0,
+          });
+
           if (fallbackTracks && fallbackTracks.length > 0) {
             player.addToQueue(fallbackTracks, false);
+            console.log("[AudioPlayerContext] ✅ Fallback tracks added successfully");
           }
-        } catch {
-          // Silent fail - user will see no tracks added
+        } catch (fallbackError) {
+          console.error("[AudioPlayerContext] ❌ Fallback also failed:", fallbackError);
         }
       }
     },
@@ -222,7 +265,16 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const generateSmartMix = useCallback(
     async (seedTrackIds: number[], count = 50) => {
-      if (!session) return;
+      console.log("[AudioPlayerContext] ⚡ generateSmartMix called", {
+        seedTrackIds,
+        count,
+        hasSession: !!session,
+      });
+
+      if (!session) {
+        console.log("[AudioPlayerContext] ❌ No session, cannot generate smart mix");
+        return;
+      }
 
       try {
         // Find seed tracks from current context
@@ -230,26 +282,52 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
           ...(player.currentTrack ? [player.currentTrack] : []),
           ...player.queue,
         ];
+
+        console.log("[AudioPlayerContext] 📋 Available tracks:", {
+          currentTrack: player.currentTrack?.id,
+          queueSize: player.queue.length,
+          totalAvailable: allTracks.length,
+        });
+
         const seedTracks = seedTrackIds
           .map((id) => allTracks.find((t) => t.id === id))
           .filter((t): t is Track => t !== undefined);
 
         if (seedTracks.length === 0) {
-          console.error("No valid seed tracks found for smart mix");
+          console.error("[AudioPlayerContext] ❌ No valid seed tracks found for smart mix", {
+            requestedIds: seedTrackIds,
+            availableIds: allTracks.map(t => t.id),
+          });
           return;
         }
 
+        console.log("[AudioPlayerContext] 📋 Seed tracks:", {
+          count: seedTracks.length,
+          tracks: seedTracks.map(t => `${t.title} - ${t.artist.name}`),
+        });
+
+        console.log("[AudioPlayerContext] 🚀 Calling generateSmartMixService...");
         // Use smart queue service to generate intelligent mix
         const tracks = await generateSmartMixService(seedTracks, count);
 
+        console.log("[AudioPlayerContext] 📦 Smart mix generated:", {
+          count: tracks.length,
+          targetCount: count,
+        });
+
         if (tracks.length > 0) {
+          console.log("[AudioPlayerContext] 🔄 Clearing queue and adding new tracks...");
           player.clearQueue();
           player.addToQueue(tracks, false);
+          console.log("[AudioPlayerContext] ✅ Smart mix applied successfully");
+        } else {
+          console.log("[AudioPlayerContext] ⚠️ No tracks in smart mix");
         }
       } catch (error) {
-        console.error("Error generating smart mix:", error);
+        console.error("[AudioPlayerContext] ❌ Error generating smart mix:", error);
 
         // Fallback to tRPC mutation if smart queue service fails
+        console.log("[AudioPlayerContext] 🔄 Attempting fallback to tRPC mutation...");
         try {
           const result = await generateSmartMixMutation.mutateAsync({
             seedTrackIds,
@@ -257,12 +335,17 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
             diversity: smartQueueSettings?.similarityPreference ?? "balanced",
           });
 
+          console.log("[AudioPlayerContext] 📦 Fallback tracks received:", {
+            count: result.tracks.length,
+          });
+
           if (result.tracks.length > 0) {
             player.clearQueue();
             player.addToQueue(result.tracks, false);
+            console.log("[AudioPlayerContext] ✅ Fallback smart mix applied successfully");
           }
-        } catch {
-          // Silent fail - user will see no tracks added
+        } catch (fallbackError) {
+          console.error("[AudioPlayerContext] ❌ Fallback also failed:", fallbackError);
         }
       }
     },
