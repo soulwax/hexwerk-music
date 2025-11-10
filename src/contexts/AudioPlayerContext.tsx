@@ -2,20 +2,21 @@
 
 "use client";
 
+import { useToast } from "@/contexts/ToastContext";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import {
+    generateSmartMix as generateSmartMixService,
+    getSmartQueueRecommendations,
+} from "@/services/smartQueue";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
-import {
-  getSmartQueueRecommendations,
-  generateSmartMix as generateSmartMixService,
-} from "@/services/smartQueue";
 import { useSession } from "next-auth/react";
 import {
-  createContext,
-  useCallback,
-  useContext,
-  type ReactNode,
+    createContext,
+    useCallback,
+    useContext,
+    type ReactNode,
 } from "react";
 
 interface AudioPlayerContextType {
@@ -67,6 +68,7 @@ const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
+  const { showToast } = useToast();
   const addToHistory = api.music.addToHistory.useMutation();
 
   // Fetch smart queue settings
@@ -226,11 +228,14 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
             console.log("[AudioPlayerContext] ➕ Adding tracks to queue...");
             player.addToQueue(newTracks, false);
             console.log("[AudioPlayerContext] ✅ Tracks added successfully");
+            showToast(`Added ${newTracks.length} similar ${newTracks.length === 1 ? 'track' : 'tracks'}`, "success");
           } else {
             console.log("[AudioPlayerContext] ⚠️ No new tracks to add (all were duplicates)");
+            showToast("All recommended tracks already in queue", "info");
           }
         } else {
           console.log("[AudioPlayerContext] ⚠️ No recommendations received");
+          showToast("No similar tracks found", "info");
         }
       } catch (error) {
         console.error("[AudioPlayerContext] ❌ Error adding similar tracks:", error);
@@ -260,7 +265,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [session, player, utils, smartQueueSettings],
+    [session, player, utils, smartQueueSettings, showToast],
   );
 
   const generateSmartMix = useCallback(
@@ -298,6 +303,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
             requestedIds: seedTrackIds,
             availableIds: allTracks.map(t => t.id),
           });
+          showToast("No valid tracks to generate mix from", "error");
           return;
         }
 
@@ -320,8 +326,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
           player.clearQueue();
           player.addToQueue(tracks, false);
           console.log("[AudioPlayerContext] ✅ Smart mix applied successfully");
+          showToast(`Smart mix created with ${tracks.length} tracks`, "success");
         } else {
           console.log("[AudioPlayerContext] ⚠️ No tracks in smart mix");
+          showToast("Could not generate smart mix", "error");
         }
       } catch (error) {
         console.error("[AudioPlayerContext] ❌ Error generating smart mix:", error);
@@ -349,7 +357,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [session, generateSmartMixMutation, smartQueueSettings, player],
+    [session, generateSmartMixMutation, smartQueueSettings, player, showToast],
   );
 
   const value: AudioPlayerContextType = {

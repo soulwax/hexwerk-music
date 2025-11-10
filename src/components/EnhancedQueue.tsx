@@ -2,12 +2,14 @@
 
 "use client";
 
+import { useToast } from "@/contexts/ToastContext";
+import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getCoverImage } from "@/utils/images";
 import { formatDuration } from "@/utils/time";
 import {
-  DndContext,
   closestCenter,
+  DndContext,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -33,10 +35,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useState } from "react";
-import { useSession } from "next-auth/react";
-import { api } from "@/trpc/react";
 
 interface QueueItemProps {
   track: Track;
@@ -174,15 +175,28 @@ export function EnhancedQueue({
   const [showSettings, setShowSettings] = useState(false);
   const [addingSimilar, setAddingSimilar] = useState(false);
   const [generatingMix, setGeneratingMix] = useState(false);
+  const [showAutoQueueInfo, setShowAutoQueueInfo] = useState(false);
 
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
+  const { showToast } = useToast();
+  const utils = api.useUtils();
 
   // Fetch smart queue settings
   const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery(undefined, {
     enabled: isAuthenticated,
   });
-  const updateSettings = api.music.updateSmartQueueSettings.useMutation();
+
+  // Update settings mutation with proper invalidation
+  const updateSettings = api.music.updateSmartQueueSettings.useMutation({
+    onSuccess: () => {
+      void utils.music.getSmartQueueSettings.invalidate();
+    },
+    onError: (error) => {
+      console.error("[EnhancedQueue] ❌ Failed to update settings:", error);
+      showToast("Failed to update settings", "error");
+    },
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -217,6 +231,12 @@ export function EnhancedQueue({
         hasCurrentTrack: !!currentTrack,
         hasCallback: !!onAddSimilarTracks,
       });
+      showToast("No track currently playing", "error");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      showToast("Sign in to use smart queue features", "info");
       return;
     }
 
@@ -228,15 +248,17 @@ export function EnhancedQueue({
     });
 
     setAddingSimilar(true);
+    const count = smartQueueSettings?.autoQueueCount ?? 5;
+    showToast(`Finding ${count} similar tracks...`, "info");
+
     try {
       console.log("[EnhancedQueue] 🚀 Calling onAddSimilarTracks callback...");
-      await onAddSimilarTracks(
-        currentTrack.id,
-        smartQueueSettings?.autoQueueCount ?? 5,
-      );
+      await onAddSimilarTracks(currentTrack.id, count);
       console.log("[EnhancedQueue] ✅ Successfully added similar tracks");
+      showToast(`Added ${count} similar tracks to queue`, "success");
     } catch (error) {
       console.error("[EnhancedQueue] ❌ Error adding similar tracks:", error);
+      showToast("Failed to add similar tracks", "error");
     } finally {
       setAddingSimilar(false);
       console.log("[EnhancedQueue] 🏁 Add similar tracks operation completed");
@@ -252,6 +274,17 @@ export function EnhancedQueue({
         hasCallback: !!onGenerateSmartMix,
         queueLength: queue.length,
       });
+      showToast("Queue is empty", "error");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      showToast("Sign in to use smart queue features", "info");
+      return;
+    }
+
+    // Confirm before clearing queue
+    if (!confirm("This will replace your current queue with a smart mix based on your current tracks. Continue?")) {
       return;
     }
 
@@ -271,11 +304,14 @@ export function EnhancedQueue({
         targetCount: 50,
       });
 
+      showToast("Generating smart mix...", "info");
       console.log("[EnhancedQueue] 🚀 Calling onGenerateSmartMix callback...");
       await onGenerateSmartMix(seedTrackIds, 50);
       console.log("[EnhancedQueue] ✅ Successfully generated smart mix");
+      showToast("Smart mix generated successfully!", "success");
     } catch (error) {
       console.error("[EnhancedQueue] ❌ Error generating smart mix:", error);
+      showToast("Failed to generate smart mix", "error");
     } finally {
       setGeneratingMix(false);
       console.log("[EnhancedQueue] 🏁 Generate smart mix operation completed");
@@ -286,8 +322,14 @@ export function EnhancedQueue({
   const handleToggleAutoQueue = async () => {
     console.log("[EnhancedQueue] 🔄 Auto-queue toggle clicked");
 
+    if (!isAuthenticated) {
+      showToast("Sign in to use smart queue features", "info");
+      return;
+    }
+
     if (!smartQueueSettings) {
       console.log("[EnhancedQueue] ❌ No smart queue settings available");
+      showToast("Settings not loaded", "error");
       return;
     }
 
@@ -303,8 +345,13 @@ export function EnhancedQueue({
         autoQueueEnabled: newValue,
       });
       console.log("[EnhancedQueue] ✅ Auto-queue setting updated successfully");
+      showToast(
+        newValue ? "Auto-queue enabled" : "Auto-queue disabled",
+        "success"
+      );
     } catch (error) {
       console.error("[EnhancedQueue] ❌ Error updating auto-queue setting:", error);
+      showToast("Failed to update auto-queue", "error");
     }
   };
 
@@ -447,6 +494,131 @@ export function EnhancedQueue({
           </div>
         )}
 
+        {/* Auto-Queue Status Indicator */}
+        {isAutoQueueing && (
+          <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 text-purple-400 animate-spin flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-purple-300">
+                  Auto-queue is working
+                </p>
+                <p className="text-xs text-purple-400/80">
+                  Adding similar tracks to your queue...
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAutoQueueInfo(!showAutoQueueInfo)}
+                className="text-purple-300 hover:text-purple-200 transition-colors"
+                title={showAutoQueueInfo ? "Hide details" : "Show details"}
+              >
+                {showAutoQueueInfo ? (
+                  <X className="h-4 w-4" />
+                ) : (
+                  <Settings className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {showAutoQueueInfo && smartQueueSettings && (
+              <div className="mt-3 pt-3 border-t border-purple-500/30 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-purple-300/80">Trigger threshold:</span>
+                  <span className="text-purple-200 font-medium">
+                    ≤ {smartQueueSettings.autoQueueThreshold} tracks
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-purple-300/80">Tracks to add:</span>
+                  <span className="text-purple-200 font-medium">
+                    {smartQueueSettings.autoQueueCount}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-purple-300/80">Similarity:</span>
+                  <span className="text-purple-200 font-medium capitalize">
+                    {smartQueueSettings.similarityPreference}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Auto-Queue Info Panel (when idle) */}
+        {!isAutoQueueing && smartQueueSettings?.autoQueueEnabled && (
+          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-shrink-0">
+                <Zap className="h-5 w-5 text-green-400" />
+                <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full animate-pulse" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-green-300">
+                  Auto-queue is active
+                </p>
+                <p className="text-xs text-green-400/80">
+                  Will add tracks when queue has ≤ {smartQueueSettings.autoQueueThreshold} tracks
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAutoQueueInfo(!showAutoQueueInfo)}
+                className="text-green-300 hover:text-green-200 transition-colors"
+                title={showAutoQueueInfo ? "Hide details" : "Show details"}
+              >
+                {showAutoQueueInfo ? (
+                  <X className="h-4 w-4" />
+                ) : (
+                  <Settings className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {showAutoQueueInfo && (
+              <div className="mt-3 pt-3 border-t border-green-500/30 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-green-300/80">Current queue:</span>
+                  <span className="text-green-200 font-medium">
+                    {queue.length} tracks
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-green-300/80">Will add:</span>
+                  <span className="text-green-200 font-medium">
+                    {smartQueueSettings.autoQueueCount} tracks
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-green-300/80">Similarity mode:</span>
+                  <span className="text-green-200 font-medium capitalize">
+                    {smartQueueSettings.similarityPreference}
+                  </span>
+                </div>
+                {queue.length <= smartQueueSettings.autoQueueThreshold && currentTrack && (
+                  <div className="mt-3 pt-3 border-t border-green-500/30">
+                    <p className="text-xs text-green-300/80 mb-2">Ready to trigger:</p>
+                    <button
+                      onClick={handleAddSimilar}
+                      disabled={addingSimilar}
+                      className="w-full py-2 px-3 bg-green-600 hover:bg-green-500 disabled:bg-green-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      {addingSimilar ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Manually Trigger Now
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Settings Panel */}
         {showSettings && smartQueueSettings && (
           <div className="bg-gray-800 rounded-lg p-4 space-y-4">
@@ -498,9 +670,14 @@ export function EnhancedQueue({
                 max="10"
                 value={smartQueueSettings.autoQueueThreshold}
                 onChange={async (e) => {
-                  await updateSettings.mutateAsync({
-                    autoQueueThreshold: parseInt(e.target.value),
-                  });
+                  const newValue = parseInt(e.target.value);
+                  try {
+                    await updateSettings.mutateAsync({
+                      autoQueueThreshold: newValue,
+                    });
+                  } catch (error) {
+                    console.error("Failed to update threshold:", error);
+                  }
                 }}
                 className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
               />
@@ -521,9 +698,14 @@ export function EnhancedQueue({
                 max="20"
                 value={smartQueueSettings.autoQueueCount}
                 onChange={async (e) => {
-                  await updateSettings.mutateAsync({
-                    autoQueueCount: parseInt(e.target.value),
-                  });
+                  const newValue = parseInt(e.target.value);
+                  try {
+                    await updateSettings.mutateAsync({
+                      autoQueueCount: newValue,
+                    });
+                  } catch (error) {
+                    console.error("Failed to update count:", error);
+                  }
                 }}
                 className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
               />
@@ -537,9 +719,15 @@ export function EnhancedQueue({
                   <button
                     key={pref}
                     onClick={async () => {
-                      await updateSettings.mutateAsync({
-                        similarityPreference: pref as "strict" | "balanced" | "diverse",
-                      });
+                      const preference = pref as "strict" | "balanced" | "diverse";
+                      try {
+                        await updateSettings.mutateAsync({
+                          similarityPreference: preference,
+                        });
+                        showToast(`Similarity set to ${pref}`, "success");
+                      } catch (error) {
+                        console.error("Failed to update similarity:", error);
+                      }
                     }}
                     className={`px-3 py-2 text-xs rounded-lg transition-colors ${
                       smartQueueSettings.similarityPreference === pref
