@@ -1196,13 +1196,29 @@ export const musicRouter = createTRPCRouter({
       const history = await ctx.db.query.listeningHistory.findMany({
         where: eq(listeningHistory.userId, user.id),
         orderBy: desc(listeningHistory.playedAt),
-        limit: input.limit ?? 20,
+        limit: (input.limit ?? 20) * 3, // Fetch more to account for deduplication
       });
 
-      return history.map((h) => ({
-        trackData: h.trackData,
-        playedAt: h.playedAt,
-      }));
+      // Deduplicate by trackId, keeping only the most recent occurrence
+      const seenTrackIds = new Set<number>();
+      const deduplicated = [];
+
+      for (const h of history) {
+        const track = h.trackData as Track;
+        if (!seenTrackIds.has(track.id)) {
+          seenTrackIds.add(track.id);
+          deduplicated.push({
+            trackData: h.trackData,
+            playedAt: h.playedAt,
+          });
+
+          if (deduplicated.length >= (input.limit ?? 20)) {
+            break;
+          }
+        }
+      }
+
+      return deduplicated;
     }),
 
   getPublicFavorites: publicProcedure
@@ -1239,9 +1255,38 @@ export const musicRouter = createTRPCRouter({
       const userPlaylists = await ctx.db.query.playlists.findMany({
         where: and(eq(playlists.userId, user.id), eq(playlists.isPublic, true)),
         orderBy: desc(playlists.createdAt),
+        with: {
+          tracks: {
+            limit: 4,
+            orderBy: playlistTracks.position,
+          },
+        },
       });
 
-      return userPlaylists;
+      // Generate 2x2 grid cover image from first 4 tracks if no coverImage exists
+      return userPlaylists.map((playlist) => {
+        let coverImage = playlist.coverImage;
+
+        // If no custom cover image, generate from tracks
+        if (!coverImage && playlist.tracks && playlist.tracks.length > 0) {
+          const albumCovers = playlist.tracks
+            .map((pt) => {
+              const track = pt.trackData as Track;
+              return track.album?.cover_medium ?? track.album?.cover;
+            })
+            .filter(Boolean)
+            .slice(0, 4);
+
+          // Store album covers as array for frontend to create 2x2 grid
+          coverImage = JSON.stringify(albumCovers);
+        }
+
+        return {
+          ...playlist,
+          coverImage,
+          trackCount: playlist.tracks?.length ?? 0,
+        };
+      });
     }),
 
   getPublicTopTracks: publicProcedure
@@ -1249,7 +1294,6 @@ export const musicRouter = createTRPCRouter({
       z.object({
         userHash: z.string(),
         limit: z.number().min(1).max(50).default(10),
-        days: z.number().min(1).max(365).default(30),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -1261,9 +1305,7 @@ export const musicRouter = createTRPCRouter({
         return [];
       }
 
-      const since = new Date();
-      since.setDate(since.getDate() - input.days);
-
+      // Calculate top tracks from ALL TIME (no date filter)
       const topTracks = await ctx.db
         .select({
           trackId: listeningAnalytics.trackId,
@@ -1272,12 +1314,7 @@ export const musicRouter = createTRPCRouter({
           totalDuration: sql<number>`SUM(${listeningAnalytics.duration})`,
         })
         .from(listeningAnalytics)
-        .where(
-          and(
-            eq(listeningAnalytics.userId, user.id),
-            sql`${listeningAnalytics.playedAt} >= ${since}`,
-          ),
-        )
+        .where(eq(listeningAnalytics.userId, user.id))
         .groupBy(listeningAnalytics.trackId, listeningAnalytics.trackData)
         .orderBy(desc(sql`COUNT(*)`))
         .limit(input.limit);
@@ -1294,7 +1331,6 @@ export const musicRouter = createTRPCRouter({
       z.object({
         userHash: z.string(),
         limit: z.number().min(1).max(50).default(10),
-        days: z.number().min(1).max(365).default(30),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -1306,20 +1342,13 @@ export const musicRouter = createTRPCRouter({
         return [];
       }
 
-      const since = new Date();
-      since.setDate(since.getDate() - input.days);
-
+      // Calculate top artists from ALL TIME (no date filter)
       const items = await ctx.db
         .select({
           trackData: listeningAnalytics.trackData,
         })
         .from(listeningAnalytics)
-        .where(
-          and(
-            eq(listeningAnalytics.userId, user.id),
-            sql`${listeningAnalytics.playedAt} >= ${since}`,
-          ),
-        );
+        .where(eq(listeningAnalytics.userId, user.id));
 
       // Group by artist in memory (since artist is nested in JSON)
       const artistCounts = new Map<number, { name: string; count: number; artistData: Track["artist"] }>();
