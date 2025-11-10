@@ -59,3 +59,8 @@ ca.pem
 drizzle.env.js
 
 .github/*.md
+
+
+public/fallback*.js
+
+public/sw.js
