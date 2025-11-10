@@ -64,7 +64,7 @@ export class FrequencyRingsRenderer {
       // Calculate ring properties
       const baseRadius = ((i + 1) / numRings) * maxRadius;
       const pulseAmount = Math.sin(currentPhase) * smoothValue * 15;
-      const radius = baseRadius + pulseAmount;
+      const radius = Math.max(0, baseRadius + pulseAmount);
 
       // Dynamic line width based on amplitude
       const lineWidth = (smoothValue * 15) + 2;
@@ -130,7 +130,7 @@ export class FrequencyRingsRenderer {
         const numRipples = 3;
         for (let r = 0; r < numRipples; r++) {
           const ripplePhase = (currentPhase + r * Math.PI * 0.66) % (Math.PI * 2);
-          const rippleRadius = radius + Math.sin(ripplePhase) * 8;
+          const rippleRadius = Math.max(0, radius + Math.sin(ripplePhase) * 8);
           const rippleAlpha = (1 - Math.abs(Math.sin(ripplePhase))) * smoothValue * 0.3;
 
           ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${rippleAlpha})`;
