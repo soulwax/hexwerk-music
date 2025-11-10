@@ -1112,6 +1112,30 @@ export const musicRouter = createTRPCRouter({
   }),
 
   // ============================================
+  // USER PROFILE
+  // ============================================
+
+  getCurrentUserProfile: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.query.users.findFirst({
+      where: eq(users.id, ctx.session.user.id),
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      userHash: user.userHash,
+      profilePublic: user.profilePublic,
+      bio: user.bio,
+    };
+  }),
+
+  // ============================================
   // PUBLIC PROFILE
   // ============================================
 
