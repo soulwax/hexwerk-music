@@ -341,31 +341,15 @@ export async function getSmartQueueRecommendations(
   });
 
   try {
-    // Try to get recommendations using HexMusic's powerful system
-    const query = `${currentTrack.artist.name} ${currentTrack.title}`;
-    console.log("[SmartQueue] 🔍 Searching HexMusic with query:", query);
+    // Fetch recommendations from Deezer
+    console.log("[SmartQueue] 🔍 Fetching recommendations from Deezer...");
+    const tracks = await fetchDeezerRadio(currentTrack.id, count * 2);
 
-    // Search for the current track to get context
-    const hexTracks = await searchHexMusicTracks(query, count * 2);
-    console.log("[SmartQueue] 📦 HexMusic search results:", {
-      count: hexTracks.length,
-      targetCount: count * 2,
-    });
-
-    if (hexTracks.length > 0) {
-      console.log("[SmartQueue] 🔄 Converting HexMusic tracks to Deezer format...");
-      // Convert HexMusic recommendations to Deezer tracks
-      const recommendedTracks = await convertHexMusicToTracks(hexTracks);
-      console.log("[SmartQueue] ✅ Converted tracks:", {
-        count: recommendedTracks.length,
-      });
-
+    if (tracks.length > 0) {
       // Filter out the current track
-      const filteredTracks = recommendedTracks.filter(
-        track => track.id !== currentTrack.id
-      );
+      const filteredTracks = tracks.filter(track => track.id !== currentTrack.id);
       console.log("[SmartQueue] 🔍 After filtering current track:", {
-        before: recommendedTracks.length,
+        before: tracks.length,
         after: filteredTracks.length,
       });
 
@@ -388,15 +372,11 @@ export async function getSmartQueueRecommendations(
       return result;
     }
 
-    console.log("[SmartQueue] ⚠️ No HexMusic results, falling back to Deezer radio");
-    // Fallback to Deezer radio if HexMusic fails
-    return await fetchDeezerRadio(currentTrack.id, count);
+    console.log("[SmartQueue] ⚠️ No recommendations found");
+    return [];
   } catch (error) {
     console.error("[SmartQueue] ❌ Failed to get smart queue recommendations:", error);
-
-    console.log("[SmartQueue] 🔄 Attempting final fallback to Deezer radio");
-    // Final fallback
-    return await fetchDeezerRadio(currentTrack.id, count);
+    return [];
   }
 }
 
