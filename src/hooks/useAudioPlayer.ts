@@ -307,6 +307,13 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     (track: Track | Track[], checkDuplicates = true) => {
       const tracks = Array.isArray(track) ? track : [track];
 
+      console.log("[useAudioPlayer] 📥 addToQueue called:", {
+        trackCount: tracks.length,
+        checkDuplicates,
+        currentQueueSize: queue.length,
+        tracks: tracks.map(t => `${t.title} - ${t.artist.name}`),
+      });
+
       if (checkDuplicates) {
         const duplicates = tracks.filter(
           (t) =>
@@ -325,11 +332,33 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
             (!currentTrack || currentTrack.id !== t.id)
         );
 
+        console.log("[useAudioPlayer] 🔍 After duplicate check:", {
+          duplicates: duplicates.length,
+          uniqueTracks: uniqueTracks.length,
+        });
+
         if (uniqueTracks.length > 0) {
-          setQueue((prev) => [...prev, ...uniqueTracks]);
+          setQueue((prev) => {
+            console.log("[useAudioPlayer] ✅ Adding tracks to queue:", {
+              previousSize: prev.length,
+              adding: uniqueTracks.length,
+              newSize: prev.length + uniqueTracks.length,
+            });
+            return [...prev, ...uniqueTracks];
+          });
+        } else {
+          console.log("[useAudioPlayer] ⚠️ No unique tracks to add (all duplicates)");
         }
       } else {
-        setQueue((prev) => [...prev, ...tracks]);
+        console.log("[useAudioPlayer] ➕ Adding tracks without duplicate check");
+        setQueue((prev) => {
+          console.log("[useAudioPlayer] ✅ Queue updated:", {
+            previousSize: prev.length,
+            adding: tracks.length,
+            newSize: prev.length + tracks.length,
+          });
+          return [...prev, ...tracks];
+        });
       }
     },
     [queue, currentTrack, onDuplicateTrack]
