@@ -4,10 +4,6 @@
 
 import { useToast } from "@/contexts/ToastContext";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
-import {
-    generateSmartMix as generateSmartMixService,
-    getSmartQueueRecommendations,
-} from "@/services/smartQueue";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
@@ -179,90 +175,36 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        // Find the track to get recommendations for
-        const track = player.queue.find((t) => t.id === trackId) ?? player.currentTrack;
+        console.log("[AudioPlayerContext] 🚀 Calling tRPC getSimilarTracks...");
 
-        if (!track) {
-          console.error("[AudioPlayerContext] ❌ Track not found for smart queue:", {
-            searchedTrackId: trackId,
-            currentTrackId: player.currentTrack?.id,
-            queueSize: player.queue.length,
-          });
-          return;
-        }
-
-        console.log("[AudioPlayerContext] 📋 Found track:", {
-          id: track.id,
-          title: track.title,
-          artist: track.artist.name,
-        });
-
-        console.log("[AudioPlayerContext] 🚀 Calling getSmartQueueRecommendations service...");
-        // Use smart queue service for intelligent recommendations
-        const tracks = await getSmartQueueRecommendations(track, {
-          count,
-          similarityLevel: smartQueueSettings?.similarityPreference ?? "balanced",
-          useAudioFeatures: smartQueueSettings?.smartMixEnabled ?? false,
+        // Use tRPC endpoint directly - goes through Next.js backend, no CORS issues
+        const tracks = await utils.client.music.getSimilarTracks.query({
+          trackId,
+          limit: count,
+          excludeTrackIds: [
+            ...(player.currentTrack ? [player.currentTrack.id] : []),
+            ...player.queue.map((t) => t.id),
+          ],
         });
 
         console.log("[AudioPlayerContext] 📦 Received recommendations:", {
-          count: tracks.length,
-          tracks: tracks.map(t => `${t.title} - ${t.artist.name}`),
+          count: tracks?.length ?? 0,
+          tracks: tracks?.slice(0, 3).map(t => `${t.title} - ${t.artist.name}`) ?? [],
         });
 
-        if (tracks.length > 0) {
-          // Filter out tracks already in queue or currently playing
-          const existingIds = new Set([
-            ...(player.currentTrack ? [player.currentTrack.id] : []),
-            ...player.queue.map((t) => t.id),
-          ]);
-          const newTracks = tracks.filter((t) => !existingIds.has(t.id));
-
-          console.log("[AudioPlayerContext] 🔍 After filtering duplicates:", {
-            original: tracks.length,
-            filtered: newTracks.length,
-            existingCount: existingIds.size,
-          });
-
-          if (newTracks.length > 0) {
-            console.log("[AudioPlayerContext] ➕ Adding tracks to queue...");
-            player.addToQueue(newTracks, false);
-            console.log("[AudioPlayerContext] ✅ Tracks added successfully");
-            showToast(`Added ${newTracks.length} similar ${newTracks.length === 1 ? 'track' : 'tracks'}`, "success");
-          } else {
-            console.log("[AudioPlayerContext] ⚠️ No new tracks to add (all were duplicates)");
-            showToast("All recommended tracks already in queue", "info");
-          }
+        if (tracks && tracks.length > 0) {
+          console.log("[AudioPlayerContext] ➕ Adding tracks to queue...");
+          player.addToQueue(tracks, false);
+          console.log("[AudioPlayerContext] ✅ Tracks added successfully");
+          showToast(`Added ${tracks.length} similar ${tracks.length === 1 ? 'track' : 'tracks'}`, "success");
         } else {
           console.log("[AudioPlayerContext] ⚠️ No recommendations received");
           showToast("No similar tracks found", "info");
         }
       } catch (error) {
         console.error("[AudioPlayerContext] ❌ Error adding similar tracks:", error);
-
-        // Fallback to basic TRPC endpoint if smart queue fails
-        console.log("[AudioPlayerContext] 🔄 Attempting fallback to tRPC endpoint...");
-        try {
-          const fallbackTracks = await utils.client.music.getSimilarTracks.query({
-            trackId,
-            limit: count,
-            excludeTrackIds: [
-              ...(player.currentTrack ? [player.currentTrack.id] : []),
-              ...player.queue.map((t) => t.id),
-            ],
-          });
-
-          console.log("[AudioPlayerContext] 📦 Fallback tracks received:", {
-            count: fallbackTracks?.length ?? 0,
-          });
-
-          if (fallbackTracks && fallbackTracks.length > 0) {
-            player.addToQueue(fallbackTracks, false);
-            console.log("[AudioPlayerContext] ✅ Fallback tracks added successfully");
-          }
-        } catch (fallbackError) {
-          console.error("[AudioPlayerContext] ❌ Fallback also failed:", fallbackError);
-        }
+        showToast("Failed to add similar tracks", "error");
+        throw error;
       }
     },
     [session, player, utils, smartQueueSettings, showToast],
@@ -281,80 +223,41 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (seedTrackIds.length === 0) {
+        console.error("[AudioPlayerContext] ❌ No seed track IDs provided");
+        showToast("No tracks to generate mix from", "error");
+        return;
+      }
+
       try {
-        // Find seed tracks from current context
-        const allTracks = [
-          ...(player.currentTrack ? [player.currentTrack] : []),
-          ...player.queue,
-        ];
+        console.log("[AudioPlayerContext] 🚀 Calling tRPC generateSmartMix...");
 
-        console.log("[AudioPlayerContext] 📋 Available tracks:", {
-          currentTrack: player.currentTrack?.id,
-          queueSize: player.queue.length,
-          totalAvailable: allTracks.length,
+        // Use tRPC mutation - goes through Next.js backend, no CORS issues
+        const result = await generateSmartMixMutation.mutateAsync({
+          seedTrackIds,
+          limit: count,
+          diversity: smartQueueSettings?.similarityPreference ?? "balanced",
         });
 
-        const seedTracks = seedTrackIds
-          .map((id) => allTracks.find((t) => t.id === id))
-          .filter((t): t is Track => t !== undefined);
-
-        if (seedTracks.length === 0) {
-          console.error("[AudioPlayerContext] ❌ No valid seed tracks found for smart mix", {
-            requestedIds: seedTrackIds,
-            availableIds: allTracks.map(t => t.id),
-          });
-          showToast("No valid tracks to generate mix from", "error");
-          return;
-        }
-
-        console.log("[AudioPlayerContext] 📋 Seed tracks:", {
-          count: seedTracks.length,
-          tracks: seedTracks.map(t => `${t.title} - ${t.artist.name}`),
-        });
-
-        console.log("[AudioPlayerContext] 🚀 Calling generateSmartMixService...");
-        // Use smart queue service to generate intelligent mix
-        const tracks = await generateSmartMixService(seedTracks, count);
-
-        console.log("[AudioPlayerContext] 📦 Smart mix generated:", {
-          count: tracks.length,
+        console.log("[AudioPlayerContext] 📦 Smart mix received:", {
+          count: result.tracks.length,
           targetCount: count,
         });
 
-        if (tracks.length > 0) {
+        if (result.tracks.length > 0) {
           console.log("[AudioPlayerContext] 🔄 Clearing queue and adding new tracks...");
           player.clearQueue();
-          player.addToQueue(tracks, false);
+          player.addToQueue(result.tracks, false);
           console.log("[AudioPlayerContext] ✅ Smart mix applied successfully");
-          showToast(`Smart mix created with ${tracks.length} tracks`, "success");
+          showToast(`Smart mix created with ${result.tracks.length} tracks`, "success");
         } else {
           console.log("[AudioPlayerContext] ⚠️ No tracks in smart mix");
           showToast("Could not generate smart mix", "error");
         }
       } catch (error) {
         console.error("[AudioPlayerContext] ❌ Error generating smart mix:", error);
-
-        // Fallback to tRPC mutation if smart queue service fails
-        console.log("[AudioPlayerContext] 🔄 Attempting fallback to tRPC mutation...");
-        try {
-          const result = await generateSmartMixMutation.mutateAsync({
-            seedTrackIds,
-            limit: count,
-            diversity: smartQueueSettings?.similarityPreference ?? "balanced",
-          });
-
-          console.log("[AudioPlayerContext] 📦 Fallback tracks received:", {
-            count: result.tracks.length,
-          });
-
-          if (result.tracks.length > 0) {
-            player.clearQueue();
-            player.addToQueue(result.tracks, false);
-            console.log("[AudioPlayerContext] ✅ Fallback smart mix applied successfully");
-          }
-        } catch (fallbackError) {
-          console.error("[AudioPlayerContext] ❌ Fallback also failed:", fallbackError);
-        }
+        showToast("Failed to generate smart mix", "error");
+        throw error;
       }
     },
     [session, generateSmartMixMutation, smartQueueSettings, player, showToast],
