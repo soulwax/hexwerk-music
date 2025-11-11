@@ -255,7 +255,7 @@ export function EnhancedQueue({
       console.log("[EnhancedQueue] 🚀 Calling onAddSimilarTracks callback...");
       await onAddSimilarTracks(currentTrack.id, count);
       console.log("[EnhancedQueue] ✅ Successfully added similar tracks");
-      showToast(`Added ${count} similar tracks to queue`, "success");
+      // Don't show toast here - AudioPlayerContext already shows it with actual count
     } catch (error) {
       console.error("[EnhancedQueue] ❌ Error adding similar tracks:", error);
       showToast("Failed to add similar tracks", "error");
@@ -308,7 +308,7 @@ export function EnhancedQueue({
       console.log("[EnhancedQueue] 🚀 Calling onGenerateSmartMix callback...");
       await onGenerateSmartMix(seedTrackIds, 50);
       console.log("[EnhancedQueue] ✅ Successfully generated smart mix");
-      showToast("Smart mix generated successfully!", "success");
+      // Don't show toast here - AudioPlayerContext already shows it with actual count
     } catch (error) {
       console.error("[EnhancedQueue] ❌ Error generating smart mix:", error);
       showToast("Failed to generate smart mix", "error");
