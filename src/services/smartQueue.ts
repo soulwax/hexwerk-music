@@ -3,7 +3,7 @@
  * Integrates with the Starchild Music backend for intelligent track recommendations
  */
 
-import type { Track } from "@/types";
+import { isTrack, type Track } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
 
@@ -247,17 +247,6 @@ export async function getPlaylistRecommendations(
 /**
  * Deezer Recommendation Response from HexMusic API
  */
-interface DeezerRecommendationTrack {
-  id: string;
-  title: string;
-  artist: string;
-  album?: string;
-  duration?: number;
-  preview?: string;
-  cover?: string;
-  link?: string;
-  rank?: number;
-}
 
 /**
  * Get Deezer recommendations based on track names using HexMusic API
@@ -297,46 +286,25 @@ export async function getDeezerRecommendations(
       throw new Error(error.message ?? `API Error: ${response.status}`);
     }
 
-    const deezerTracks = (await response.json()) as DeezerRecommendationTrack[];
+    const payload = (await response.json()) as unknown;
+    const tracks = Array.isArray(payload)
+      ? payload.filter((item): item is Track => isTrack(item))
+      : [];
+
     console.log("[SmartQueue] ✅ Deezer recommendations received:", {
-      count: deezerTracks.length,
-      tracks: deezerTracks.slice(0, 3).map(t => `${t.title} - ${t.artist}`),
-    });
-
-    // Convert Deezer recommendation tracks to full Track objects
-    const tracks = await convertDeezerRecommendationsToTracks(deezerTracks);
-    console.log("[SmartQueue] 🔄 Converted to Track objects:", {
       count: tracks.length,
+      sample: tracks.slice(0, 3).map(t => `${t.title} - ${t.artist.name}`),
     });
 
-    return tracks;
+    if (tracks.length === 0) {
+      return [];
+    }
+
+    return tracks.slice(0, count);
   } catch (error) {
     console.error("[SmartQueue] ❌ Failed to get Deezer recommendations:", error);
     return [];
   }
-}
-
-/**
- * Convert Deezer recommendation tracks to full Track objects
- */
-async function convertDeezerRecommendationsToTracks(
-  deezerTracks: DeezerRecommendationTrack[]
-): Promise<Track[]> {
-  const tracks: Track[] = [];
-
-  for (const deezerTrack of deezerTracks) {
-    try {
-      // Fetch full track details from Deezer using the ID
-      const fullTrack = await fetchDeezerTrack(deezerTrack.id);
-      if (fullTrack) {
-        tracks.push(fullTrack);
-      }
-    } catch (error) {
-      console.error(`Failed to convert track: ${deezerTrack.title}`, error);
-    }
-  }
-
-  return tracks;
 }
 
 /**

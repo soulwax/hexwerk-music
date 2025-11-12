@@ -1132,60 +1132,39 @@ export const musicRouter = createTRPCRouter({
           throw new Error(`API Error: ${response.status}`);
         }
 
-        interface DeezerRecommendationTrack {
-          id: string;
-          title: string;
-          artist: string;
-          album?: string;
-          duration?: number;
-          preview?: string;
-          cover?: string;
-          link?: string;
-          rank?: number;
+        const payload = (await response.json()) as unknown;
+        if (!Array.isArray(payload)) {
+          throw new Error("Unexpected recommendation response format");
         }
 
-        const deezerTracks = (await response.json()) as DeezerRecommendationTrack[];
+        const candidateTracks = payload
+          .filter((item): item is Track => isTrack(item))
+          .filter((track) => !input.seedTrackIds.includes(track.id));
 
-        // Convert to full Track objects
-        const tracks: Track[] = [];
-        for (const deezerTrack of deezerTracks) {
-          try {
-            const trackResponse = await fetch(`https://api.deezer.com/track/${deezerTrack.id}`);
-            if (trackResponse.ok) {
-              const fullTrack = (await trackResponse.json()) as Track;
-              // Exclude seed tracks
-              if (!input.seedTrackIds.includes(fullTrack.id)) {
-                tracks.push(fullTrack);
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch track ${deezerTrack.id}:`, error);
-          }
+        if (candidateTracks.length === 0) {
+          throw new Error("No valid recommendation tracks received");
         }
 
         // Apply additional diversity shuffling if needed
         let finalMix: Track[];
         switch (input.diversity) {
           case "diverse":
-            // Maximum variety, shuffle completely
-            finalMix = tracks
+            finalMix = candidateTracks
               .sort(() => Math.random() - 0.5)
               .slice(0, input.limit);
             break;
           case "balanced":
-            // Mix with some artist diversity
-            finalMix = shuffleWithDiversity(tracks).slice(0, input.limit);
+            finalMix = shuffleWithDiversity(candidateTracks).slice(0, input.limit);
             break;
           case "strict":
-            // Keep API order (same artists)
-            finalMix = tracks.slice(0, input.limit);
+            finalMix = candidateTracks.slice(0, input.limit);
             break;
         }
 
         return {
           tracks: finalMix,
           seedCount: seedTracks.length,
-          totalCandidates: tracks.length,
+          totalCandidates: candidateTracks.length,
         };
       } catch (error) {
         console.error("[SmartMix] Error generating mix:", error);
