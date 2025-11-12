@@ -1159,6 +1159,9 @@ export const musicRouter = createTRPCRouter({
           case "strict":
             finalMix = candidateTracks.slice(0, input.limit);
             break;
+          default:
+            finalMix = candidateTracks.slice(0, input.limit);
+            break;
         }
 
         return {
