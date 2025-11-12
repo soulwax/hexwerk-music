@@ -557,10 +557,21 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
               queue.length
             );
 
+            // Calculate how many tracks to add:
+            // - Always add at least 5 tracks
+            // - OR fill up to 8 if queue has fewer than 8 tracks
+            const targetCount = Math.max(5, 8 - queue.length);
+
+            console.log("[SmartQueue] 🎯 Auto-queue calculation:", {
+              currentQueueLength: queue.length,
+              targetCount,
+              availableRecommendations: recommendations.length,
+            });
+
             // Add recommendations to queue
             if (recommendations.length > 0) {
               addToQueue(
-                recommendations.slice(0, settings.autoQueueCount),
+                recommendations.slice(0, targetCount),
                 false
               );
             }

@@ -944,6 +944,75 @@ export const musicRouter = createTRPCRouter({
       return filtered.slice(0, input.limit);
     }),
 
+  // Get intelligent recommendations using HexMusic API
+  getIntelligentRecommendations: protectedProcedure
+    .input(
+      z.object({
+        trackNames: z.array(z.string()).min(1),
+        count: z.number().min(1).max(50).default(10),
+        excludeTrackIds: z.array(z.number()).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
+
+      try {
+        // Call the HexMusic recommendation API from server-side (no CORS issues)
+        const response = await fetch(`${API_URL}/hexmusic/recommendations/deezer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trackNames: input.trackNames,
+            n: input.count * 2, // Request more to account for filtering
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        interface DeezerRecommendationTrack {
+          id: string;
+          title: string;
+          artist: string;
+          album?: string;
+          duration?: number;
+          preview?: string;
+          cover?: string;
+          link?: string;
+          rank?: number;
+        }
+
+        const deezerTracks = (await response.json()) as DeezerRecommendationTrack[];
+
+        // Convert to full Track objects by fetching from Deezer API
+        const tracks: Track[] = [];
+        for (const deezerTrack of deezerTracks) {
+          try {
+            const trackResponse = await fetch(`https://api.deezer.com/track/${deezerTrack.id}`);
+            if (trackResponse.ok) {
+              const fullTrack = (await trackResponse.json()) as Track;
+              tracks.push(fullTrack);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch track ${deezerTrack.id}:`, error);
+          }
+        }
+
+        // Filter out excluded tracks
+        const filtered = filterRecommendations(tracks, {
+          excludeTrackIds: input.excludeTrackIds,
+        });
+
+        return filtered.slice(0, input.count);
+      } catch (error) {
+        console.error("Failed to get intelligent recommendations:", error);
+        return [];
+      }
+    }),
+
   getSimilarTracks: protectedProcedure
     .input(
       z.object({
