@@ -27,7 +27,7 @@ import {
   getCacheExpiryDate,
   shuffleWithDiversity,
 } from "@/server/services/recommendations";
-import type { Track } from "@/types";
+import { isTrack, type Track } from "@/types";
 
 const trackSchema = z.object({
   id: z.number(),
@@ -992,32 +992,16 @@ export const musicRouter = createTRPCRouter({
           throw new Error(`API Error: ${response.status}`);
         }
 
-        interface DeezerRecommendationTrack {
-          id: string;
-          title: string;
-          artist: string;
-          album?: string;
-          duration?: number;
-          preview?: string;
-          cover?: string;
-          link?: string;
-          rank?: number;
-        }
+        const payload = (await response.json()) as unknown;
+        const tracks = Array.isArray(payload)
+          ? payload.filter((item): item is Track => isTrack(item))
+          : [];
 
-        const deezerTracks = (await response.json()) as DeezerRecommendationTrack[];
-
-        // Convert to full Track objects by fetching from Deezer API
-        const tracks: Track[] = [];
-        for (const deezerTrack of deezerTracks) {
-          try {
-            const trackResponse = await fetch(`https://api.deezer.com/track/${deezerTrack.id}`);
-            if (trackResponse.ok) {
-              const fullTrack = (await trackResponse.json()) as Track;
-              tracks.push(fullTrack);
-            }
-          } catch (error) {
-            console.error(`Failed to fetch track ${deezerTrack.id}:`, error);
-          }
+        if (tracks.length === 0) {
+          console.warn("[IntelligentRecommendations] Backend returned no valid tracks", {
+            payloadPreview: Array.isArray(payload) ? payload.slice(0, 2) : payload,
+          });
+          return [];
         }
 
         // Filter out excluded tracks
