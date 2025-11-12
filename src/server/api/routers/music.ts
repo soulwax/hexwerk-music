@@ -953,10 +953,28 @@ export const musicRouter = createTRPCRouter({
         excludeTrackIds: z.array(z.number()).optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
 
       try {
+        // Get user's similarity preference from database
+        const userPrefs = await ctx.db.query.userPreferences.findFirst({
+          where: eq(userPreferences.userId, ctx.session.user.id),
+        });
+
+        // Map similarity preference to API mode
+        // strict → 0, balanced → 1 (default), diverse → 2
+        const similarityPreference = userPrefs?.similarityPreference ?? "balanced";
+        const mode = similarityPreference === "strict" ? 0 
+                    : similarityPreference === "diverse" ? 2 
+                    : 1; // balanced is default
+
+        console.log("[IntelligentRecommendations] Using mode:", {
+          similarityPreference,
+          mode,
+          userId: ctx.session.user.id,
+        });
+
         // Call the HexMusic recommendation API from server-side (no CORS issues)
         const response = await fetch(`${API_URL}/hexmusic/recommendations/deezer`, {
           method: "POST",
@@ -966,6 +984,7 @@ export const musicRouter = createTRPCRouter({
           body: JSON.stringify({
             trackNames: input.trackNames,
             n: input.count * 2, // Request more to account for filtering
+            mode, // Use user's preference
           }),
         });
 
@@ -1075,45 +1094,140 @@ export const musicRouter = createTRPCRouter({
         diversity: z.enum(["strict", "balanced", "diverse"]).default("balanced"),
       }),
     )
-    .mutation(async ({ input }) => {
-      const allRecommendations: Track[] = [];
-      const seenTrackIds = new Set<number>(input.seedTrackIds);
+    .mutation(async ({ ctx, input }) => {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
 
-      // Get recommendations for each seed track
-      for (const seedTrackId of input.seedTrackIds) {
-        const recs = await fetchDeezerRecommendations(seedTrackId, 20);
-        for (const track of recs) {
-          if (!seenTrackIds.has(track.id)) {
-            allRecommendations.push(track);
-            seenTrackIds.add(track.id);
+      try {
+        // Fetch seed tracks to get their names
+        const seedTracks: Track[] = [];
+        for (const trackId of input.seedTrackIds) {
+          try {
+            const response = await fetch(`https://api.deezer.com/track/${trackId}`);
+            if (response.ok) {
+              const track = (await response.json()) as Track;
+              seedTracks.push(track);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch seed track ${trackId}:`, error);
           }
         }
-      }
 
-      // Apply diversity algorithm
-      let finalMix: Track[];
-      switch (input.diversity) {
-        case "strict":
-          // Only tracks similar to all seeds
-          finalMix = allRecommendations.slice(0, input.limit);
-          break;
-        case "balanced":
-          // Mix with some artist diversity
-          finalMix = shuffleWithDiversity(allRecommendations).slice(0, input.limit);
-          break;
-        case "diverse":
-          // Maximum variety, shuffle completely
-          finalMix = allRecommendations
-            .sort(() => Math.random() - 0.5)
-            .slice(0, input.limit);
-          break;
-      }
+        if (seedTracks.length === 0) {
+          throw new Error("Could not fetch any seed tracks");
+        }
 
-      return {
-        tracks: finalMix,
-        seedCount: input.seedTrackIds.length,
-        totalCandidates: allRecommendations.length,
-      };
+        // Map diversity preference to API mode
+        const mode = input.diversity === "strict" ? 0 
+                    : input.diversity === "diverse" ? 2 
+                    : 1; // balanced is default
+
+        console.log("[SmartMix] Generating with mode:", {
+          diversity: input.diversity,
+          mode,
+          seedCount: seedTracks.length,
+          userId: ctx.session.user.id,
+        });
+
+        // Build track names for API
+        const trackNames = seedTracks.map(t => `${t.artist.name} ${t.title}`);
+
+        // Call intelligent API
+        const response = await fetch(`${API_URL}/hexmusic/recommendations/deezer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trackNames,
+            n: input.limit * 2, // Request more for better variety
+            mode,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        interface DeezerRecommendationTrack {
+          id: string;
+          title: string;
+          artist: string;
+          album?: string;
+          duration?: number;
+          preview?: string;
+          cover?: string;
+          link?: string;
+          rank?: number;
+        }
+
+        const deezerTracks = (await response.json()) as DeezerRecommendationTrack[];
+
+        // Convert to full Track objects
+        const tracks: Track[] = [];
+        for (const deezerTrack of deezerTracks) {
+          try {
+            const trackResponse = await fetch(`https://api.deezer.com/track/${deezerTrack.id}`);
+            if (trackResponse.ok) {
+              const fullTrack = (await trackResponse.json()) as Track;
+              // Exclude seed tracks
+              if (!input.seedTrackIds.includes(fullTrack.id)) {
+                tracks.push(fullTrack);
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to fetch track ${deezerTrack.id}:`, error);
+          }
+        }
+
+        // Apply additional diversity shuffling if needed
+        let finalMix: Track[];
+        switch (input.diversity) {
+          case "diverse":
+            // Maximum variety, shuffle completely
+            finalMix = tracks
+              .sort(() => Math.random() - 0.5)
+              .slice(0, input.limit);
+            break;
+          case "balanced":
+            // Mix with some artist diversity
+            finalMix = shuffleWithDiversity(tracks).slice(0, input.limit);
+            break;
+          case "strict":
+            // Keep API order (same artists)
+            finalMix = tracks.slice(0, input.limit);
+            break;
+        }
+
+        return {
+          tracks: finalMix,
+          seedCount: seedTracks.length,
+          totalCandidates: tracks.length,
+        };
+      } catch (error) {
+        console.error("[SmartMix] Error generating mix:", error);
+        
+        // Fallback to old method
+        const allRecommendations: Track[] = [];
+        const seenTrackIds = new Set<number>(input.seedTrackIds);
+
+        for (const seedTrackId of input.seedTrackIds) {
+          const recs = await fetchDeezerRecommendations(seedTrackId, 20);
+          for (const track of recs) {
+            if (!seenTrackIds.has(track.id)) {
+              allRecommendations.push(track);
+              seenTrackIds.add(track.id);
+            }
+          }
+        }
+
+        const finalMix = shuffleWithDiversity(allRecommendations).slice(0, input.limit);
+
+        return {
+          tracks: finalMix,
+          seedCount: input.seedTrackIds.length,
+          totalCandidates: allRecommendations.length,
+        };
+      }
     }),
 
   // Log recommendation requests for analytics and debugging

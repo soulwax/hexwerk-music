@@ -8,32 +8,32 @@ import type { Track } from "@/types";
 import { getCoverImage } from "@/utils/images";
 import { formatDuration } from "@/utils/time";
 import {
-  closestCenter,
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
+    closestCenter,
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  GripVertical,
-  Loader2,
-  Play,
-  Save,
-  Search,
-  Settings,
-  Sparkles,
-  Trash2,
-  X,
-  Zap,
+    GripVertical,
+    Loader2,
+    Play,
+    Save,
+    Search,
+    Settings,
+    Sparkles,
+    Trash2,
+    X,
+    Zap,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
@@ -713,7 +713,7 @@ export function EnhancedQueue({
 
             {/* Similarity Preference */}
             <div className="space-y-2">
-              <label className="text-sm text-gray-300">Similarity</label>
+              <label className="text-sm text-gray-300">Similarity Mode</label>
               <div className="grid grid-cols-3 gap-2">
                 {["strict", "balanced", "diverse"].map((pref) => (
                   <button
@@ -724,7 +724,12 @@ export function EnhancedQueue({
                         await updateSettings.mutateAsync({
                           similarityPreference: preference,
                         });
-                        showToast(`Similarity set to ${pref}`, "success");
+                        const modeLabels = {
+                          strict: "Strict (same artists)",
+                          balanced: "Balanced (related artists)",
+                          diverse: "Diverse (genre variety)"
+                        };
+                        showToast(modeLabels[preference], "success");
                       } catch (error) {
                         console.error("Failed to update similarity:", error);
                       }
@@ -741,10 +746,10 @@ export function EnhancedQueue({
               </div>
               <p className="text-xs text-gray-400">
                 {smartQueueSettings.similarityPreference === "strict"
-                  ? "Very similar tracks only"
+                  ? "Same artists only - most similar tracks"
                   : smartQueueSettings.similarityPreference === "balanced"
-                  ? "Mix of similar and varied tracks"
-                  : "Wide variety of tracks"}
+                  ? "Related artists - good mix of familiar & new"
+                  : "Genre-based variety - maximum exploration"}
               </p>
             </div>
           </div>
