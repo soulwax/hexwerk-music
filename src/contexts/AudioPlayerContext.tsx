@@ -4,6 +4,7 @@
 
 import { useToast } from "@/contexts/ToastContext";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { getSmartQueueRecommendations } from "@/services/smartQueue";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
@@ -79,6 +80,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Mutation for fetching recommendations
   const generateSmartMixMutation = api.music.generateSmartMix.useMutation();
 
+  // Mutation for logging recommendations
+  const logRecommendationMutation = api.music.logRecommendation.useMutation();
+
   // Auto-queue trigger callback using the powerful backend
   const handleAutoQueueTrigger = useCallback(
     async (currentTrack: Track, _queueLength: number) => {
@@ -86,13 +90,29 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
       try {
         // Use the smart queue service to get intelligent recommendations
-        const tracks = await getSmartQueueRecommendations(currentTrack, {
+        const result = await getSmartQueueRecommendations(currentTrack, {
           count: smartQueueSettings.autoQueueCount,
           similarityLevel: smartQueueSettings.similarityPreference || "balanced",
           useAudioFeatures: smartQueueSettings.smartMixEnabled,
         });
 
-        return tracks;
+        // Log the recommendation
+        logRecommendationMutation.mutate({
+          seedTracks: [currentTrack],
+          recommendedTracks: result.tracks,
+          source: result.source,
+          requestParams: {
+            count: smartQueueSettings.autoQueueCount,
+            similarityLevel: smartQueueSettings.similarityPreference || "balanced",
+            useAudioFeatures: smartQueueSettings.smartMixEnabled,
+          },
+          responseTime: result.responseTime,
+          success: result.success,
+          errorMessage: result.errorMessage,
+          context: "auto-queue",
+        });
+
+        return result.tracks;
       } catch (error) {
         console.error("Failed to fetch auto-queue recommendations:", error);
 
@@ -102,13 +122,28 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
             trackId: currentTrack.id,
             limit: smartQueueSettings.autoQueueCount,
           });
+
+          // Log the fallback attempt
+          if (fallbackTracks && fallbackTracks.length > 0) {
+            logRecommendationMutation.mutate({
+              seedTracks: [currentTrack],
+              recommendedTracks: fallbackTracks,
+              source: "cached",
+              requestParams: {
+                count: smartQueueSettings.autoQueueCount,
+              },
+              success: true,
+              context: "auto-queue",
+            });
+          }
+
           return fallbackTracks ?? [];
         } catch {
           return [];
         }
       }
     },
-    [session, smartQueueSettings, utils],
+    [session, smartQueueSettings, utils, logRecommendationMutation],
   );
 
   const player = useAudioPlayer({
@@ -177,6 +212,11 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       try {
         console.log("[AudioPlayerContext] 🚀 Calling tRPC getSimilarTracks...");
 
+        // Find the seed track for logging
+        const seedTrack = player.currentTrack?.id === trackId
+          ? player.currentTrack
+          : player.queue.find(t => t.id === trackId);
+
         // Use tRPC endpoint directly - goes through Next.js backend, no CORS issues
         const tracks = await utils.client.music.getSimilarTracks.query({
           trackId,
@@ -193,6 +233,18 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         });
 
         if (tracks && tracks.length > 0) {
+          // Log the recommendation
+          if (seedTrack) {
+            logRecommendationMutation.mutate({
+              seedTracks: [seedTrack],
+              recommendedTracks: tracks,
+              source: "cached",
+              requestParams: { count },
+              success: true,
+              context: "similar-tracks",
+            });
+          }
+
           console.log("[AudioPlayerContext] ➕ Adding tracks to queue...");
           player.addToQueue(tracks, false);
           console.log("[AudioPlayerContext] ✅ Tracks added successfully");
@@ -207,7 +259,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [session, player, utils, smartQueueSettings, showToast],
+    [session, player, utils, showToast, logRecommendationMutation],
   );
 
   const generateSmartMix = useCallback(
@@ -232,6 +284,11 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       try {
         console.log("[AudioPlayerContext] 🚀 Calling tRPC generateSmartMix...");
 
+        // Find seed tracks for logging
+        const seedTracks = seedTrackIds
+          .map(id => player.queue.find(t => t.id === id) || (player.currentTrack?.id === id ? player.currentTrack : null))
+          .filter((t): t is Track => t !== null);
+
         // Use tRPC mutation - goes through Next.js backend, no CORS issues
         const result = await generateSmartMixMutation.mutateAsync({
           seedTrackIds,
@@ -245,6 +302,21 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         });
 
         if (result.tracks.length > 0) {
+          // Log the smart mix generation
+          if (seedTracks.length > 0) {
+            logRecommendationMutation.mutate({
+              seedTracks,
+              recommendedTracks: result.tracks,
+              source: "cached",
+              requestParams: {
+                count,
+                similarityLevel: smartQueueSettings?.similarityPreference ?? "balanced",
+              },
+              success: true,
+              context: "smart-mix",
+            });
+          }
+
           console.log("[AudioPlayerContext] 🔄 Clearing queue and adding new tracks...");
           player.clearQueue();
           player.addToQueue(result.tracks, false);
@@ -260,7 +332,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [session, generateSmartMixMutation, smartQueueSettings, player, showToast],
+    [session, generateSmartMixMutation, smartQueueSettings, player, showToast, logRecommendationMutation],
   );
 
   const value: AudioPlayerContextType = {
