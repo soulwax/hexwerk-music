@@ -15,6 +15,7 @@ import {
   playlists,
   playlistTracks,
   recommendationCache,
+  recommendationLogs,
   searchHistory,
   userPreferences,
   users,
@@ -1044,6 +1045,42 @@ export const musicRouter = createTRPCRouter({
         seedCount: input.seedTrackIds.length,
         totalCandidates: allRecommendations.length,
       };
+    }),
+
+  // Log recommendation requests for analytics and debugging
+  logRecommendation: protectedProcedure
+    .input(
+      z.object({
+        seedTracks: z.array(trackSchema).min(1),
+        recommendedTracks: z.array(trackSchema),
+        source: z.enum(["hexmusic-api", "deezer-fallback", "artist-radio", "cached"]),
+        requestParams: z.object({
+          count: z.number().optional(),
+          similarityLevel: z.enum(["strict", "balanced", "diverse"]).optional(),
+          useAudioFeatures: z.boolean().optional(),
+        }).optional(),
+        responseTime: z.number().optional(),
+        success: z.boolean(),
+        errorMessage: z.string().optional(),
+        context: z.enum(["auto-queue", "smart-mix", "manual", "similar-tracks"]).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.insert(recommendationLogs).values({
+        userId: ctx.session.user.id,
+        seedTrackIds: input.seedTracks.map(t => t.id),
+        seedTrackData: input.seedTracks as unknown as Record<string, unknown>,
+        recommendedTrackIds: input.recommendedTracks.map(t => t.id),
+        recommendedTracksData: input.recommendedTracks as unknown as Record<string, unknown>,
+        source: input.source,
+        requestParams: input.requestParams as unknown as Record<string, unknown>,
+        responseTime: input.responseTime,
+        success: input.success,
+        errorMessage: input.errorMessage,
+        context: input.context,
+      });
+
+      return { success: true };
     }),
 
   getSmartQueueSettings: protectedProcedure.query(async ({ ctx }) => {

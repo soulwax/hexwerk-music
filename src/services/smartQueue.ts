@@ -5,7 +5,7 @@
 
 import type { Track } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api2.starchildmusic.com";
 
 // Log configuration on module load (client-side only)
 if (typeof window !== "undefined") {
@@ -245,6 +245,101 @@ export async function getPlaylistRecommendations(
 }
 
 /**
+ * Deezer Recommendation Response from HexMusic API
+ */
+interface DeezerRecommendationTrack {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  duration?: number;
+  preview?: string;
+  cover?: string;
+  link?: string;
+  rank?: number;
+}
+
+/**
+ * Get Deezer recommendations based on track names using HexMusic API
+ * This uses the intelligent recommendation engine
+ */
+export async function getDeezerRecommendations(
+  trackNames: string[],
+  count = 10
+): Promise<Track[]> {
+  console.log("[SmartQueue] 🎯 getDeezerRecommendations called", {
+    trackNames,
+    count,
+    apiUrl: API_BASE_URL,
+  });
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/hexmusic/recommendations/deezer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        trackNames,
+        n: count,
+      }),
+    });
+
+    console.log("[SmartQueue] 📡 Deezer recommendations API response:", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: response.statusText })) as { message?: string };
+      console.error("[SmartQueue] ❌ Deezer recommendations API error:", error);
+      throw new Error(error.message ?? `API Error: ${response.status}`);
+    }
+
+    const deezerTracks = (await response.json()) as DeezerRecommendationTrack[];
+    console.log("[SmartQueue] ✅ Deezer recommendations received:", {
+      count: deezerTracks.length,
+      tracks: deezerTracks.slice(0, 3).map(t => `${t.title} - ${t.artist}`),
+    });
+
+    // Convert Deezer recommendation tracks to full Track objects
+    const tracks = await convertDeezerRecommendationsToTracks(deezerTracks);
+    console.log("[SmartQueue] 🔄 Converted to Track objects:", {
+      count: tracks.length,
+    });
+
+    return tracks;
+  } catch (error) {
+    console.error("[SmartQueue] ❌ Failed to get Deezer recommendations:", error);
+    return [];
+  }
+}
+
+/**
+ * Convert Deezer recommendation tracks to full Track objects
+ */
+async function convertDeezerRecommendationsToTracks(
+  deezerTracks: DeezerRecommendationTrack[]
+): Promise<Track[]> {
+  const tracks: Track[] = [];
+
+  for (const deezerTrack of deezerTracks) {
+    try {
+      // Fetch full track details from Deezer using the ID
+      const fullTrack = await fetchDeezerTrack(deezerTrack.id);
+      if (fullTrack) {
+        tracks.push(fullTrack);
+      }
+    } catch (error) {
+      console.error(`Failed to convert track: ${deezerTrack.title}`, error);
+    }
+  }
+
+  return tracks;
+}
+
+/**
  * Convert HexMusic track to internal Track format
  * This attempts to match HexMusic tracks with Deezer tracks
  */
@@ -315,6 +410,17 @@ async function searchDeezerTrack(query: string): Promise<Track[]> {
 }
 
 /**
+ * Recommendation result with metadata for logging
+ */
+export interface RecommendationResult {
+  tracks: Track[];
+  source: "hexmusic-api" | "deezer-fallback" | "artist-radio" | "cached";
+  responseTime: number;
+  success: boolean;
+  errorMessage?: string;
+}
+
+/**
  * Get smart queue recommendations based on current track
  * This is the main function that ties everything together
  */
@@ -325,7 +431,7 @@ export async function getSmartQueueRecommendations(
     similarityLevel?: "strict" | "balanced" | "diverse";
     useAudioFeatures?: boolean;
   } = {}
-): Promise<Track[]> {
+): Promise<RecommendationResult> {
   const {
     count = 5,
     similarityLevel = "balanced",
@@ -340,9 +446,54 @@ export async function getSmartQueueRecommendations(
     useAudioFeatures,
   });
 
+  const startTime = performance.now();
+
   try {
-    // Fetch recommendations from Deezer
-    console.log("[SmartQueue] 🔍 Fetching recommendations from Deezer...");
+    // Try the intelligent HexMusic Deezer recommendations API first
+    console.log("[SmartQueue] 🧠 Attempting intelligent recommendations from HexMusic API...");
+    const trackName = `${currentTrack.artist.name} ${currentTrack.title}`;
+    const intelligentTracks = await getDeezerRecommendations([trackName], count * 2);
+
+    if (intelligentTracks.length > 0) {
+      console.log("[SmartQueue] ✅ Got recommendations from HexMusic API");
+
+      // Filter out the current track
+      const filteredTracks = intelligentTracks.filter(track => track.id !== currentTrack.id);
+      console.log("[SmartQueue] 🔍 After filtering current track:", {
+        before: intelligentTracks.length,
+        after: filteredTracks.length,
+      });
+
+      // Apply similarity level filtering
+      console.log("[SmartQueue] 🎚️ Applying similarity filter:", similarityLevel);
+      const finalTracks = applySimilarityFilter(
+        filteredTracks,
+        currentTrack,
+        similarityLevel
+      );
+      console.log("[SmartQueue] 📊 After similarity filtering:", {
+        count: finalTracks.length,
+      });
+
+      const result = finalTracks.slice(0, count);
+      const responseTime = performance.now() - startTime;
+
+      console.log("[SmartQueue] ✅ Returning recommendations:", {
+        count: result.length,
+        tracks: result.map(t => `${t.title} - ${t.artist.name}`),
+        responseTime: `${responseTime.toFixed(0)}ms`,
+      });
+
+      return {
+        tracks: result,
+        source: "hexmusic-api",
+        responseTime: Math.round(responseTime),
+        success: true,
+      };
+    }
+
+    // Fallback to direct Deezer API
+    console.log("[SmartQueue] 🔄 Falling back to direct Deezer API...");
     const tracks = await fetchDeezerRadio(currentTrack.id, count * 2);
 
     if (tracks.length > 0) {
@@ -365,18 +516,41 @@ export async function getSmartQueueRecommendations(
       });
 
       const result = finalTracks.slice(0, count);
+      const responseTime = performance.now() - startTime;
+
       console.log("[SmartQueue] ✅ Returning recommendations:", {
         count: result.length,
         tracks: result.map(t => `${t.title} - ${t.artist.name}`),
+        responseTime: `${responseTime.toFixed(0)}ms`,
       });
-      return result;
+
+      return {
+        tracks: result,
+        source: "deezer-fallback",
+        responseTime: Math.round(responseTime),
+        success: true,
+      };
     }
 
     console.log("[SmartQueue] ⚠️ No recommendations found");
-    return [];
+    const responseTime = performance.now() - startTime;
+    return {
+      tracks: [],
+      source: "deezer-fallback",
+      responseTime: Math.round(responseTime),
+      success: false,
+      errorMessage: "No recommendations found",
+    };
   } catch (error) {
     console.error("[SmartQueue] ❌ Failed to get smart queue recommendations:", error);
-    return [];
+    const responseTime = performance.now() - startTime;
+    return {
+      tracks: [],
+      source: "deezer-fallback",
+      responseTime: Math.round(responseTime),
+      success: false,
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
@@ -535,13 +709,13 @@ export async function generateSmartMix(
         track: `${seedTrack.title} - ${seedTrack.artist.name}`,
       });
 
-      const recommendations = await getSmartQueueRecommendations(
+      const result = await getSmartQueueRecommendations(
         seedTrack,
         { count: tracksPerSeed, similarityLevel: "balanced" }
       );
 
-      console.log(`[SmartQueue] 📦 Received ${recommendations.length} recommendations for seed ${i + 1}`);
-      allRecommendations.push(...recommendations);
+      console.log(`[SmartQueue] 📦 Received ${result.tracks.length} recommendations for seed ${i + 1}`);
+      allRecommendations.push(...result.tracks);
     }
 
     console.log("[SmartQueue] 📊 Total recommendations collected:", allRecommendations.length);
