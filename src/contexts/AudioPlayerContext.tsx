@@ -10,10 +10,10 @@ import type { Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
 import { useSession } from "next-auth/react";
 import {
-    createContext,
-    useCallback,
-    useContext,
-    type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  type ReactNode,
 } from "react";
 
 interface AudioPlayerContextType {
@@ -286,7 +286,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
         // Find seed tracks for logging
         const seedTracks = seedTrackIds
-          .map(id => player.queue.find(t => t.id === id) || (player.currentTrack?.id === id ? player.currentTrack : null))
+          .map(id => player.queue.find(t => t.id === id) ?? (player.currentTrack?.id === id ? player.currentTrack : null))
           .filter((t): t is Track => t !== null);
 
         // Use tRPC mutation - goes through Next.js backend, no CORS issues
