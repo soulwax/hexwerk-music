@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 interface QueueItemProps {
   track: Track;
@@ -45,6 +45,7 @@ interface QueueItemProps {
   isActive: boolean;
   onPlay: () => void;
   onRemove: () => void;
+  sortableId: string;
 }
 
 function SortableQueueItem({
@@ -53,6 +54,7 @@ function SortableQueueItem({
   isActive,
   onPlay,
   onRemove,
+  sortableId,
 }: QueueItemProps) {
   const {
     attributes,
@@ -61,7 +63,7 @@ function SortableQueueItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: track.id.toString() });
+  } = useSortable({ id: sortableId });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -70,6 +72,10 @@ function SortableQueueItem({
   };
 
   const coverImage = getCoverImage(track, "small");
+  const altText =
+    track.album?.title?.trim()?.length
+      ? `${track.album.title} cover art`
+      : `${track.title} cover art`;
 
   return (
     <div
@@ -98,7 +104,7 @@ function SortableQueueItem({
         {coverImage ? (
           <Image
             src={coverImage}
-            alt={track.album.title}
+            alt={altText}
             fill
             sizes="48px"
             className="object-cover"
@@ -182,6 +188,71 @@ export function EnhancedQueue({
   const { showToast } = useToast();
   const utils = api.useUtils();
 
+  const trackIdMapRef = useRef<{
+    map: WeakMap<Track, string>;
+    counter: number;
+  }>({
+    map: new WeakMap<Track, string>(),
+    counter: 0,
+  });
+
+  const getSortableId = useCallback(
+    (track: Track) => {
+      const map = trackIdMapRef.current.map;
+      const existing = map.get(track);
+      if (existing) {
+        return existing;
+      }
+
+      const newId = `queue-item-${trackIdMapRef.current.counter++}`;
+      map.set(track, newId);
+      return newId;
+    },
+    []
+  );
+
+  const queueEntries = useMemo(
+    () =>
+      queue.map((track, index) => ({
+        track,
+        index,
+        sortableId: getSortableId(track),
+      })),
+    [queue, getSortableId]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const findIndexBySortableId = useCallback(
+    (id: string) =>
+      queueEntries.find((entry) => entry.sortableId === id)?.index ?? -1,
+    [queueEntries]
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex =
+        typeof active.id === "string"
+          ? findIndexBySortableId(active.id)
+          : findIndexBySortableId(String(active.id));
+      const newIndex =
+        typeof over.id === "string"
+          ? findIndexBySortableId(over.id)
+          : findIndexBySortableId(String(over.id));
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        onReorder(oldIndex, newIndex);
+      }
+    }
+  };
+
   // Fetch smart queue settings
   const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -197,30 +268,6 @@ export function EnhancedQueue({
       showToast("Failed to update settings", "error");
     },
   });
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = queue.findIndex(
-        (track) => track.id.toString() === active.id
-      );
-      const newIndex = queue.findIndex(
-        (track) => track.id.toString() === over.id
-      );
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        onReorder(oldIndex, newIndex);
-      }
-    }
-  };
 
   // Handle adding similar tracks
   const handleAddSimilar = async () => {
@@ -354,15 +401,18 @@ export function EnhancedQueue({
       showToast("Failed to update auto-queue", "error");
     }
   };
+  const filteredQueue = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return queueEntries;
+    }
 
-  // Filter queue based on search query
-  const filteredQueue = searchQuery
-    ? queue.filter(
-        (track) =>
-          track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          track.artist.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : queue;
+    const normalizedQuery = searchQuery.toLowerCase();
+    return queueEntries.filter(
+      ({ track }) =>
+        track.title.toLowerCase().includes(normalizedQuery) ||
+        track.artist.name.toLowerCase().includes(normalizedQuery)
+    );
+  }, [queueEntries, searchQuery]);
 
   const totalDuration = queue.reduce(
     (acc, track) => acc + track.duration,
@@ -777,24 +827,21 @@ export function EnhancedQueue({
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={filteredQueue.map((track) => track.id.toString())}
+              items={filteredQueue.map((entry) => entry.sortableId)}
               strategy={verticalListSortingStrategy}
             >
               <div className="divide-y divide-gray-800">
-                {filteredQueue.map((track) => {
-                  // Find the real index in the unfiltered queue
-                  const realIndex = queue.indexOf(track);
-                  return (
-                    <SortableQueueItem
-                      key={track.id}
-                      track={track}
-                      index={realIndex}
-                      isActive={currentTrack?.id === track.id}
-                      onPlay={() => onPlayFrom(realIndex)}
-                      onRemove={() => onRemove(realIndex)}
-                    />
-                  );
-                })}
+                {filteredQueue.map(({ track, index, sortableId }) => (
+                  <SortableQueueItem
+                    key={sortableId}
+                    sortableId={sortableId}
+                    track={track}
+                    index={index}
+                    isActive={currentTrack?.id === track.id}
+                    onPlay={() => onPlayFrom(index)}
+                    onRemove={() => onRemove(index)}
+                  />
+                ))}
               </div>
             </SortableContext>
           </DndContext>
