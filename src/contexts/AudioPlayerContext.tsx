@@ -4,7 +4,6 @@
 
 import { useToast } from "@/contexts/ToastContext";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
-import { getSmartQueueRecommendations } from "@/services/smartQueue";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
@@ -83,64 +82,49 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Mutation for logging recommendations
   const logRecommendationMutation = api.music.logRecommendation.useMutation();
 
-  // Auto-queue trigger callback using the powerful backend
+  // Auto-queue trigger callback using the intelligent backend API
   const handleAutoQueueTrigger = useCallback(
     async (currentTrack: Track, _queueLength: number) => {
       if (!session || !smartQueueSettings) return [];
-
       try {
-        // Use the smart queue service to get intelligent recommendations
-        const result = await getSmartQueueRecommendations(currentTrack, {
-          count: smartQueueSettings.autoQueueCount,
-          similarityLevel: smartQueueSettings.similarityPreference || "balanced",
-          useAudioFeatures: smartQueueSettings.smartMixEnabled,
+        const startTime = performance.now();
+        const trackName = `${currentTrack.artist.name} ${currentTrack.title}`;
+
+        // Calculate how many tracks we need:
+        // - Always request at least 10 to have enough for the dynamic calculation
+        // - The actual number added will be calculated in useAudioPlayer based on _queueLength
+        const requestCount = Math.max(10, Math.ceil((20 - _queueLength) * 1.5));
+
+        // Use the intelligent recommendations API through tRPC (server-side, no CORS)
+        const tracks = await utils.client.music.getIntelligentRecommendations.query({
+          trackNames: [trackName],
+          count: requestCount,
+          excludeTrackIds: [currentTrack.id],
         });
+
+        const responseTime = Math.round(performance.now() - startTime);
 
         // Log the recommendation
-        logRecommendationMutation.mutate({
-          seedTracks: [currentTrack],
-          recommendedTracks: result.tracks,
-          source: result.source,
-          requestParams: {
-            count: smartQueueSettings.autoQueueCount,
-            similarityLevel: smartQueueSettings.similarityPreference || "balanced",
-            useAudioFeatures: smartQueueSettings.smartMixEnabled,
-          },
-          responseTime: result.responseTime,
-          success: result.success,
-          errorMessage: result.errorMessage,
-          context: "auto-queue",
-        });
+        if (tracks && tracks.length > 0) {
+          logRecommendationMutation.mutate({
+        seedTracks: [currentTrack],
+        recommendedTracks: tracks,
+        source: "hexmusic-api",
+        requestParams: {
+          count: requestCount,
+          similarityLevel: smartQueueSettings.similarityPreference || "balanced",
+          useAudioFeatures: smartQueueSettings.smartMixEnabled,
+        },
+        responseTime,
+        success: true,
+        context: "auto-queue",
+          });
+        }
 
-        return result.tracks;
+        return tracks ?? [];
       } catch (error) {
         console.error("Failed to fetch auto-queue recommendations:", error);
-
-        // Fallback to basic tRPC endpoint if smart queue fails
-        try {
-          const fallbackTracks = await utils.client.music.getSimilarTracks.query({
-            trackId: currentTrack.id,
-            limit: smartQueueSettings.autoQueueCount,
-          });
-
-          // Log the fallback attempt
-          if (fallbackTracks && fallbackTracks.length > 0) {
-            logRecommendationMutation.mutate({
-              seedTracks: [currentTrack],
-              recommendedTracks: fallbackTracks,
-              source: "cached",
-              requestParams: {
-                count: smartQueueSettings.autoQueueCount,
-              },
-              success: true,
-              context: "auto-queue",
-            });
-          }
-
-          return fallbackTracks ?? [];
-        } catch {
-          return [];
-        }
+        return [];
       }
     },
     [session, smartQueueSettings, utils, logRecommendationMutation],
