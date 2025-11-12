@@ -141,7 +141,11 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const player = useAudioPlayer({
     onTrackChange: (track) => {
       if (track && session) {
-        addToHistory.mutate({ track });
+    if (track.duration && track.duration > 0) {
+      addToHistory.mutate({ track, totalDuration: track.duration });
+    } else {
+      addToHistory.mutate({ track });
+    }
       }
     },
     onAutoQueueTrigger: handleAutoQueueTrigger,
