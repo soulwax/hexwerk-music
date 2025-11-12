@@ -126,10 +126,7 @@ export default function PersistentPlayer() {
           onClear={player.clearQueue}
           onReorder={player.reorderQueue}
           onPlayFrom={player.playFromQueue}
-          onSaveAsPlaylist={() => {
-            // TODO: Implement save queue as playlist functionality
-            console.log("Save queue as playlist - to be implemented");
-          }}
+          onSaveAsPlaylist={player.saveQueueAsPlaylist}
           onAddSimilarTracks={
             player.addSimilarTracks ??
             (() => {

@@ -56,6 +56,7 @@ interface AudioPlayerContextType {
   // Smart Queue
   addSimilarTracks: (trackId: number, count?: number) => Promise<void>;
   generateSmartMix: (seedTrackIds: number[], count?: number) => Promise<void>;
+  saveQueueAsPlaylist: () => Promise<void>;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(
@@ -66,6 +67,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const { showToast } = useToast();
   const addToHistory = api.music.addToHistory.useMutation();
+  const createPlaylistMutation = api.music.createPlaylist.useMutation();
+  const addToPlaylistMutation = api.music.addToPlaylist.useMutation();
 
   // Fetch smart queue settings
   const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery(
@@ -319,6 +322,71 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     [session, generateSmartMixMutation, smartQueueSettings, player, showToast, logRecommendationMutation],
   );
 
+  const saveQueueAsPlaylist = useCallback(async () => {
+    console.log("[AudioPlayerContext] 💾 saveQueueAsPlaylist called", {
+      hasSession: !!session,
+      currentTrack: player.currentTrack ? player.currentTrack.title : null,
+      queueSize: player.queue.length,
+    });
+
+    if (!session) {
+      showToast("Sign in to save playlists", "info");
+      return;
+    }
+
+    const tracksToSave: Track[] = [
+      ...(player.currentTrack ? [player.currentTrack] : []),
+      ...player.queue,
+    ];
+
+    if (tracksToSave.length === 0) {
+      showToast("Queue is empty", "info");
+      return;
+    }
+
+    const defaultName = player.currentTrack
+      ? `${player.currentTrack.title} Queue`
+      : `Queue ${new Date().toLocaleDateString()}`;
+    const playlistName = prompt("Name your new playlist", defaultName);
+
+    if (playlistName === null) {
+      console.log("[AudioPlayerContext] ⚪ Playlist creation cancelled by user");
+      return;
+    }
+
+    const trimmedName = playlistName.trim();
+
+    if (!trimmedName) {
+      showToast("Playlist name cannot be empty", "error");
+      return;
+    }
+
+    showToast("Saving queue as playlist...", "info");
+
+    try {
+      const playlist = await createPlaylistMutation.mutateAsync({
+        name: trimmedName,
+        isPublic: false,
+      });
+
+      for (const track of tracksToSave) {
+        await addToPlaylistMutation.mutateAsync({
+          playlistId: playlist.id,
+          track,
+        });
+      }
+
+      showToast(
+        `Saved ${tracksToSave.length} track${tracksToSave.length === 1 ? "" : "s"} to "${trimmedName}"`,
+        "success"
+      );
+      void utils.music.getPlaylists.invalidate();
+    } catch (error) {
+      console.error("[AudioPlayerContext] ❌ Failed to save queue as playlist:", error);
+      showToast("Failed to save playlist", "error");
+    }
+  }, [session, player, createPlaylistMutation, addToPlaylistMutation, showToast, utils]);
+
   const value: AudioPlayerContextType = {
     // State
     currentTrack: player.currentTrack,
@@ -360,6 +428,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     // Smart Queue
     addSimilarTracks,
     generateSmartMix,
+    saveQueueAsPlaylist,
   };
 
   return (
