@@ -91,7 +91,12 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       if (!session || !smartQueueSettings) return [];
       try {
         const startTime = performance.now();
-        const trackName = `${currentTrack.artist.name} ${currentTrack.title}`;
+        const artistName = currentTrack.artist?.name ?? "";
+        const title = currentTrack.title ?? "";
+        const trackName = [artistName, title].filter(Boolean).join(" ").trim();
+        const excludeIds = [currentTrack.id]
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id));
 
         // Calculate how many tracks we need:
         // - Always request at least 10 to have enough for the dynamic calculation
@@ -100,9 +105,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
         // Use the intelligent recommendations API through tRPC (server-side, no CORS)
         const tracks = await utils.client.music.getIntelligentRecommendations.query({
-          trackNames: [trackName],
+          trackNames: trackName ? [trackName] : [String(currentTrack.id)],
           count: requestCount,
-          excludeTrackIds: [currentTrack.id],
+          excludeTrackIds: excludeIds,
         });
 
         const responseTime = Math.round(performance.now() - startTime);

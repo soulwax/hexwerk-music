@@ -8,32 +8,32 @@ import type { SmartQueueSettings, Track } from "@/types";
 import { getCoverImage } from "@/utils/images";
 import { formatDuration } from "@/utils/time";
 import {
-    closestCenter,
-    DndContext,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    type DragEndEvent,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-    SortableContext,
-    sortableKeyboardCoordinates,
-    useSortable,
-    verticalListSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-    GripVertical,
-    Loader2,
-    Play,
-    Save,
-    Search,
-    Settings,
-    Sparkles,
-    Trash2,
-    X,
-    Zap,
+  GripVertical,
+  Loader2,
+  Play,
+  Save,
+  Search,
+  Settings,
+  Sparkles,
+  Trash2,
+  X,
+  Zap,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
@@ -76,6 +76,11 @@ function SortableQueueItem({
     track.album?.title?.trim()?.length
       ? `${track.album.title} cover art`
       : `${track.title} cover art`;
+
+  const artistName =
+    track.artist?.name?.trim()?.length ? track.artist.name : "Unknown Artist";
+  const albumTitle =
+    track.album?.title?.trim()?.length ? track.album.title : null;
 
   return (
     <div
@@ -130,7 +135,15 @@ function SortableQueueItem({
         <h4 className="text-sm font-medium text-white truncate">
           {track.title}
         </h4>
-        <p className="text-xs text-gray-400 truncate">{track.artist.name}</p>
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
+          <span className="truncate">{artistName}</span>
+          {albumTitle && (
+            <>
+              <span className="text-gray-600">•</span>
+              <span className="truncate">{albumTitle}</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Duration */}

@@ -171,15 +171,21 @@ export default function MaturePlayer({
         {/* Track Info */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="relative flex-shrink-0">
-            <Image
-              src={currentTrack.album.cover_small}
-              alt={currentTrack.title}
-              width={56}
-              height={56}
-              className="rounded-lg"
-              priority
-              quality={75}
-            />
+            {currentTrack.album.cover_small ? (
+              <Image
+                src={currentTrack.album.cover_small}
+                alt={currentTrack.title}
+                width={56}
+                height={56}
+                className="rounded-lg"
+                priority
+                quality={75}
+              />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gray-800 text-gray-500">
+                🎵
+              </div>
+            )}
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60">
                 <div className="border-accent h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />

@@ -172,15 +172,21 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             className="flex items-center gap-3 px-4 py-3"
             onClick={() => setIsExpanded(true)}
           >
-            <Image
-              src={currentTrack.album.cover_small}
-              alt={currentTrack.title}
-              width={48}
-              height={48}
-              className="flex-shrink-0 rounded-lg"
-              priority
-              quality={75}
-            />
+            {currentTrack.album.cover_small ? (
+              <Image
+                src={currentTrack.album.cover_small}
+                alt={currentTrack.title}
+                width={48}
+                height={48}
+                className="flex-shrink-0 rounded-lg"
+                priority
+                quality={75}
+              />
+            ) : (
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-800 text-gray-500">
+                🎵
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <h4 className="truncate font-medium text-white">
                 {currentTrack.title}
@@ -267,15 +273,21 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             {/* Album Art */}
             <div className="flex flex-1 items-center justify-center px-8 py-8">
               <div className="relative w-full max-w-sm">
-                <Image
-                  src={currentTrack.album.cover_medium ?? currentTrack.album.cover_small}
-                  alt={currentTrack.title}
-                  width={400}
-                  height={400}
-                  className="w-full rounded-2xl shadow-2xl"
-                  priority
-                  quality={85}
-                />
+                {coverArt ? (
+                  <Image
+                    src={coverArt}
+                    alt={currentTrack.title}
+                    width={400}
+                    height={400}
+                    className="w-full rounded-2xl shadow-2xl"
+                    priority
+                    quality={85}
+                  />
+                ) : (
+                  <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-gray-800 text-6xl">
+                    🎵
+                  </div>
+                )}
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/60">
                     <div className="border-accent h-12 w-12 animate-spin rounded-full border-4 border-t-transparent" />
