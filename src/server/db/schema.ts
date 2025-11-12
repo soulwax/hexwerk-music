@@ -368,6 +368,38 @@ export const recommendationCache = createTable(
   ],
 );
 
+// Recommendation logs for analytics and debugging
+export const recommendationLogs = createTable(
+  "recommendation_log",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    userId: d
+      .varchar({ length: 255 })
+      .references(() => users.id, { onDelete: "set null" }),
+    seedTrackIds: d.jsonb().notNull(), // Array of track IDs used as seeds
+    seedTrackData: d.jsonb().notNull(), // Full track objects for seeds
+    recommendedTrackIds: d.jsonb().notNull(), // Array of recommended track IDs
+    recommendedTracksData: d.jsonb().notNull(), // Full track objects returned
+    source: d.varchar({ length: 50 }).notNull(), // 'hexmusic-api', 'deezer-fallback', 'artist-radio'
+    requestParams: d.jsonb(), // { count, similarityLevel, useAudioFeatures }
+    responseTime: d.integer(), // milliseconds
+    success: d.boolean().notNull(),
+    errorMessage: d.text(),
+    context: d.varchar({ length: 50 }), // 'auto-queue', 'smart-mix', 'manual', 'similar-tracks'
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }),
+  (t) => [
+    index("rec_log_user_idx").on(t.userId),
+    index("rec_log_source_idx").on(t.source),
+    index("rec_log_created_idx").on(t.createdAt),
+    index("rec_log_success_idx").on(t.success),
+    index("rec_log_context_idx").on(t.context),
+  ],
+);
+
 // Audio features from Essentia analysis (future integration)
 // Feature flagged - only populated when ENABLE_AUDIO_FEATURES=true
 export const audioFeatures = createTable(
@@ -518,4 +550,11 @@ export const recommendationCacheRelations = relations(
 
 export const audioFeaturesRelations = relations(audioFeatures, () => ({
   // Track ID references Deezer API, no direct DB relation
+}));
+
+export const recommendationLogsRelations = relations(recommendationLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [recommendationLogs.userId],
+    references: [users.id],
+  }),
 }));
