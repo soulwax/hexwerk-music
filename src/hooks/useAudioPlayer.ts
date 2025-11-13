@@ -257,13 +257,9 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       }
 
       try {
-        audioRef.current.src = "";
+        audioRef.current.currentTime = 0;
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          console.debug("[useAudioPlayer] Audio source reset aborted (ignored).");
-        } else {
-          console.warn("[useAudioPlayer] Failed to reset audio source:", error);
-        }
+        console.debug("[useAudioPlayer] Unable to reset currentTime:", error);
       }
 
       setHistory((prev) => (currentTrack ? [...prev, currentTrack] : prev));
@@ -285,7 +281,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
         return true;
       };
 
-      let applied = applySource();
+      const applied = applySource();
       if (!applied) {
         setTimeout(() => {
           if (!audioRef.current) return;
