@@ -143,7 +143,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     }
   }, [currentTrack, queue, repeatMode, history, onTrackEnd]);
 
-  // Media Session API integration
+  // Media Session API integration for background playback
   useEffect(() => {
     if (
       !currentTrack ||
@@ -152,6 +152,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     )
       return;
 
+    // Set metadata for lock screen and notification controls
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.artist.name,
@@ -190,7 +191,103 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
           artwork !== undefined
       ),
     });
-  }, [currentTrack]);
+
+    // Set playback state
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [currentTrack, isPlaying]);
+
+  // Media Session action handlers for background controls
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator))
+      return;
+
+    const togglePlayPause = () => {
+      if (audioRef.current) {
+        if (isPlaying) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play().catch((error) => {
+            console.error("Playback failed:", error);
+          });
+        }
+      }
+    };
+
+    const handleNextTrack = () => {
+      if (queue.length > 0) {
+        const nextTrack = queue[0];
+        if (nextTrack && currentTrack) {
+          setHistory((prev) => [...prev, currentTrack]);
+        }
+        setQueue((prev) => prev.slice(1));
+      }
+    };
+
+    const handlePreviousTrack = () => {
+      // If more than 3 seconds in, restart current track
+      if (audioRef.current && audioRef.current.currentTime > 3) {
+        audioRef.current.currentTime = 0;
+      } else if (history.length > 0) {
+        // Go to previous track
+        const prevTrack = history[history.length - 1];
+        if (prevTrack && currentTrack) {
+          setQueue((prev) => [currentTrack, ...prev]);
+        }
+        setHistory((prev) => prev.slice(0, -1));
+      }
+    };
+
+    const handleSeekBackward = (details: MediaSessionActionDetails) => {
+      if (audioRef.current) {
+        const seekTime = details.seekOffset ?? 10;
+        audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - seekTime);
+      }
+    };
+
+    const handleSeekForward = (details: MediaSessionActionDetails) => {
+      if (audioRef.current) {
+        const seekTime = details.seekOffset ?? 10;
+        audioRef.current.currentTime = Math.min(
+          audioRef.current.duration,
+          audioRef.current.currentTime + seekTime
+        );
+      }
+    };
+
+    const handleSeekTo = (details: MediaSessionActionDetails) => {
+      if (audioRef.current && details.seekTime !== undefined) {
+        audioRef.current.currentTime = details.seekTime;
+      }
+    };
+
+    // Register action handlers
+    try {
+      navigator.mediaSession.setActionHandler("play", togglePlayPause);
+      navigator.mediaSession.setActionHandler("pause", togglePlayPause);
+      navigator.mediaSession.setActionHandler("nexttrack", handleNextTrack);
+      navigator.mediaSession.setActionHandler("previoustrack", handlePreviousTrack);
+      navigator.mediaSession.setActionHandler("seekbackward", handleSeekBackward);
+      navigator.mediaSession.setActionHandler("seekforward", handleSeekForward);
+      navigator.mediaSession.setActionHandler("seekto", handleSeekTo);
+    } catch (error) {
+      console.error("Failed to set media session handlers:", error);
+    }
+
+    // Cleanup - remove handlers on unmount
+    return () => {
+      try {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+        navigator.mediaSession.setActionHandler("seekbackward", null);
+        navigator.mediaSession.setActionHandler("seekforward", null);
+        navigator.mediaSession.setActionHandler("seekto", null);
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    };
+  }, [currentTrack, queue, history, isPlaying]);
 
   // Audio event listeners
   useEffect(() => {

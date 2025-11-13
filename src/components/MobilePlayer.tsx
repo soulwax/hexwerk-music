@@ -177,6 +177,9 @@ export default function MobilePlayer(props: MobilePlayerProps) {
 
   if (!currentTrack) return null;
 
+  // Determine cover art URL
+  const coverArt = currentTrack.album.cover_xl ?? currentTrack.album.cover_big ?? currentTrack.album.cover_medium ?? currentTrack.album.cover;
+
   return (
     <>
       {/* Mini Player */}

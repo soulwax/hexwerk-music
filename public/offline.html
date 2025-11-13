@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#f4b266">
     <title>Offline - Starchild Music</title>
     <style>
         * {
@@ -16,8 +16,10 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
                 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
                 sans-serif;
-            background: linear-gradient(135deg, #0e0e12 0%, #1a1a2e 100%);
-            color: #ffffff;
+            background: #0b1118;
+            background-image: radial-gradient(120% 120% at 15% 20%, rgba(88, 198, 177, 0.18), transparent),
+                            radial-gradient(100% 100% at 80% 0%, rgba(244, 178, 102, 0.22), transparent);
+            color: #f5f1e8;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -40,12 +42,12 @@
             width: 120px;
             height: 120px;
             margin: 0 auto;
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #f4b266 0%, #58c6b1 100%);
             border-radius: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 20px 40px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 20px 40px rgba(244, 178, 102, 0.35);
         }
 
         .icon svg {
@@ -60,15 +62,17 @@
             font-size: 2rem;
             font-weight: 700;
             margin-bottom: 1rem;
-            background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+            background: linear-gradient(92deg, #f4b266, #58c6b1, #8ca7ff);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            animation: gradientFlow 6s ease infinite;
         }
 
         p {
             font-size: 1.1rem;
-            color: #9ca3af;
+            color: #a5afbf;
             margin-bottom: 2rem;
             line-height: 1.6;
         }
@@ -76,21 +80,21 @@
         .button {
             display: inline-block;
             padding: 14px 32px;
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            color: white;
+            background: linear-gradient(135deg, #f4b266, #58c6b1);
+            color: #0f141d;
             text-decoration: none;
             border-radius: 12px;
             font-weight: 600;
             font-size: 1rem;
             transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 10px 25px rgba(244, 178, 102, 0.35);
             border: none;
             cursor: pointer;
         }
 
         .button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(79, 70, 229, 0.4);
+            box-shadow: 0 15px 35px rgba(244, 178, 102, 0.45);
         }
 
         .button:active {
@@ -100,15 +104,17 @@
         .status {
             margin-top: 2rem;
             padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(244, 178, 102, 0.08);
+            border: 1px solid rgba(244, 178, 102, 0.16);
             border-radius: 12px;
             font-size: 0.9rem;
-            color: #9ca3af;
+            color: #a5afbf;
         }
 
         .status.online {
-            background: rgba(34, 197, 94, 0.1);
-            color: #4ade80;
+            background: rgba(88, 198, 177, 0.18);
+            border-color: rgba(88, 198, 177, 0.35);
+            color: #58c6b1;
         }
 
         @keyframes pulse {
@@ -118,6 +124,12 @@
             50% {
                 opacity: 0.6;
             }
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         @media (max-width: 640px) {
@@ -145,12 +157,10 @@
     <div class="container">
         <div class="icon-container">
             <div class="icon">
-                <svg viewBox="0 0 24 24">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 18V5l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
                 </svg>
             </div>
         </div>

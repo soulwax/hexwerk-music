@@ -8,6 +8,8 @@
   "theme_color": "#f4b266",
   "orientation": "portrait-primary",
   "scope": "/",
+  "related_applications": [],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/48.png",
@@ -84,8 +86,20 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "My Library",
+      "short_name": "Library",
+      "description": "Access your saved tracks and playlists",
+      "url": "/library",
+      "icons": [
+        {
+          "src": "/AppIcons/Assets.xcassets/AppIcon.appiconset/100.png",
+          "sizes": "100x100",
+          "type": "image/png"
+        }
+      ]
     }
   ],
-  "screenshots": [],
-  "prefer_related_applications": false
+  "screenshots": []
 }

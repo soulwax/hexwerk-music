@@ -32,133 +32,104 @@ export default function LibraryPage() {
     );
 
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <h1 className="accent-gradient text-glow text-2xl font-bold">
-                🌟 Starchild Music
-              </h1>
-            </Link>
+    <div className="container mx-auto flex min-h-screen flex-col px-3 py-4 md:px-6 md:py-8">
+      {/* Page Title */}
+      <h1 className="mb-6 text-2xl font-bold text-[var(--color-text)] md:mb-8 md:text-3xl">
+        Your Library
+      </h1>
 
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Home
-              </Link>
-              <Link href="/library" className="font-semibold text-white">
-                Library
-              </Link>
-              <Link
-                href="/playlists"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Playlists
-              </Link>
-            </nav>
-          </div>
+      {/* Mobile-Optimized Tabs */}
+      <div className="mb-6 flex gap-2 border-b border-[rgba(244,178,102,0.14)] md:mb-8 md:gap-4">
+        <button
+          onClick={() => setActiveTab("favorites")}
+          className={`touch-target relative flex flex-1 items-center justify-center gap-2 px-3 pb-3 font-medium transition md:flex-initial md:px-4 md:pb-4 ${
+            activeTab === "favorites"
+              ? "text-[var(--color-accent)]"
+              : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
+          }`}
+        >
+          <Heart className="h-4 w-4 md:h-5 md:w-5" />
+          <span className="text-sm md:text-base">Favorites</span>
+          {activeTab === "favorites" && (
+            <div className="accent-gradient absolute right-0 bottom-0 left-0 h-0.5" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("history")}
+          className={`touch-target relative flex flex-1 items-center justify-center gap-2 px-3 pb-3 font-medium transition md:flex-initial md:px-4 md:pb-4 ${
+            activeTab === "history"
+              ? "text-[var(--color-accent)]"
+              : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
+          }`}
+        >
+          <Clock className="h-4 w-4 md:h-5 md:w-5" />
+          <span className="text-sm md:text-base">History</span>
+          {activeTab === "history" && (
+            <div className="accent-gradient absolute right-0 bottom-0 left-0 h-0.5" />
+          )}
+        </button>
+      </div>
+
+      {/* Content */}
+      {activeTab === "favorites" && (
+        <div className="fade-in">
+          {favoritesLoading ? (
+            <LoadingState message="Loading your favorites..." />
+          ) : favorites && favorites.length > 0 ? (
+            <div className="grid gap-2 md:gap-3">
+              {favorites.map((fav) => (
+                <EnhancedTrackCard
+                  key={fav.id}
+                  track={fav.track}
+                  onPlay={player.play}
+                  onAddToQueue={player.addToQueue}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Heart className="h-12 w-12 md:h-16 md:w-16" />}
+              title="No favorites yet"
+              description="Tracks you favorite will appear here"
+              action={
+                <Link href="/" className="btn-primary touch-target-lg">
+                  Search for music
+                </Link>
+              }
+            />
+          )}
         </div>
-      </header>
+      )}
 
-      {/* Main Content */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
-        <h1 className="mb-8 text-3xl font-bold text-white">Your Library</h1>
-
-        {/* Tabs */}
-        <div className="mb-8 flex gap-4 border-b border-gray-800">
-          <button
-            onClick={() => setActiveTab("favorites")}
-            className={`relative px-2 pb-4 font-medium transition ${
-              activeTab === "favorites"
-                ? "text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Favorites
-            {activeTab === "favorites" && (
-              <div className="bg-accent absolute right-0 bottom-0 left-0 h-0.5" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("history")}
-            className={`relative px-2 pb-4 font-medium transition ${
-              activeTab === "history"
-                ? "text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Listening History
-            {activeTab === "history" && (
-              <div className="bg-accent absolute right-0 bottom-0 left-0 h-0.5" />
-            )}
-          </button>
+      {activeTab === "history" && (
+        <div className="fade-in">
+          {historyLoading ? (
+            <LoadingState message="Loading your history..." />
+          ) : history && history.length > 0 ? (
+            <div className="grid gap-2 md:gap-3">
+              {history.map((item) => (
+                <EnhancedTrackCard
+                  key={item.id}
+                  track={item.track}
+                  onPlay={player.play}
+                  onAddToQueue={player.addToQueue}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Clock className="h-12 w-12 md:h-16 md:w-16" />}
+              title="No listening history yet"
+              description="Your recently played tracks will appear here"
+              action={
+                <Link href="/" className="btn-primary touch-target-lg">
+                  Start listening to music
+                </Link>
+              }
+            />
+          )}
         </div>
-
-        {/* Content */}
-        {activeTab === "favorites" && (
-          <div>
-            {favoritesLoading ? (
-              <LoadingState message="Loading your favorites..." />
-            ) : favorites && favorites.length > 0 ? (
-              <div className="grid gap-3">
-                {favorites.map((fav) => (
-                  <EnhancedTrackCard
-                    key={fav.id}
-                    track={fav.track}
-                    onPlay={player.play}
-                    onAddToQueue={player.addToQueue}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={<Heart className="h-16 w-16" />}
-                title="No favorites yet"
-                description="Tracks you favorite will appear here"
-                action={
-                  <Link href="/" className="text-accent hover:underline">
-                    Search for music to add favorites
-                  </Link>
-                }
-              />
-            )}
-          </div>
-        )}
-
-        {activeTab === "history" && (
-          <div>
-            {historyLoading ? (
-              <LoadingState message="Loading your history..." />
-            ) : history && history.length > 0 ? (
-              <div className="grid gap-3">
-                {history.map((item) => (
-                  <EnhancedTrackCard
-                    key={item.id}
-                    track={item.track}
-                    onPlay={player.play}
-                    onAddToQueue={player.addToQueue}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={<Clock className="h-16 w-16" />}
-                title="No listening history yet"
-                description="Your recently played tracks will appear here"
-                action={
-                  <Link href="/" className="text-accent hover:underline">
-                    Start listening to music
-                  </Link>
-                }
-              />
-            )}
-          </div>
-        )}
-      </main>
+      )}
     </div>
   );
 }
