@@ -269,7 +269,6 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       const applySource = () => {
         try {
           audioRef.current!.src = streamUrl;
-          audioRef.current!.load();
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
             console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
