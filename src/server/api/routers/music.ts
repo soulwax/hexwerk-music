@@ -209,6 +209,56 @@ export const musicRouter = createTRPCRouter({
       return { success: true, isPublic: input.isPublic };
     }),
 
+  updatePlaylistMetadata: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1).max(256).optional(),
+        description: z.string().max(1024).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const playlist = await ctx.db.query.playlists.findFirst({
+        where: and(
+          eq(playlists.id, input.id),
+          eq(playlists.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+
+      const updateData: Partial<typeof playlists.$inferInsert> = {};
+
+      if (input.name !== undefined) {
+        updateData.name = input.name;
+      }
+
+      if (input.description !== undefined) {
+        updateData.description =
+          input.description.trim().length > 0 ? input.description : null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return { success: true };
+      }
+
+      updateData.updatedAt = new Date();
+
+      await ctx.db
+        .update(playlists)
+        .set(updateData)
+        .where(
+          and(
+            eq(playlists.id, input.id),
+            eq(playlists.userId, ctx.session.user.id),
+          ),
+        );
+
+      return { success: true };
+    }),
+
   getPlaylists: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.query.playlists.findMany({
       where: eq(playlists.userId, ctx.session.user.id),

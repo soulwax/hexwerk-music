@@ -22,6 +22,10 @@ export default function PlaylistDetailPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [localVisibility, setLocalVisibility] = useState<boolean | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
 
   // Try authenticated query first if user is logged in
   const { data: privatePlaylist, isLoading: isLoadingPrivate } =
@@ -46,6 +50,7 @@ export default function PlaylistDetailPage() {
 
   const utils = api.useUtils();
   const updateVisibilityMutation = api.music.updatePlaylistVisibility.useMutation();
+  const updateMetadataMutation = api.music.updatePlaylistMetadata.useMutation();
   const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
     onSuccess: async () => {
       try {
@@ -128,6 +133,8 @@ export default function PlaylistDetailPage() {
   useEffect(() => {
     if (playlist) {
       setLocalVisibility(playlist.isPublic);
+      setDraftTitle(playlist.name ?? "");
+      setDraftDescription(playlist.description ?? "");
     }
   }, [playlist?.isPublic]);
 
@@ -161,6 +168,42 @@ export default function PlaylistDetailPage() {
       showToast("Failed to update playlist visibility", "error");
     }
   };
+
+  const handleSaveMetadata = async () => {
+    if (!playlist) return;
+
+    const trimmedTitle = draftTitle.trim();
+    if (!trimmedTitle) {
+      showToast("Playlist name cannot be empty", "error");
+      return;
+    }
+
+    try {
+      await updateMetadataMutation.mutateAsync({
+        id: playlist.id,
+        name: trimmedTitle !== playlist.name ? trimmedTitle : undefined,
+        description:
+          draftDescription.trim() !== (playlist.description ?? "")
+            ? draftDescription.trim()
+            : undefined,
+      });
+
+      await Promise.all([
+        utils.music.getPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPublicPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPlaylists.invalidate(),
+      ]);
+
+      setIsEditingTitle(false);
+      setIsEditingDescription(false);
+      showToast("Playlist details updated", "success");
+    } catch (error) {
+      console.error("Failed to update playlist metadata:", error);
+      showToast("Failed to update playlist details", "error");
+    }
+  };
+
+  const isSavingMetadata = updateMetadataMutation.isPending;
 
   const handleDragStart = (index: number): void => {
     setDraggedIndex(index);
@@ -234,6 +277,9 @@ export default function PlaylistDetailPage() {
   }
 
   const effectiveIsPublic = (localVisibility ?? playlist.isPublic) ?? false;
+  const isDirty =
+    (draftTitle.trim() !== (playlist.name ?? "")) ||
+    (draftDescription.trim() !== (playlist.description ?? ""));
 
   return (
     <div className="flex min-h-screen flex-col pb-32">
@@ -295,11 +341,62 @@ export default function PlaylistDetailPage() {
               </svg>
             </Link>
             <div className="flex-1">
-              <h1 className="mb-2 text-3xl font-bold text-white">
-                {playlist.name}
-              </h1>
-              {playlist.description && (
-                <p className="mb-4 text-gray-400">{playlist.description}</p>
+              {isOwner ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    {isEditingTitle ? (
+                      <input
+                        value={draftTitle}
+                        onChange={(e) => setDraftTitle(e.target.value)}
+                        className="w-full rounded-lg bg-gray-900 px-3 py-2 text-3xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-accent"
+                        maxLength={256}
+                      />
+                    ) : (
+                      <h1 className="text-3xl font-bold text-white">
+                        {playlist.name}
+                      </h1>
+                    )}
+                    <button
+                      onClick={() => setIsEditingTitle((prev) => !prev)}
+                      className="rounded-lg bg-gray-800 px-3 py-1 text-sm text-gray-200 transition hover:bg-gray-700"
+                    >
+                      {isEditingTitle ? "Cancel" : "Rename"}
+                    </button>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    {isEditingDescription ? (
+                      <textarea
+                        value={draftDescription}
+                        onChange={(e) => setDraftDescription(e.target.value)}
+                        className="w-full rounded-lg bg-gray-900 px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                        rows={3}
+                        maxLength={1024}
+                        placeholder="Add a description..."
+                      />
+                    ) : playlist.description ? (
+                      <p className="text-gray-400">{playlist.description}</p>
+                    ) : (
+                      <p className="italic text-gray-600">
+                        No description yet.
+                      </p>
+                    )}
+                    <button
+                      onClick={() => setIsEditingDescription((prev) => !prev)}
+                      className="rounded-lg bg-gray-800 px-3 py-1 text-sm text-gray-200 transition hover:bg-gray-700"
+                    >
+                      {isEditingDescription ? "Cancel" : "Edit Description"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="mb-2 text-3xl font-bold text-white">
+                    {playlist.name}
+                  </h1>
+                  {playlist.description && (
+                    <p className="mb-4 text-gray-400">{playlist.description}</p>
+                  )}
+                </>
               )}
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span>{playlist.tracks.length} tracks</span>
@@ -342,6 +439,16 @@ export default function PlaylistDetailPage() {
                 ) : (
                   "Make Public"
                 )}
+              </button>
+            )}
+
+            {isOwner && (
+              <button
+                onClick={handleSaveMetadata}
+                className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!isDirty || isSavingMetadata}
+              >
+                {isSavingMetadata ? "Saving..." : "Save Changes"}
               </button>
             )}
 

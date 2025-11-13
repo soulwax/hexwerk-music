@@ -36,7 +36,7 @@ export default function Section<T>({
 
   return (
     <section className={`mb-12 ${className}`}>
-      <h2 className="mb-6 text-2xl font-bold text-white">{title}</h2>
+      <h2 className="mb-6 text-2xl font-bold text-[var(--color-text)] text-glow">{title}</h2>
       {loading ? (
         <SkeletonGrid
           rows={skeletonCount}
@@ -48,9 +48,9 @@ export default function Section<T>({
           {items.map((item, idx) => renderItem(item, idx))}
         </div>
       ) : (
-        <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-8 text-center">
+        <div className="surface-muted p-8 text-center">
           <div className="mb-2 text-4xl">{emptyIcon}</div>
-          <p className="text-gray-400">{emptyMessage}</p>
+          <p className="text-[var(--color-subtext)]">{emptyMessage}</p>
         </div>
       )}
     </section>

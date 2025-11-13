@@ -38,7 +38,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-black/95 backdrop-blur-xl shadow-lg">
+      <header className="sticky top-0 z-30 border-b border-[rgba(244,178,102,0.12)] bg-[rgba(10,16,24,0.88)] backdrop-blur-xl shadow-lg shadow-[rgba(5,10,18,0.6)]">
         <div className="container flex items-center justify-between py-3.5">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
@@ -47,7 +47,7 @@ export default function Header() {
               alt="Starchild Music"
               width={40}
               height={40}
-              className="h-10 w-10 rounded-xl shadow-lg ring-2 ring-indigo-500/20 transition-all group-hover:scale-105 group-hover:shadow-indigo-500/50"
+              className="h-10 w-10 rounded-xl shadow-lg ring-2 ring-[rgba(244,178,102,0.3)] transition-all group-hover:scale-105 group-hover:shadow-[rgba(244,178,102,0.35)]"
               priority
             />
             <span className="accent-gradient hidden text-lg font-bold md:block">
@@ -59,7 +59,7 @@ export default function Header() {
           <nav className="hidden items-center gap-6 md:flex">
             <Link
               href="/"
-              className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-white hover:scale-105"
+              className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-[var(--color-text)] hover:scale-105"
             >
               Home
             </Link>
@@ -67,13 +67,13 @@ export default function Header() {
               <>
                 <Link
                   href="/library"
-                  className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-white hover:scale-105"
+                  className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-[var(--color-text)] hover:scale-105"
                 >
                   Library
                 </Link>
                 <Link
                   href="/playlists"
-                  className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-white hover:scale-105"
+                  className="text-sm font-medium text-[var(--color-subtext)] transition-all hover:text-[var(--color-text)] hover:scale-105"
                 >
                   Playlists
                 </Link>
@@ -101,7 +101,7 @@ export default function Header() {
                       className="h-6 w-6 rounded-full ring-2 ring-white/10"
                     />
                   ) : (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-xs font-bold text-white shadow-lg">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(244,178,102,0.4),rgba(88,198,177,0.4))] text-xs font-bold text-[var(--color-text)] shadow-lg shadow-[rgba(244,178,102,0.3)]">
                       {session.user?.name?.charAt(0).toUpperCase() ?? "U"}
                     </div>
                   )}
@@ -118,13 +118,13 @@ export default function Header() {
 
                 {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-800 bg-gray-900 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-1">
+                  <div className="absolute right-0 mt-2 w-52 rounded-xl border border-[rgba(244,178,102,0.16)] bg-[rgba(18,26,38,0.95)] p-1 shadow-xl shadow-[rgba(5,10,18,0.6)] backdrop-blur-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-1">
                       {userProfile?.userHash && (
                         <Link
                           href={`/${userProfile.userHash}`}
                           onClick={() => setShowUserMenu(false)}
-                          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+                          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-subtext)] transition-colors hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)]"
                         >
                           <User className="h-4 w-4" />
                           My Profile
@@ -132,7 +132,7 @@ export default function Header() {
                       )}
                       <button
                         onClick={handleSignOut}
-                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-subtext)] transition-colors hover:bg-[rgba(242,139,130,0.12)] hover:text-[var(--color-text)]"
                       >
                         <LogOut className="h-4 w-4" />
                         Sign Out
