@@ -12,6 +12,8 @@ import dynamic from "next/dynamic";
 import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
 import { getCoverImage } from "@/utils/images";
 import { Activity } from "lucide-react";
+import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { springPresets } from "@/utils/spring-animations";
 
 // Dynamic import for visualizer
 const AudioVisualizer = dynamic(
@@ -79,9 +81,11 @@ export default function MobilePlayer(props: MobilePlayerProps) {
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [albumColorPalette, setAlbumColorPalette] = useState<ColorPalette | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const dragStartY = useRef<number>(0);
-  const isDragging = useRef(false);
   const progressRef = useRef<HTMLDivElement>(null);
+  
+  // Motion values for smooth drag interactions
+  const dragY = useMotionValue(0);
+  const opacity = useTransform(dragY, [0, 100], [1, 0.7]);
 
   const shouldIgnoreTouch = (target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
@@ -169,46 +173,22 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     onSeek(percentage * duration);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    dragStartY.current = e.touches[0]?.clientY ?? 0;
-    isDragging.current = true;
-  };
+  const handleExpandedDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const offset = info.offset.y;
+    const velocity = info.velocity.y;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const currentY = e.touches[0]?.clientY ?? 0;
-    const diff = currentY - dragStartY.current;
-
-    // If swiping down significantly while expanded, collapse
-    if (isExpanded && diff > 50) {
+    // Collapse if swiped down significantly or with high velocity
+    if (offset > 100 || velocity > 500) {
+      hapticLight();
       setIsExpanded(false);
-      isDragging.current = false;
     }
   };
 
-  const handleTouchEnd = () => {
-    isDragging.current = false;
-  };
-
-  const handleMiniTouchStart = (e: React.TouchEvent) => {
-    if (shouldIgnoreTouch(e.target)) return;
-    dragStartY.current = e.touches[0]?.clientY ?? 0;
-    isDragging.current = true;
-  };
-
-  const handleMiniTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const currentY = e.touches[0]?.clientY ?? 0;
-    const diff = currentY - dragStartY.current;
-
-    if (!isExpanded && diff < -50) {
-      setIsExpanded(true);
-      isDragging.current = false;
-    }
-  };
-
-  const handleMiniTouchEnd = () => {
-    isDragging.current = false;
+  const handleMiniTap = (e: React.MouseEvent | React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (shouldIgnoreTouch(target)) return;
+    hapticLight();
+    setIsExpanded(true);
   };
 
   if (!currentTrack) return null;
@@ -220,11 +200,12 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     <>
       {/* Mini Player */}
       {!isExpanded && (
-        <div
+        <motion.div
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          exit={{ y: 100 }}
+          transition={springPresets.gentle}
           className="safe-bottom fixed right-0 bottom-0 left-0 z-50 border-t border-[rgba(244,178,102,0.14)] bg-[rgba(10,16,24,0.94)] backdrop-blur-xl shadow-[0_-12px_32px_rgba(5,10,18,0.6)]"
-          onTouchStart={handleMiniTouchStart}
-          onTouchMove={handleMiniTouchMove}
-          onTouchEnd={handleMiniTouchEnd}
         >
           {/* Progress Bar */}
           <div
@@ -240,9 +221,11 @@ export default function MobilePlayer(props: MobilePlayerProps) {
           </div>
 
           {/* Mini Player Content */}
-          <div
-            className="flex items-center gap-3 px-4 py-3"
-            onClick={() => setIsExpanded(true)}
+          <motion.div
+            className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+            onTap={handleMiniTap}
+            whileTap={{ scale: 0.99 }}
+            transition={springPresets.snappy}
           >
             {currentTrack.album.cover_small ? (
               <Image
@@ -267,12 +250,15 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 {currentTrack.artist.name}
               </p>
             </div>
-            <button
+            <motion.button
               onClick={(e) => {
                 e.stopPropagation();
                 handlePlayPause();
               }}
-              className="touch-target-lg flex-shrink-0 text-[var(--color-text)] transition hover:scale-105"
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              transition={springPresets.snappy}
+              className="touch-target-lg flex-shrink-0 text-[var(--color-text)]"
             >
               {isPlaying ? (
                 <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20">
@@ -291,44 +277,65 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                   />
                 </svg>
               )}
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={(e) => {
                 e.stopPropagation();
                 onNext();
               }}
               disabled={queue.length === 0}
-              className="touch-target-lg flex-shrink-0 text-[var(--color-subtext)] transition hover:text-[var(--color-text)] disabled:opacity-50"
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              transition={springPresets.snappy}
+              className="touch-target-lg flex-shrink-0 text-[var(--color-subtext)] hover:text-[var(--color-text)] disabled:opacity-50"
             >
               <svg className="h-7 w-7" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798l-5.445-3.63z" />
               </svg>
-            </button>
-          </div>
-        </div>
+            </motion.button>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Expanded Player */}
       {isExpanded && (
         <>
           {/* Backdrop */}
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[98] bg-black/90"
-            onClick={() => setIsExpanded(false)}
+            onClick={() => {
+              hapticLight();
+              setIsExpanded(false);
+            }}
           />
 
           {/* Full Player */}
-          <div className="safe-bottom fixed inset-0 z-[99] flex flex-col bg-[linear-gradient(165deg,rgba(13,20,29,0.98),rgba(8,13,20,0.92))]">
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.2 }}
+            onDragEnd={handleExpandedDragEnd}
+            style={{ y: dragY, opacity }}
+            transition={springPresets.gentle}
+            className="safe-bottom fixed inset-0 z-[99] flex flex-col bg-[linear-gradient(165deg,rgba(13,20,29,0.98),rgba(8,13,20,0.92))]"
+          >
             {/* Header with drag handle */}
-            <div
-              className="flex flex-col items-center pt-4"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
+            <div className="flex flex-col items-center pt-4 cursor-grab active:cursor-grabbing">
               <div className="bottom-sheet-handle mb-4" />
-              <button
-                onClick={() => setIsExpanded(false)}
+              <motion.button
+                onClick={() => {
+                  hapticLight();
+                  setIsExpanded(false);
+                }}
+                whileTap={{ scale: 0.9 }}
+                transition={springPresets.immediate}
                 className="touch-target text-[var(--color-subtext)]"
               >
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -339,12 +346,17 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     d="M19 9l-7 7-7-7"
                   />
                 </svg>
-              </button>
+              </motion.button>
             </div>
 
             {/* Album Art / Visualizer */}
             <div className="flex flex-1 items-center justify-center px-8 py-8">
-              <div className="relative w-full max-w-sm">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={springPresets.smooth}
+                className="relative w-full max-w-sm"
+              >
                 {/* Album Art */}
                 {!showVisualizer && coverArt ? (
                   <Image
@@ -378,11 +390,13 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 )}
 
                 {/* Visualizer Toggle Button */}
-                <button
+                <motion.button
                   onClick={() => {
                     hapticLight();
                     setShowVisualizer(!showVisualizer);
                   }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={springPresets.immediate}
                   className={`absolute right-4 top-4 touch-target rounded-full p-3 backdrop-blur-md transition-all ${
                     showVisualizer
                       ? "bg-[rgba(244,178,102,0.25)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.35)]"
@@ -391,7 +405,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                   title={showVisualizer ? "Show Album Art" : "Show Visualizer"}
                 >
                   <Activity className="h-6 w-6" />
-                </button>
+                </motion.button>
 
                 {/* Loading Indicator */}
                 {isLoading && (
@@ -399,7 +413,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     <div className="border-accent h-12 w-12 animate-spin rounded-full border-4 border-t-transparent" />
                   </div>
                 )}
-              </div>
+              </motion.div>
             </div>
 
             {/* Track Info */}
@@ -435,8 +449,10 @@ export default function MobilePlayer(props: MobilePlayerProps) {
 
             {/* Main Controls */}
             <div className="flex items-center justify-center gap-4 px-8 py-6">
-              <button
+              <motion.button
                 onClick={handleToggleShuffle}
+                whileTap={{ scale: 0.9 }}
+                transition={springPresets.snappy}
                 className={`touch-target rounded-full p-3 transition ${
                   isShuffled
                     ? "bg-[rgba(244,178,102,0.18)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.25)]"
@@ -450,20 +466,26 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     clipRule="evenodd"
                   />
                 </svg>
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
                 onClick={handlePrevious}
-                className="touch-target-lg text-[var(--color-text)] transition hover:scale-105"
+                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
+                transition={springPresets.snappy}
+                className="touch-target-lg text-[var(--color-text)]"
               >
                 <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
                 </svg>
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
                 onClick={handlePlayPause}
-                className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-text)] text-[#0f141d] shadow-[0_12px_32px_rgba(244,178,102,0.35)] transition hover:scale-105 active:scale-95"
+                whileTap={{ scale: 0.92 }}
+                whileHover={{ scale: 1.05 }}
+                transition={springPresets.snappy}
+                className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-text)] text-[#0f141d] shadow-[0_12px_32px_rgba(244,178,102,0.35)]"
               >
                 {isPlaying ? (
                   <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
@@ -482,20 +504,25 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     />
                   </svg>
                 )}
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
                 onClick={handleNext}
                 disabled={queue.length === 0}
-                className="touch-target-lg text-[var(--color-text)] transition hover:scale-105 disabled:opacity-50"
+                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
+                transition={springPresets.snappy}
+                className="touch-target-lg text-[var(--color-text)] disabled:opacity-50"
               >
                 <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798l-5.445-3.63z" />
                 </svg>
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
                 onClick={handleCycleRepeat}
+                whileTap={{ scale: 0.9 }}
+                transition={springPresets.snappy}
                 className={`touch-target rounded-full p-3 transition ${
                   repeatMode !== "none"
                     ? "bg-[rgba(244,178,102,0.18)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.25)]"
@@ -524,7 +551,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     />
                   </svg>
                 )}
-              </button>
+              </motion.button>
             </div>
 
             {/* Secondary Controls */}
@@ -628,7 +655,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 </button>
               )}
             </div>
-          </div>
+          </motion.div>
         </>
       )}
     </>

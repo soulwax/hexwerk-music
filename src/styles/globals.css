@@ -601,8 +601,16 @@ input, button { outline: none; }
 }
 
 /* ------------------------------------------------------------
-   📱 Mobile-First Touch Utilities
+   📱 Mobile-First Touch Utilities & Performance
 ------------------------------------------------------------- */
+
+/* Force GPU acceleration for all animated elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform;
+}
 
 /* Minimum touch target size (44x44px iOS, 48x48px Android) */
 .touch-target {
@@ -611,6 +619,9 @@ input, button { outline: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* GPU acceleration for better performance */
+  transform: translateZ(0);
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Larger touch target for primary actions */
@@ -620,13 +631,15 @@ input, button { outline: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transform: translateZ(0);
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Active state feedback for touch */
+/* Active state feedback for touch - optimized for 60fps */
 .touch-active:active {
-  transform: scale(0.95);
+  transform: scale(0.95) translateZ(0);
   opacity: 0.8;
-  transition: all 0.1s ease;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.1s ease;
 }
 
 /* Prevent text selection on touch interfaces */
@@ -834,10 +847,111 @@ input, button { outline: none; }
 /* Smooth transitions for all interactive elements */
 button, a, input, select, textarea {
   -webkit-tap-highlight-color: transparent;
+  /* GPU acceleration for interactive elements */
+  transform: translateZ(0);
 }
 
 /* Improved focus states */
 *:focus-visible {
   outline: none;
   box-shadow: var(--ring);
+}
+
+/* ------------------------------------------------------------
+   🚀 60fps Mobile Performance Optimizations
+------------------------------------------------------------- */
+
+/* Only animate transform and opacity for best performance */
+.animate-smooth {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Optimize repaints - use transform instead of top/left */
+.animate-position {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Contain layout changes to prevent reflows */
+.contain-layout {
+  contain: layout style paint;
+}
+
+/* Optimize scrolling performance on mobile */
+.scroll-optimized {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  /* Enable GPU-accelerated scrolling */
+  transform: translateZ(0);
+}
+
+/* Optimize list rendering */
+.list-optimized {
+  contain: layout style paint;
+  content-visibility: auto;
+}
+
+/* Reduce paint on hover/active states */
+.interactive-optimized {
+  /* Only animate GPU-accelerated properties */
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0.15s;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize images for mobile */
+img {
+  content-visibility: auto;
+}
+
+/* Prevent layout shifts on mobile */
+@media (max-width: 768px) {
+  /* Force hardware acceleration on mobile */
+  .card,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  button,
+  a {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Optimize animations for mobile */
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.15s !important;
+  }
+
+  /* Reduce motion on low-end devices */
+  @media (prefers-reduced-motion: no-preference) {
+    /* Enable smooth animations only on capable devices */
+    .smooth-animation {
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  }
+}
+
+/* Optimize touch feedback */
+@media (hover: none) and (pointer: coarse) {
+  /* Touch device optimizations */
+  button:active,
+  a:active,
+  .touch-target:active,
+  .touch-target-lg:active {
+    transform: scale(0.96) translateZ(0);
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Layer promotion for frequently animated elements */
+.layer-promote {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }

@@ -1,9 +1,13 @@
 // File: src/components/TrackCard.tsx
 
+"use client";
+
 import type { Track } from "@/types";
 import { getCoverImage } from "@/utils/images";
 import { hapticLight } from "@/utils/haptics";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import { springPresets } from "@/utils/spring-animations";
 
 export interface TrackCardProps {
   track: Track;
@@ -19,9 +23,12 @@ export default function TrackCard({ track, onPlay }: TrackCardProps) {
   };
 
   return (
-    <div
+    <motion.div
       onClick={handlePlay}
-      className="card touch-active group flex cursor-pointer items-center gap-3 p-3 transition-all duration-200 hover:scale-[1.01] hover:shadow-md md:gap-4 md:p-4"
+      whileHover={{ scale: 1.01, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={springPresets.snappy}
+      className="card group flex cursor-pointer items-center gap-3 p-3 md:gap-4 md:p-4"
     >
       <div className="relative flex-shrink-0">
         <Image
@@ -55,6 +62,6 @@ export default function TrackCard({ track, onPlay }: TrackCardProps) {
           {track.artist.name}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 }

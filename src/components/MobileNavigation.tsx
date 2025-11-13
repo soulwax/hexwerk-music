@@ -5,6 +5,9 @@
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { springPresets } from "@/utils/spring-animations";
+import { hapticLight } from "@/utils/haptics";
 
 export default function MobileNavigation() {
   const pathname = usePathname();
@@ -101,25 +104,77 @@ export default function MobileNavigation() {
     (tab) => !tab.requiresAuth || (tab.requiresAuth && session),
   );
 
+  const activeIndex = visibleTabs.findIndex((tab) => isActive(tab.path));
+
   return (
-    <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-40 border-t border-gray-800 bg-black/95 backdrop-blur-lg md:hidden">
-      <div className="flex items-center justify-around">
-        {visibleTabs.map((tab) => {
+    <motion.nav
+      initial={{ y: 100 }}
+      animate={{ y: 0 }}
+      transition={springPresets.gentle}
+      className="safe-bottom fixed bottom-0 left-0 right-0 z-40 border-t border-gray-800 bg-black/95 backdrop-blur-lg md:hidden"
+    >
+      <div className="relative flex items-center justify-around">
+        {/* Animated active indicator */}
+        <AnimatePresence mode="wait">
+          {activeIndex >= 0 && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute top-0 h-1 bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-strong)] rounded-b-full"
+              initial={false}
+              animate={{
+                left: `${(activeIndex / visibleTabs.length) * 100}%`,
+                width: `${100 / visibleTabs.length}%`,
+              }}
+              transition={springPresets.snappy}
+            />
+          )}
+        </AnimatePresence>
+
+        {visibleTabs.map((tab, index) => {
           const active = isActive(tab.path);
           return (
             <Link
               key={tab.path}
               href={tab.path}
-              className={`touch-target-lg flex flex-1 flex-col items-center justify-center gap-1 py-2 transition-all ${
-                active ? "text-accent scale-105" : "text-gray-400 hover:text-gray-200"
-              }`}
+              onClick={() => hapticLight()}
+              className="touch-target-lg relative flex flex-1 flex-col items-center justify-center gap-1 py-2"
             >
-              <div className={active ? "text-accent" : "opacity-80"}>{tab.icon}</div>
-              <span className={`text-xs font-medium ${active ? "text-accent" : "text-gray-300"}`}>{tab.name}</span>
+              <motion.div
+                animate={{
+                  scale: active ? 1.1 : 1,
+                  y: active ? -2 : 0,
+                }}
+                transition={springPresets.snappy}
+                className={active ? "text-[var(--color-accent)]" : "text-gray-400 opacity-80"}
+              >
+                {tab.icon}
+              </motion.div>
+              
+              <motion.span
+                animate={{
+                  scale: active ? 1 : 0.95,
+                  opacity: active ? 1 : 0.7,
+                }}
+                transition={springPresets.snappy}
+                className={`text-xs font-medium ${
+                  active ? "text-[var(--color-accent)]" : "text-gray-300"
+                }`}
+              >
+                {tab.name}
+              </motion.span>
+
+              {/* Ripple effect on tap */}
+              {active && (
+                <motion.div
+                  layoutId="activeIndicator"
+                  className="absolute -bottom-1 h-1 w-8 rounded-full bg-[var(--color-accent)] shadow-[0_0_10px_rgba(244,178,102,0.5)]"
+                  transition={springPresets.snappy}
+                />
+              )}
             </Link>
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 }
