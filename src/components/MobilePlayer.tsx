@@ -8,6 +8,16 @@ import { formatTime } from "@/utils/time";
 import { PLAYBACK_RATES } from "@/config/player";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
+import { getCoverImage } from "@/utils/images";
+import { Activity } from "lucide-react";
+
+// Dynamic import for visualizer
+const AudioVisualizer = dynamic(
+  () => import("./AudioVisualizer").then((mod) => mod.AudioVisualizer),
+  { ssr: false },
+);
 
 interface MobilePlayerProps {
   currentTrack: Track | null;
@@ -66,6 +76,9 @@ export default function MobilePlayer(props: MobilePlayerProps) {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showVisualizer, setShowVisualizer] = useState(false);
+  const [albumColorPalette, setAlbumColorPalette] = useState<ColorPalette | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const dragStartY = useRef<number>(0);
   const isDragging = useRef(false);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -112,6 +125,29 @@ export default function MobilePlayer(props: MobilePlayerProps) {
       document.body.style.overflow = "";
     };
   }, [isExpanded]);
+
+  // Extract colors from album art when track changes
+  useEffect(() => {
+    if (currentTrack) {
+      const coverUrl = getCoverImage(currentTrack, "big");
+      extractColorsFromImage(coverUrl)
+        .then(setAlbumColorPalette)
+        .catch((error) => {
+          console.error("Failed to extract colors:", error);
+          setAlbumColorPalette(null);
+        });
+    } else {
+      setAlbumColorPalette(null);
+    }
+  }, [currentTrack]);
+
+  // Get audio element
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const audio = document.querySelector("audio");
+      setAudioElement(audio);
+    }
+  }, []);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -306,10 +342,11 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               </button>
             </div>
 
-            {/* Album Art */}
+            {/* Album Art / Visualizer */}
             <div className="flex flex-1 items-center justify-center px-8 py-8">
               <div className="relative w-full max-w-sm">
-                {coverArt ? (
+                {/* Album Art */}
+                {!showVisualizer && coverArt ? (
                   <Image
                     src={coverArt}
                     alt={currentTrack.title}
@@ -319,11 +356,44 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     priority
                     quality={85}
                   />
-                ) : (
+                ) : !showVisualizer ? (
                   <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-[rgba(244,178,102,0.12)] text-6xl text-[var(--color-muted)]">
                     🎵
                   </div>
+                ) : null}
+
+                {/* Visualizer Overlay */}
+                {showVisualizer && audioElement && (
+                  <div className="aspect-square w-full overflow-hidden rounded-2xl">
+                    <AudioVisualizer
+                      audioElement={audioElement}
+                      isPlaying={isPlaying}
+                      width={400}
+                      height={400}
+                      barCount={64}
+                      colorPalette={albumColorPalette}
+                      blendWithBackground={true}
+                    />
+                  </div>
                 )}
+
+                {/* Visualizer Toggle Button */}
+                <button
+                  onClick={() => {
+                    hapticLight();
+                    setShowVisualizer(!showVisualizer);
+                  }}
+                  className={`absolute right-4 top-4 touch-target rounded-full p-3 backdrop-blur-md transition-all ${
+                    showVisualizer
+                      ? "bg-[rgba(244,178,102,0.25)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.35)]"
+                      : "bg-black/40 text-[var(--color-subtext)] hover:text-[var(--color-text)]"
+                  }`}
+                  title={showVisualizer ? "Show Album Art" : "Show Visualizer"}
+                >
+                  <Activity className="h-6 w-6" />
+                </button>
+
+                {/* Loading Indicator */}
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/60">
                     <div className="border-accent h-12 w-12 animate-spin rounded-full border-4 border-t-transparent" />

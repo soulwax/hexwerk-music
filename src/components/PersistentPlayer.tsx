@@ -11,6 +11,8 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import MobilePlayer from "./MobilePlayer";
 import MaturePlayer from "./Player";
+import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
+import { getCoverImage } from "@/utils/images";
 
 // Dynamic imports to prevent SSR issues with Web Audio API
 const AudioVisualizer = dynamic(
@@ -49,6 +51,7 @@ export default function PersistentPlayer() {
   // Initialize state from database preferences, with fallback to false
   const [showQueue, setShowQueue] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
+  const [albumColorPalette, setAlbumColorPalette] = useState<ColorPalette | null>(null);
 
   // Sync state with database preferences when they load
   useEffect(() => {
@@ -57,6 +60,21 @@ export default function PersistentPlayer() {
       setShowEqualizer(preferences.equalizerPanelOpen ?? false);
     }
   }, [preferences]);
+
+  // Extract colors from album art when track changes
+  useEffect(() => {
+    if (player.currentTrack) {
+      const coverUrl = getCoverImage(player.currentTrack, "medium");
+      extractColorsFromImage(coverUrl)
+        .then(setAlbumColorPalette)
+        .catch((error) => {
+          console.error("Failed to extract colors from album art:", error);
+          setAlbumColorPalette(null);
+        });
+    } else {
+      setAlbumColorPalette(null);
+    }
+  }, [player.currentTrack]);
 
   // Persist queue panel state to database
   useEffect(() => {
@@ -151,23 +169,22 @@ export default function PersistentPlayer() {
         />
       )}
 
-      {/* Audio Visualizer (embedded in player or as overlay) */}
-      {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && (
-        <div className="fixed left-4 z-40 hidden lg:block bottom-[162px]">
-          <div className="rounded-lg bg-black/80 p-2 backdrop-blur-lg">
-            <AudioVisualizer
-              audioElement={player.audioElement}
-              isPlaying={player.isPlaying}
-              width={200}
-              height={60}
-              barCount={24}
-              type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"}
-              onTypeChange={(newType) => {
-                updatePreferences.mutate({ visualizerType: newType });
-              }}
-            />
-          </div>
-        </div>
+      {/* Audio Visualizer - Draggable on Desktop, bigger, with album colors */}
+      {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && !isMobile && (
+        <AudioVisualizer
+          audioElement={player.audioElement}
+          isPlaying={player.isPlaying}
+          width={400}
+          height={150}
+          barCount={64}
+          type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"}
+          onTypeChange={(newType) => {
+            updatePreferences.mutate({ visualizerType: newType });
+          }}
+          colorPalette={albumColorPalette}
+          isDraggable={true}
+          blendWithBackground={true}
+        />
       )}
     </>
   );
