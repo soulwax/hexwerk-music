@@ -85,6 +85,64 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Mutation for logging recommendations
   const logRecommendationMutation = api.music.logRecommendation.useMutation();
 
+const hasCompleteTrackData = (track: Track | null | undefined): track is Track => {
+  if (!track) return false;
+
+  const {
+    id,
+    readable,
+    title,
+    title_short,
+    title_version,
+    duration,
+    rank,
+    explicit_lyrics,
+    explicit_content_lyrics,
+    explicit_content_cover,
+    preview,
+    md5_image,
+    artist,
+    album,
+  } = track as Partial<Track>;
+
+  return (
+    typeof id === "number" &&
+    typeof readable === "boolean" &&
+    typeof title === "string" &&
+    typeof title_short === "string" &&
+    typeof title_version === "string" &&
+    typeof duration === "number" &&
+    typeof rank === "number" &&
+    typeof explicit_lyrics === "boolean" &&
+    typeof explicit_content_lyrics === "number" &&
+    typeof explicit_content_cover === "number" &&
+    typeof preview === "string" &&
+    typeof md5_image === "string" &&
+    artist !== undefined &&
+    album !== undefined &&
+    typeof artist?.id === "number" &&
+    typeof artist?.name === "string" &&
+    typeof artist?.link === "string" &&
+    typeof artist?.picture === "string" &&
+    typeof artist?.picture_small === "string" &&
+    typeof artist?.picture_medium === "string" &&
+    typeof artist?.picture_big === "string" &&
+    typeof artist?.picture_xl === "string" &&
+    typeof artist?.tracklist === "string" &&
+    typeof artist?.type === "string" &&
+    typeof album?.id === "number" &&
+    typeof album?.title === "string" &&
+    typeof album?.cover === "string" &&
+    typeof album?.cover_small === "string" &&
+    typeof album?.cover_medium === "string" &&
+    typeof album?.cover_big === "string" &&
+    typeof album?.cover_xl === "string" &&
+    typeof album?.md5_image === "string" &&
+    typeof album?.tracklist === "string" &&
+    typeof album?.type === "string"
+  );
+};
+
   // Auto-queue trigger callback using the intelligent backend API
   const handleAutoQueueTrigger = useCallback(
     async (currentTrack: Track, _queueLength: number) => {
@@ -114,19 +172,29 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
         // Log the recommendation
         if (tracks && tracks.length > 0) {
-          logRecommendationMutation.mutate({
-        seedTracks: [currentTrack],
-        recommendedTracks: tracks,
-        source: "hexmusic-api",
-        requestParams: {
-          count: requestCount,
-          similarityLevel: smartQueueSettings.similarityPreference || "balanced",
-          useAudioFeatures: smartQueueSettings.smartMixEnabled,
-        },
-        responseTime,
-        success: true,
-        context: "auto-queue",
-          });
+          const validSeedTracks = hasCompleteTrackData(currentTrack) ? [currentTrack] : [];
+          const validRecommendedTracks = tracks.filter(hasCompleteTrackData);
+
+          if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
+            logRecommendationMutation.mutate({
+              seedTracks: validSeedTracks,
+              recommendedTracks: validRecommendedTracks,
+              source: "hexmusic-api",
+              requestParams: {
+                count: requestCount,
+                similarityLevel: smartQueueSettings.similarityPreference || "balanced",
+                useAudioFeatures: smartQueueSettings.smartMixEnabled,
+              },
+              responseTime,
+              success: true,
+              context: "auto-queue",
+            });
+          } else {
+            console.warn("[AudioPlayerContext] ⚠️ Skipping logRecommendation due to incomplete track data", {
+              seedTrackValid: validSeedTracks.length > 0,
+              recommendedCount: validRecommendedTracks.length,
+            });
+          }
         }
 
         return tracks ?? [];
@@ -141,11 +209,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const player = useAudioPlayer({
     onTrackChange: (track) => {
       if (track && session) {
-    if (track.duration && track.duration > 0) {
-      addToHistory.mutate({ track, totalDuration: track.duration });
-    } else {
-      addToHistory.mutate({ track });
-    }
+    addToHistory.mutate({
+      track,
+      duration: typeof track.duration === "number" ? track.duration : undefined,
+    });
       }
     },
     onAutoQueueTrigger: handleAutoQueueTrigger,
@@ -231,14 +298,24 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         if (tracks && tracks.length > 0) {
           // Log the recommendation
           if (seedTrack) {
-            logRecommendationMutation.mutate({
-              seedTracks: [seedTrack],
-              recommendedTracks: tracks,
-              source: "cached",
-              requestParams: { count },
-              success: true,
-              context: "similar-tracks",
-            });
+            const validSeedTracks = hasCompleteTrackData(seedTrack) ? [seedTrack] : [];
+            const validRecommendedTracks = tracks.filter(hasCompleteTrackData);
+
+            if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
+              logRecommendationMutation.mutate({
+                seedTracks: validSeedTracks,
+                recommendedTracks: validRecommendedTracks,
+                source: "cached",
+                requestParams: { count },
+                success: true,
+                context: "similar-tracks",
+              });
+            } else {
+              console.warn("[AudioPlayerContext] ⚠️ Skipping logRecommendation for similar tracks due to incomplete data", {
+                hasSeedTrack: validSeedTracks.length > 0,
+                recommendedCount: validRecommendedTracks.length,
+              });
+            }
           }
 
           console.log("[AudioPlayerContext] ➕ Adding tracks to queue...");
@@ -300,17 +377,27 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         if (result.tracks.length > 0) {
           // Log the smart mix generation
           if (seedTracks.length > 0) {
-            logRecommendationMutation.mutate({
-              seedTracks,
-              recommendedTracks: result.tracks,
-              source: "cached",
-              requestParams: {
-                count,
-                similarityLevel: smartQueueSettings?.similarityPreference ?? "balanced",
-              },
-              success: true,
-              context: "smart-mix",
-            });
+            const validSeedTracks = seedTracks.filter(hasCompleteTrackData);
+            const validRecommendedTracks = result.tracks.filter(hasCompleteTrackData);
+
+            if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
+              logRecommendationMutation.mutate({
+                seedTracks: validSeedTracks,
+                recommendedTracks: validRecommendedTracks,
+                source: "cached",
+                requestParams: {
+                  count,
+                  similarityLevel: smartQueueSettings?.similarityPreference ?? "balanced",
+                },
+                success: true,
+                context: "smart-mix",
+              });
+            } else {
+              console.warn("[AudioPlayerContext] ⚠️ Skipping smart-mix logRecommendation due to incomplete track data", {
+                seedCount: validSeedTracks.length,
+                recommendedCount: validRecommendedTracks.length,
+              });
+            }
           }
 
           console.log("[AudioPlayerContext] 🔄 Clearing queue and adding new tracks...");
