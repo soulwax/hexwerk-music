@@ -174,6 +174,41 @@ export const musicRouter = createTRPCRouter({
       return playlist;
     }),
 
+  updatePlaylistVisibility: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        isPublic: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const playlist = await ctx.db.query.playlists.findFirst({
+        where: and(
+          eq(playlists.id, input.id),
+          eq(playlists.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+
+      await ctx.db
+        .update(playlists)
+        .set({
+          isPublic: input.isPublic,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(playlists.id, input.id),
+            eq(playlists.userId, ctx.session.user.id),
+          ),
+        );
+
+      return { success: true, isPublic: input.isPublic };
+    }),
+
   getPlaylists: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.query.playlists.findMany({
       where: eq(playlists.userId, ctx.session.user.id),

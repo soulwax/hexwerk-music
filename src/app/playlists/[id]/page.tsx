@@ -4,11 +4,12 @@
 
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
+import { useToast } from "@/contexts/ToastContext";
 import { api } from "@/trpc/react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function PlaylistDetailPage() {
   const params = useParams<{ id: string }>();
