@@ -85,7 +85,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Mutation for logging recommendations
   const logRecommendationMutation = api.music.logRecommendation.useMutation();
 
-const hasCompleteTrackData = (track: Track | null | undefined): track is Track => {
+const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
   if (!track) return false;
 
   const {
@@ -173,7 +173,9 @@ const hasCompleteTrackData = (track: Track | null | undefined): track is Track =
         // Log the recommendation
         if (tracks && tracks.length > 0) {
           const validSeedTracks = hasCompleteTrackData(currentTrack) ? [currentTrack] : [];
-          const validRecommendedTracks = tracks.filter(hasCompleteTrackData);
+          const validRecommendedTracks = tracks.filter(
+            (t): t is Track => hasCompleteTrackData(t)
+          );
 
           if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
             logRecommendationMutation.mutate({
@@ -209,10 +211,16 @@ const hasCompleteTrackData = (track: Track | null | undefined): track is Track =
   const player = useAudioPlayer({
     onTrackChange: (track) => {
       if (track && session) {
-    addToHistory.mutate({
-      track,
-      duration: typeof track.duration === "number" ? track.duration : undefined,
-    });
+        if (hasCompleteTrackData(track)) {
+          addToHistory.mutate({
+            track,
+            duration: typeof track.duration === "number" ? track.duration : undefined,
+          });
+        } else {
+          console.warn("[AudioPlayerContext] ⚠️ Skipping addToHistory due to incomplete track data", {
+            trackId: track.id,
+          });
+        }
       }
     },
     onAutoQueueTrigger: handleAutoQueueTrigger,
@@ -299,7 +307,9 @@ const hasCompleteTrackData = (track: Track | null | undefined): track is Track =
           // Log the recommendation
           if (seedTrack) {
             const validSeedTracks = hasCompleteTrackData(seedTrack) ? [seedTrack] : [];
-            const validRecommendedTracks = tracks.filter(hasCompleteTrackData);
+            const validRecommendedTracks = tracks.filter(
+              (t): t is Track => hasCompleteTrackData(t)
+            );
 
             if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
               logRecommendationMutation.mutate({
@@ -377,8 +387,12 @@ const hasCompleteTrackData = (track: Track | null | undefined): track is Track =
         if (result.tracks.length > 0) {
           // Log the smart mix generation
           if (seedTracks.length > 0) {
-            const validSeedTracks = seedTracks.filter(hasCompleteTrackData);
-            const validRecommendedTracks = result.tracks.filter(hasCompleteTrackData);
+            const validSeedTracks = seedTracks.filter(
+              (t): t is Track => hasCompleteTrackData(t)
+            );
+            const validRecommendedTracks = result.tracks.filter(
+              (t): t is Track => hasCompleteTrackData(t)
+            );
 
             if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
               logRecommendationMutation.mutate({
