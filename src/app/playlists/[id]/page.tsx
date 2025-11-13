@@ -283,40 +283,6 @@ export default function PlaylistDetailPage() {
 
   return (
     <div className="flex min-h-screen flex-col pb-32">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-[rgba(244,178,102,0.12)] bg-[rgba(10,16,24,0.9)] backdrop-blur-lg">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <h1 className="accent-gradient text-glow text-2xl font-bold">
-                🌟 Starchild Music
-              </h1>
-            </Link>
-
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
-              >
-                Home
-              </Link>
-              <Link
-                href="/library"
-                className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
-              >
-                Library
-              </Link>
-              <Link
-                href="/playlists"
-                className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
-              >
-                Playlists
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         {/* Playlist Header */}
