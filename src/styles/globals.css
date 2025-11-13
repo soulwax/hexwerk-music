@@ -313,6 +313,31 @@ input, button { outline: none; }
   border: 1px solid rgba(244, 178, 102, 0.16);
 }
 
+.player-backdrop {
+  width: 100%;
+  border-top: 1px solid rgba(244, 178, 102, 0.16);
+  background: linear-gradient(135deg, rgba(18, 26, 38, 0.96), rgba(11, 17, 24, 0.96));
+  box-shadow: 0 -12px 32px rgba(5, 10, 18, 0.6);
+  backdrop-filter: blur(24px);
+  position: relative;
+}
+.player-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 15% 0%, rgba(244, 178, 102, 0.18), transparent 70%),
+              radial-gradient(100% 70% at 85% -10%, rgba(88, 198, 177, 0.14), transparent 65%);
+  pointer-events: none;
+  opacity: 0.75;
+}
+.player-backdrop-inner {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  width: min(1180px, 100%);
+  padding: 1rem 1.5rem 1.25rem;
+}
+
 .page-shell {
   position: relative;
   isolation: isolate;

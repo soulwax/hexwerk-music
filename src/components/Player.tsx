@@ -146,11 +146,11 @@ export default function MaturePlayer({
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="fixed right-0 bottom-0 left-0 z-50 border-t border-gray-800 bg-black/95 backdrop-blur-lg">
+    <div className="w-full">
       {/* Progress Bar */}
       <div
         ref={progressRef}
-        className="group relative h-1.5 w-full cursor-pointer bg-gray-700/50 transition-all hover:h-2"
+        className="group relative h-1.5 w-full cursor-pointer rounded-full bg-[rgba(255,255,255,0.12)] transition-all hover:h-2"
         onClick={handleProgressClick}
         onMouseDown={() => setIsDragging(true)}
         onMouseUp={() => setIsDragging(false)}
@@ -158,7 +158,7 @@ export default function MaturePlayer({
         onMouseLeave={() => setIsDragging(false)}
       >
         <div
-          className="accent-gradient h-full transition-all shadow-sm"
+          className="accent-gradient h-full rounded-full shadow-sm transition-all"
           style={{ width: `${progress}%` }}
         />
         <div
@@ -167,7 +167,7 @@ export default function MaturePlayer({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-4 px-4 py-3">
+      <div className="mt-2 flex items-center justify-between gap-4">
         {/* Track Info */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="relative flex-shrink-0">
@@ -182,7 +182,7 @@ export default function MaturePlayer({
                 quality={75}
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gray-800 text-gray-500">
+              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-[rgba(244,178,102,0.08)] text-[var(--color-muted)]">
                 🎵
               </div>
             )}
@@ -193,10 +193,10 @@ export default function MaturePlayer({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="truncate font-medium text-white">
+            <h4 className="truncate font-medium text-[var(--color-text)]">
               {currentTrack.title}
             </h4>
-            <p className="truncate text-sm text-gray-400">
+            <p className="truncate text-sm text-[var(--color-subtext)]">
               {currentTrack.artist.name}
             </p>
           </div>
@@ -210,8 +210,8 @@ export default function MaturePlayer({
               onClick={handleToggleShuffle}
               className={`rounded p-2 transition ${
                 isShuffled
-                  ? "bg-accent/20 text-accent"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-[rgba(244,178,102,0.16)] text-[var(--color-accent)] shadow-[0_0_16px_rgba(244,178,102,0.2)]"
+                  : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
               }`}
               title="Shuffle (S)"
             >
@@ -227,7 +227,7 @@ export default function MaturePlayer({
             {/* Previous */}
             <button
               onClick={handlePrevious}
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               title="Previous (Shift + ←)"
             >
               <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
@@ -238,7 +238,7 @@ export default function MaturePlayer({
             {/* Skip Backward */}
             <button
               onClick={onSkipBackward}
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               title="Skip backward 10s (←)"
             >
               <svg
@@ -259,7 +259,7 @@ export default function MaturePlayer({
             {/* Play/Pause */}
             <button
               onClick={handlePlayPause}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-text)] text-[#0f141d] shadow-[0_10px_28px_rgba(244,178,102,0.35)] transition hover:scale-105 active:scale-95"
               title="Play/Pause (Space)"
             >
               {isPlaying ? (
@@ -288,7 +288,7 @@ export default function MaturePlayer({
             {/* Skip Forward */}
             <button
               onClick={onSkipForward}
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               title="Skip forward 10s (→)"
             >
               <svg
@@ -309,7 +309,7 @@ export default function MaturePlayer({
             {/* Next */}
             <button
               onClick={handleNext}
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               disabled={queue.length === 0}
               title="Next (Shift + →)"
             >

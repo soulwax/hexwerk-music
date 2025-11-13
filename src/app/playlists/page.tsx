@@ -76,40 +76,7 @@ export default function PlaylistsPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <h1 className="accent-gradient text-glow text-2xl font-bold">
-                🌟 Starchild Music
-              </h1>
-            </Link>
-
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Home
-              </Link>
-              <Link
-                href="/library"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Library
-              </Link>
-              <Link
-                href="/playlists"
-                className="text-white"
-              >
-                Playlists
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+      { /* No Need For Header Because It's Already In The Header Component */ }
       {/* Main Content */}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         <div className="mb-8 flex items-center justify-between">

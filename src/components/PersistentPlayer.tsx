@@ -107,9 +107,9 @@ export default function PersistentPlayer() {
       {isMobile ? (
         <MobilePlayer {...playerProps} />
       ) : (
-        <div className="fixed right-0 bottom-0 left-0 z-50">
-          <div className="container">
-            <div className="card p-3">
+        <div className="fixed inset-x-0 bottom-0 z-50">
+          <div className="player-backdrop">
+            <div className="player-backdrop-inner">
               <MaturePlayer {...playerProps} />
             </div>
           </div>
