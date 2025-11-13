@@ -270,15 +270,27 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       setCurrentTrack(track);
 
       // Set new source and load
-      try {
-        audioRef.current.src = streamUrl;
-        audioRef.current.load();
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
-        } else {
-          console.error("[useAudioPlayer] Failed to load new audio source:", error);
+      const applySource = () => {
+        try {
+          audioRef.current!.src = streamUrl;
+          audioRef.current!.load();
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
+            return false;
+          } else {
+            console.error("[useAudioPlayer] Failed to load new audio source:", error);
+          }
         }
+        return true;
+      };
+
+      let applied = applySource();
+      if (!applied) {
+        setTimeout(() => {
+          if (!audioRef.current) return;
+          applySource();
+        }, 50);
       }
 
       onTrackChange?.(track);
