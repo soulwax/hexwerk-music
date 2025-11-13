@@ -199,9 +199,13 @@ export default function PlaylistsPage() {
                       {playlist.tracks?.length ?? 0} track
                       {(playlist.tracks?.length ?? 0) !== 1 ? "s" : ""}
                     </span>
-                    {playlist.isPublic && (
-                      <span className="text-accent">• Public</span>
-                    )}
+                    <span
+                      className={
+                        playlist.isPublic ? "text-accent" : "text-gray-400"
+                      }
+                    >
+                      • {playlist.isPublic ? "Public" : "Private"}
+                    </span>
                   </div>
                 </div>
               </Link>

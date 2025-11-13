@@ -246,15 +246,41 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       if (!audioRef.current) return;
 
       // Pause and reset current audio to prevent "aborted" errors on rapid track changes
-      audioRef.current.pause();
-      audioRef.current.src = "";
+      try {
+        audioRef.current.pause();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.debug("[useAudioPlayer] Audio pause aborted (ignored).");
+        } else {
+          console.warn("[useAudioPlayer] Failed to pause audio element:", error);
+        }
+      }
+
+      try {
+        audioRef.current.src = "";
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.debug("[useAudioPlayer] Audio source reset aborted (ignored).");
+        } else {
+          console.warn("[useAudioPlayer] Failed to reset audio source:", error);
+        }
+      }
 
       setHistory((prev) => (currentTrack ? [...prev, currentTrack] : prev));
       setCurrentTrack(track);
 
       // Set new source and load
-      audioRef.current.src = streamUrl;
-      audioRef.current.load();
+      try {
+        audioRef.current.src = streamUrl;
+        audioRef.current.load();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
+        } else {
+          console.error("[useAudioPlayer] Failed to load new audio source:", error);
+        }
+      }
+
       onTrackChange?.(track);
     },
     [currentTrack, onTrackChange]

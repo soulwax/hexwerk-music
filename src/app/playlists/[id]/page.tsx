@@ -17,9 +17,11 @@ export default function PlaylistDetailPage() {
   const playlistId = parseInt(params.id);
   const player = useGlobalPlayer();
   const { data: session } = useSession();
+  const { showToast } = useToast();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [localVisibility, setLocalVisibility] = useState<boolean | null>(null);
 
   // Try authenticated query first if user is logged in
   const { data: privatePlaylist, isLoading: isLoadingPrivate } =
@@ -43,6 +45,7 @@ export default function PlaylistDetailPage() {
   const isOwner: boolean = !!session && !!privatePlaylist;
 
   const utils = api.useUtils();
+  const updateVisibilityMutation = api.music.updatePlaylistVisibility.useMutation();
   const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
     onSuccess: async () => {
       try {
@@ -104,7 +107,9 @@ export default function PlaylistDetailPage() {
   };
 
   const handleSharePlaylist = async (): Promise<void> => {
-    if (!playlist?.isPublic) {
+    const canShare = (localVisibility ?? playlist?.isPublic) ?? false;
+
+    if (!canShare) {
       alert("Only public playlists can be shared!");
       return;
     }
@@ -117,6 +122,43 @@ export default function PlaylistDetailPage() {
     } catch (error) {
       console.error("Failed to copy:", error);
       alert("Failed to copy link to clipboard");
+    }
+  };
+
+  useEffect(() => {
+    if (playlist) {
+      setLocalVisibility(playlist.isPublic);
+    }
+  }, [playlist?.isPublic]);
+
+  const handleToggleVisibility = async (): Promise<void> => {
+    if (!playlist) return;
+
+    const currentVisibility = localVisibility ?? playlist.isPublic;
+    const nextVisibility = !currentVisibility;
+
+    setLocalVisibility(nextVisibility);
+
+    try {
+      await updateVisibilityMutation.mutateAsync({
+        id: playlist.id,
+        isPublic: nextVisibility,
+      });
+      await Promise.all([
+        utils.music.getPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPublicPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPlaylists.invalidate(),
+      ]);
+      showToast(
+        nextVisibility
+          ? "Playlist is now public"
+          : "Playlist is now private",
+        "success",
+      );
+    } catch (error) {
+      console.error("Failed to update playlist visibility:", error);
+      setLocalVisibility(playlist.isPublic);
+      showToast("Failed to update playlist visibility", "error");
     }
   };
 
@@ -191,6 +233,8 @@ export default function PlaylistDetailPage() {
     );
   }
 
+  const effectiveIsPublic = (localVisibility ?? playlist.isPublic) ?? false;
+
   return (
     <div className="flex min-h-screen flex-col pb-32">
       {/* Header */}
@@ -259,9 +303,9 @@ export default function PlaylistDetailPage() {
               )}
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span>{playlist.tracks.length} tracks</span>
-                {playlist.isPublic && (
-                  <span className="text-accent">Public</span>
-                )}
+                <span className={effectiveIsPublic ? "text-accent" : "text-gray-400"}>
+                  {effectiveIsPublic ? "Public" : "Private"}
+                </span>
                 <span>
                   Created {new Date(playlist.createdAt).toLocaleDateString()}
                 </span>
@@ -285,7 +329,23 @@ export default function PlaylistDetailPage() {
               Play All
             </button>
 
-            {playlist.isPublic && (
+            {isOwner && (
+              <button
+                onClick={handleToggleVisibility}
+                className="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700"
+                disabled={updateVisibilityMutation.isPending}
+              >
+                {updateVisibilityMutation.isPending ? (
+                  "Updating..."
+                ) : effectiveIsPublic ? (
+                  "Make Private"
+                ) : (
+                  "Make Public"
+                )}
+              </button>
+            )}
+
+            {effectiveIsPublic && (
               <button
                 onClick={handleSharePlaylist}
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
