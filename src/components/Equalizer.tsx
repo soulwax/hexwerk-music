@@ -70,8 +70,8 @@ export function Equalizer({ equalizer, onClose }: EqualizerProps) {
       />
 
       {/* Compact Floating Panel */}
-      <div className="fixed right-4 top-20 z-50 w-full max-w-sm animate-in slide-in-from-right duration-300">
-        <div className="relative overflow-hidden rounded-2xl border border-[rgba(244,178,102,0.16)] bg-[rgba(10,16,24,0.95)] shadow-[0_28px_60px_rgba(5,10,18,0.65)] backdrop-blur-xl">
+      <div className="fixed right-4 top-4 z-50 w-full max-w-sm max-h-[calc(100vh-180px)] animate-in slide-in-from-right duration-300 sm:top-20 sm:right-6">
+        <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-[rgba(244,178,102,0.16)] bg-[rgba(10,16,24,0.95)] shadow-[0_28px_60px_rgba(5,10,18,0.65)] backdrop-blur-xl">
           {/* Magical glow effect when enabled */}
           {equalizer.isEnabled && (
             <div className="pointer-events-none absolute inset-0 opacity-20">
@@ -79,63 +79,65 @@ export function Equalizer({ equalizer, onClose }: EqualizerProps) {
             </div>
           )}
 
-          {/* Header */}
-          <div className="relative flex items-center justify-between border-b border-[rgba(244,178,102,0.12)] bg-black/25 px-4 py-3 backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,var(--color-accent),var(--color-accent-strong))] shadow-lg shadow-[rgba(244,178,102,0.3)]">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
-              <h2 className="text-lg font-bold text-[var(--color-text)]">Equalizer</h2>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleReset}
-                className="group rounded-lg p-2 text-[var(--color-subtext)] transition-all hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)] active:scale-95"
-                title="Reset to flat"
-              >
-                <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-180" />
-              </button>
-              <button
-                onClick={handleToggle}
-                className={`group relative rounded-lg p-2 transition-all active:scale-95 ${
-                  equalizer.isEnabled
-                    ? "bg-[linear-gradient(135deg,var(--color-accent),var(--color-accent-strong))] text-[var(--color-text)] shadow-lg shadow-[rgba(244,178,102,0.3)]"
-                    : "text-[var(--color-subtext)] hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)]"
-                }`}
-                title={equalizer.isEnabled ? "Disable EQ" : "Enable EQ"}
-              >
-                <Power className="h-4 w-4" />
-                {equalizer.isEnabled && (
-                  <span className="absolute inset-0 animate-ping rounded-lg bg-[rgba(244,178,102,0.4)] opacity-30" />
-                )}
-              </button>
-              <button
-                onClick={handleClose}
-                className="rounded-lg p-2 text-[var(--color-subtext)] transition-all hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)] active:scale-95"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {!equalizer.isInitialized ? (
-            <div className="flex items-center justify-center p-12 text-center">
-              <div className="space-y-3">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--color-accent),var(--color-accent-strong))] shadow-xl shadow-[rgba(244,178,102,0.35)]">
-                  <Sparkles className="h-8 w-8 animate-pulse text-white" />
+          <div className="flex h-full flex-col overflow-hidden">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[rgba(244,178,102,0.12)] bg-black/30 px-4 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,var(--color-accent),var(--color-accent-strong))] shadow-lg shadow-[rgba(244,178,102,0.3)]">
+                  <Sparkles className="h-4 w-4 text-white" />
                 </div>
-                <p className="text-sm text-[var(--color-text)]">
-                  Click anywhere to enable equalizer
-                </p>
-                <p className="text-xs text-[var(--color-subtext)]">
-                  Web Audio API requires user interaction
-                </p>
+                <h2 className="text-lg font-bold text-[var(--color-text)]">Equalizer</h2>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleReset}
+                  className="group rounded-lg p-2 text-[var(--color-subtext)] transition-all hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)] active:scale-95"
+                  title="Reset to flat"
+                >
+                  <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-180" />
+                </button>
+                <button
+                  onClick={handleToggle}
+                  className={`group relative rounded-lg p-2 transition-all active:scale-95 ${
+                    equalizer.isEnabled
+                      ? "bg-[linear-gradient(135deg,var(--color-accent),var(--color-accent-strong))] text-[var(--color-text)] shadow-lg shadow-[rgba(244,178,102,0.3)]"
+                      : "text-[var(--color-subtext)] hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)]"
+                  }`}
+                  title={equalizer.isEnabled ? "Disable EQ" : "Enable EQ"}
+                >
+                  <Power className="h-4 w-4" />
+                  {equalizer.isEnabled && (
+                    <span className="absolute inset-0 animate-ping rounded-lg bg-[rgba(244,178,102,0.4)] opacity-30" />
+                  )}
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="rounded-lg p-2 text-[var(--color-subtext)] transition-all hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)] active:scale-95"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Presets Dropdown */}
-              <div className="relative border-b border-[rgba(244,178,102,0.12)] bg-black/15 p-4">
+
+            <div className="flex-1 overflow-y-auto">
+              {!equalizer.isInitialized ? (
+                <div className="flex items-center justify-center p-12 text-center">
+                  <div className="space-y-3">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--color-accent),var(--color-accent-strong))] shadow-xl shadow-[rgba(244,178,102,0.35)]">
+                      <Sparkles className="h-8 w-8 animate-pulse text-white" />
+                    </div>
+                    <p className="text-sm text-[var(--color-text)]">
+                      Click anywhere to enable equalizer
+                    </p>
+                    <p className="text-xs text-[var(--color-subtext)]">
+                      Web Audio API requires user interaction
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Presets Dropdown */}
+                  <div className="relative border-b border-[rgba(244,178,102,0.12)] bg-black/15 p-4">
                 <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[var(--color-subtext)]">
                   Preset
                 </label>
@@ -278,9 +280,11 @@ export function Equalizer({ equalizer, onClose }: EqualizerProps) {
                     Drag sliders to adjust • Range: -12dB to +12dB
                   </p>
                 </div>
-              </div>
-            </>
-          )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>

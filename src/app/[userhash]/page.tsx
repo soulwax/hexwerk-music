@@ -112,7 +112,7 @@ export default function PublicProfilePage({
               onAddToQueue={(track) => addToQueue(track)}
             />
           )}
-          gridColumns={3}
+          gridColumns={2}
           emptyMessage="No recent tracks yet"
         />
 

@@ -153,7 +153,7 @@ export default function PersistentPlayer() {
 
       {/* Audio Visualizer (embedded in player or as overlay) */}
       {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && (
-        <div className="fixed bottom-20 left-4 z-40 hidden lg:block">
+        <div className="fixed left-4 z-40 hidden lg:block bottom-[162px]">
           <div className="rounded-lg bg-black/80 p-2 backdrop-blur-lg">
             <AudioVisualizer
               audioElement={player.audioElement}

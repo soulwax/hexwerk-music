@@ -267,7 +267,7 @@ export default function PlaylistDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="mb-4 text-gray-400">Playlist not found</p>
+          <p className="mb-4 text-[var(--color-subtext)]">Playlist not found</p>
           <Link href="/playlists" className="text-accent hover:underline">
             Back to Playlists
           </Link>
@@ -284,7 +284,7 @@ export default function PlaylistDetailPage() {
   return (
     <div className="flex min-h-screen flex-col pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-40 border-b border-[rgba(244,178,102,0.12)] bg-[rgba(10,16,24,0.9)] backdrop-blur-lg">
         <div className="mx-auto max-w-7xl px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
@@ -296,19 +296,19 @@ export default function PlaylistDetailPage() {
             <nav className="flex items-center gap-4">
               <Link
                 href="/"
-                className="text-gray-300 transition hover:text-white"
+                className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               >
                 Home
               </Link>
               <Link
                 href="/library"
-                className="text-gray-300 transition hover:text-white"
+                className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               >
                 Library
               </Link>
               <Link
                 href="/playlists"
-                className="text-gray-300 transition hover:text-white"
+                className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               >
                 Playlists
               </Link>
@@ -324,7 +324,7 @@ export default function PlaylistDetailPage() {
           <div className="mb-2 flex items-start gap-2">
             <Link
               href="/playlists"
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
             >
               <svg
                 className="h-6 w-6"
@@ -348,17 +348,17 @@ export default function PlaylistDetailPage() {
                       <input
                         value={draftTitle}
                         onChange={(e) => setDraftTitle(e.target.value)}
-                        className="w-full rounded-lg bg-gray-900 px-3 py-2 text-3xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-accent"
+                        className="input-text w-full text-3xl font-bold"
                         maxLength={256}
                       />
                     ) : (
-                      <h1 className="text-3xl font-bold text-white">
+                      <h1 className="text-3xl font-bold text-[var(--color-text)]">
                         {playlist.name}
                       </h1>
                     )}
                     <button
                       onClick={() => setIsEditingTitle((prev) => !prev)}
-                      className="rounded-lg bg-gray-800 px-3 py-1 text-sm text-gray-200 transition hover:bg-gray-700"
+                      className="btn-secondary px-3 py-1 text-sm"
                     >
                       {isEditingTitle ? "Cancel" : "Rename"}
                     </button>
@@ -368,21 +368,21 @@ export default function PlaylistDetailPage() {
                       <textarea
                         value={draftDescription}
                         onChange={(e) => setDraftDescription(e.target.value)}
-                        className="w-full rounded-lg bg-gray-900 px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent"
+                        className="input-text h-full min-h-[90px] w-full"
                         rows={3}
                         maxLength={1024}
                         placeholder="Add a description..."
                       />
                     ) : playlist.description ? (
-                      <p className="text-gray-400">{playlist.description}</p>
+                      <p className="text-[var(--color-subtext)]">{playlist.description}</p>
                     ) : (
-                      <p className="italic text-gray-600">
+                      <p className="italic text-[var(--color-muted)]">
                         No description yet.
                       </p>
                     )}
                     <button
                       onClick={() => setIsEditingDescription((prev) => !prev)}
-                      className="rounded-lg bg-gray-800 px-3 py-1 text-sm text-gray-200 transition hover:bg-gray-700"
+                      className="btn-secondary px-3 py-1 text-sm"
                     >
                       {isEditingDescription ? "Cancel" : "Edit Description"}
                     </button>
@@ -390,17 +390,17 @@ export default function PlaylistDetailPage() {
                 </div>
               ) : (
                 <>
-                  <h1 className="mb-2 text-3xl font-bold text-white">
+                  <h1 className="mb-2 text-3xl font-bold text-[var(--color-text)]">
                     {playlist.name}
                   </h1>
                   {playlist.description && (
-                    <p className="mb-4 text-gray-400">{playlist.description}</p>
+                    <p className="mb-4 text-[var(--color-subtext)]">{playlist.description}</p>
                   )}
                 </>
               )}
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-4 text-sm text-[var(--color-muted)]">
                 <span>{playlist.tracks.length} tracks</span>
-                <span className={effectiveIsPublic ? "text-accent" : "text-gray-400"}>
+                <span className={effectiveIsPublic ? "text-[var(--color-accent)]" : "text-[var(--color-subtext)]"}>
                   {effectiveIsPublic ? "Public" : "Private"}
                 </span>
                 <span>
@@ -429,7 +429,7 @@ export default function PlaylistDetailPage() {
             {isOwner && (
               <button
                 onClick={handleToggleVisibility}
-                className="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700"
+                className="btn-secondary flex items-center gap-2 text-sm"
                 disabled={updateVisibilityMutation.isPending}
               >
                 {updateVisibilityMutation.isPending ? (
@@ -445,7 +445,7 @@ export default function PlaylistDetailPage() {
             {isOwner && (
               <button
                 onClick={handleSaveMetadata}
-                className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-primary flex items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!isDirty || isSavingMetadata}
               >
                 {isSavingMetadata ? "Saving..." : "Save Changes"}
@@ -455,7 +455,7 @@ export default function PlaylistDetailPage() {
             {effectiveIsPublic && (
               <button
                 onClick={handleSharePlaylist}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
+                className="btn-secondary flex items-center gap-2 text-sm"
               >
                 <svg
                   className="h-5 w-5"
@@ -481,7 +481,7 @@ export default function PlaylistDetailPage() {
                     deletePlaylist.mutate({ id: playlistId });
                   }
                 }}
-                className="rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
+                className="btn-danger"
               >
                 Delete Playlist
               </button>
@@ -491,7 +491,7 @@ export default function PlaylistDetailPage() {
 
         {/* Drag-and-drop hint */}
         {isOwner && playlist.tracks && playlist.tracks.length > 0 && (
-          <div className="mb-4 rounded-lg bg-gray-800/50 px-4 py-2 text-sm text-gray-400">
+          <div className="mb-4 rounded-lg bg-[rgba(16,22,31,0.65)] px-4 py-2 text-sm text-[var(--color-subtext)]">
             💡 Tip: Drag and drop tracks to reorder them
           </div>
         )}
@@ -516,7 +516,7 @@ export default function PlaylistDetailPage() {
                 <div className="flex items-center gap-3">
                   {/* Drag handle or track number */}
                   {isOwner ? (
-                    <div className="flex flex-col items-center text-gray-500">
+                    <div className="flex flex-col items-center text-[var(--color-muted)]">
                       <svg
                         className="h-5 w-5"
                         fill="currentColor"
@@ -527,7 +527,7 @@ export default function PlaylistDetailPage() {
                       <span className="text-xs">{index + 1}</span>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center text-gray-500">
+                    <div className="flex items-center justify-center text-[var(--color-muted)]">
                       <span className="text-sm font-medium">{index + 1}</span>
                     </div>
                   )}
@@ -546,7 +546,7 @@ export default function PlaylistDetailPage() {
                   {isOwner && (
                     <button
                       onClick={() => handleRemoveTrack(item.id)}
-                      className="rounded-full bg-gray-900/80 p-2 text-gray-400 transition hover:text-red-500"
+                      className="rounded-full bg-[rgba(16,22,31,0.85)] p-2 text-[var(--color-subtext)] transition hover:text-[var(--color-danger)]"
                       title="Remove from playlist"
                     >
                       <svg
@@ -569,13 +569,13 @@ export default function PlaylistDetailPage() {
         ) : (
           <div className="py-12 text-center">
             <svg
-              className="mx-auto mb-4 h-16 w-16 text-gray-600"
+              className="mx-auto mb-4 h-16 w-16 text-[var(--color-muted)]"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
               <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
             </svg>
-            <p className="mb-2 text-gray-400">This playlist is empty</p>
+            <p className="mb-2 text-[var(--color-subtext)]">This playlist is empty</p>
             <Link href="/" className="text-accent hover:underline">
               Search for music to add tracks
             </Link>

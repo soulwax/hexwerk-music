@@ -149,6 +149,29 @@ input, button { outline: none; }
 }
 .btn-secondary:focus-visible { box-shadow: var(--ring); }
 
+.btn-danger {
+  background: rgba(242, 139, 130, 0.12);
+  color: var(--color-danger);
+  border: 1px solid rgba(242, 139, 130, 0.35);
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
+  transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(242, 139, 130, 0.25);
+}
+.btn-danger:hover {
+  background: rgba(242, 139, 130, 0.18);
+  border-color: rgba(242, 139, 130, 0.48);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(242, 139, 130, 0.32);
+}
+.btn-danger:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(242, 139, 130, 0.25);
+}
+.btn-danger:focus-visible { box-shadow: 0 0 0 4px rgba(242, 139, 130, 0.25); }
+
 .btn-ghost {
   background: transparent;
   color: var(--color-text);

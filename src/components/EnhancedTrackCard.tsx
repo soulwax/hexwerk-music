@@ -130,14 +130,14 @@ export default function EnhancedTrackCard({
   const coverImage = getCoverImage(track);
 
   return (
-    <div className="card group relative flex items-center gap-3 p-3 transition-all duration-200 hover:scale-[1.01] hover:shadow-lg md:gap-4 md:p-4">
+    <div className="card group relative flex items-center gap-4 p-4 transition-all duration-200 hover:scale-[1.015] hover:shadow-lg md:gap-5 md:p-5">
       <div className="relative flex-shrink-0">
         <Image
           src={coverImage}
           alt={track.title}
-          width={80}
-          height={80}
-          className="h-16 w-16 rounded-lg shadow-md ring-2 ring-white/5 transition-all group-hover:ring-[var(--color-accent)]/30 md:h-16 md:w-16"
+          width={96}
+          height={96}
+          className="h-20 w-20 rounded-xl shadow-md ring-2 ring-white/5 transition-all group-hover:ring-[var(--color-accent)]/30 md:h-20 md:w-20"
           loading="lazy"
           quality={75}
         />
@@ -159,22 +159,22 @@ export default function EnhancedTrackCard({
         </button>
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 space-y-1.5">
         <h3
-          className="no-select cursor-pointer truncate text-base font-semibold text-[var(--color-text)] transition-colors hover:text-[var(--color-accent-light)] hover:underline md:text-base"
+          className="no-select cursor-pointer text-lg font-semibold leading-tight text-[var(--color-text)] transition-colors hover:text-[var(--color-accent-light)] hover:underline md:text-xl line-clamp-2"
           onClick={handlePlay}
         >
           {track.title}
         </h3>
-        <p className="truncate text-sm text-[var(--color-subtext)]">
+        <p className="text-base text-[var(--color-subtext)] line-clamp-1">
           {track.artist.name}
         </p>
-        <p className="truncate text-xs text-[var(--color-muted)]">
+        <p className="text-sm text-[var(--color-muted)] line-clamp-1">
           {track.album.title}
         </p>
       </div>
 
-      <div className="hidden flex-shrink-0 text-sm text-[var(--color-subtext)] sm:block">
+      <div className="hidden flex-shrink-0 text-sm font-medium text-[var(--color-subtext)] lg:block">
         {formatDuration(track.duration)}
       </div>
 
@@ -185,7 +185,7 @@ export default function EnhancedTrackCard({
             className={`touch-target touch-active rounded-full transition-all ${
               favoriteData?.isFavorite
                 ? "text-[var(--color-danger)] hover:text-red-400"
-                : "text-[var(--color-subtext)] hover:scale-110 hover:text-white"
+                : "text-[var(--color-subtext)] hover:scale-110 hover:text-[var(--color-text)]"
             }`}
             disabled={addFavorite.isPending || removeFavorite.isPending}
           >

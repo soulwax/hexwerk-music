@@ -323,8 +323,8 @@ export default function MaturePlayer({
               onClick={handleCycleRepeat}
               className={`rounded p-2 transition ${
                 repeatMode !== "none"
-                  ? "bg-accent/20 text-accent"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-[rgba(244,178,102,0.16)] text-[var(--color-accent)] shadow-[0_0_16px_rgba(244,178,102,0.2)]"
+                  : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
               }`}
               title={`Repeat: ${repeatMode} (R)`}
             >
@@ -364,9 +364,9 @@ export default function MaturePlayer({
           </div>
 
           {/* Time Display */}
-          <div className="flex items-center gap-2 text-xs font-medium text-gray-300">
+        <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-subtext)]">
             <span>{formatTime(currentTime)}</span>
-            <span className="text-gray-500">/</span>
+          <span className="text-[var(--color-muted)]">/</span>
             <span>{formatTime(duration)}</span>
           </div>
         </div>
@@ -375,7 +375,7 @@ export default function MaturePlayer({
         <div className="flex flex-1 items-center justify-end gap-3">
           {/* Queue indicator */}
           {queue.length > 0 && (
-            <span className="hidden text-sm text-gray-400 lg:block">
+            <span className="hidden text-sm text-[var(--color-subtext)] lg:block">
               {queue.length} in queue
             </span>
           )}
@@ -384,7 +384,7 @@ export default function MaturePlayer({
           <div className="relative hidden md:block">
             <button
               onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-              className="rounded px-2 py-1 text-xs font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
+            className="rounded px-2 py-1 text-xs font-medium text-[var(--color-subtext)] transition hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)]"
             >
               {playbackRate}x
             </button>
@@ -394,7 +394,7 @@ export default function MaturePlayer({
                   className="fixed inset-0 z-10"
                   onClick={() => setShowSpeedMenu(false)}
                 />
-                <div className="absolute bottom-full right-0 z-20 mb-2 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg">
+                <div className="absolute bottom-full right-0 z-20 mb-2 rounded-lg border border-[rgba(244,178,102,0.18)] bg-[rgba(12,18,27,0.95)] py-2 shadow-lg shadow-[rgba(5,10,18,0.6)] backdrop-blur-lg">
                   {PLAYBACK_RATES.map((rate) => (
                     <button
                       key={rate}
@@ -402,10 +402,10 @@ export default function MaturePlayer({
                         onPlaybackRateChange(rate);
                         setShowSpeedMenu(false);
                       }}
-                      className={`w-full px-4 py-2 text-left text-sm transition hover:bg-gray-800 ${
+                      className={`w-full px-4 py-2 text-left text-sm transition hover:bg-[rgba(244,178,102,0.12)] ${
                         playbackRate === rate
-                          ? "text-accent"
-                          : "text-gray-400"
+                          ? "text-[var(--color-accent)]"
+                          : "text-[var(--color-subtext)]"
                       }`}
                     >
                       {rate}x
@@ -424,7 +424,7 @@ export default function MaturePlayer({
           >
             <button
               onClick={onToggleMute}
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               title="Mute/Unmute (M)"
             >
               {isMuted || volume === 0 ? (
@@ -465,7 +465,7 @@ export default function MaturePlayer({
                 step={0.01}
                 value={volume}
                 onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-                className="accent-accent h-1 w-full cursor-pointer appearance-none rounded-full bg-gray-700"
+                className="accent-accent h-1 w-full cursor-pointer appearance-none rounded-full bg-[rgba(255,255,255,0.12)]"
                 title="Volume (↑↓)"
               />
             </div>
@@ -475,7 +475,7 @@ export default function MaturePlayer({
           {onToggleQueue && (
             <button
               onClick={onToggleQueue}
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               title="Queue (Q)"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,7 +493,7 @@ export default function MaturePlayer({
           {onToggleEqualizer && (
             <button
               onClick={onToggleEqualizer}
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               title="Equalizer (E)"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
