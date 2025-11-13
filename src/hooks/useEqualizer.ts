@@ -140,6 +140,10 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
 
   useEffect(() => {
     if (!isAuthenticated && status !== "loading") {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
       loadLocalPreferences();
     }
   }, [isAuthenticated, status, loadLocalPreferences]);
@@ -307,16 +311,25 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
         }
       }
 
-      // Save toggle state to database
-      updatePreferencesMutation.mutate({
-        enabled: newState,
-        bands: bands.map((b) => b.gain),
-        preset: currentPreset,
-      });
+      persistLocalPreferences(bands, currentPreset, newState);
+
+      if (isAuthenticated) {
+        updatePreferencesMutation.mutate({
+          enabled: newState,
+          bands: bands.map((b) => b.gain),
+          preset: currentPreset,
+        });
+      }
 
       return newState;
     });
-  }, [updatePreferencesMutation, bands, currentPreset]);
+  }, [
+    updatePreferencesMutation,
+    bands,
+    currentPreset,
+    persistLocalPreferences,
+    isAuthenticated,
+  ]);
 
   // Initialize when audio element is available
   useEffect(() => {
