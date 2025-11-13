@@ -465,6 +465,10 @@ const hasCompleteTrackData = (track: Track | null | undefined): track is Track =
         isPublic: false,
       });
 
+      if (!playlist) {
+        throw new Error("Playlist creation returned no data");
+      }
+
       for (const track of tracksToSave) {
         await addToPlaylistMutation.mutateAsync({
           playlistId: playlist.id,
