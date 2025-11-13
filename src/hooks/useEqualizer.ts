@@ -2,7 +2,10 @@
 
 "use client";
 
+import { STORAGE_KEYS } from "@/config/storage";
+import { localStorage as storage } from "@/services/storage";
 import { api } from "@/trpc/react";
+import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface EqualizerBand {
@@ -45,18 +48,55 @@ export function useEqualizer(audioElement: HTMLAudioElement | null) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const filtersRef = useRef<BiquadFilterNode[]>([]);
-const debounceTimerRef = useRef<number | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const [bands, setBands] = useState<EqualizerBand[]>(DEFAULT_BANDS);
   const [currentPreset, setCurrentPreset] = useState("Flat");
 
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+
+  const persistLocalPreferences = useCallback(
+    (bandsToPersist: EqualizerBand[], presetName: string, enabledValue: boolean) => {
+      const gains = bandsToPersist.map((band) => band.gain);
+      void storage.set(STORAGE_KEYS.EQUALIZER_BANDS, gains);
+      void storage.set(STORAGE_KEYS.EQUALIZER_PRESET, presetName);
+      void storage.set(STORAGE_KEYS.EQUALIZER_ENABLED, enabledValue);
+    },
+    [],
+  );
+
+  const loadLocalPreferences = useCallback(() => {
+    const storedPreset = storage.getOrDefault<string>(STORAGE_KEYS.EQUALIZER_PRESET, "Flat");
+    const preset = PRESETS.find((p) => p.name === storedPreset) ?? PRESETS[0]!;
+    const storedBands = storage.getOrDefault<number[]>(
+      STORAGE_KEYS.EQUALIZER_BANDS,
+      preset.bands,
+    );
+    const storedEnabled = storage.getOrDefault<boolean>(
+      STORAGE_KEYS.EQUALIZER_ENABLED,
+      true,
+    );
+
+    const mergedBands = DEFAULT_BANDS.map((band, index) => ({
+      ...band,
+      gain: storedBands[index] ?? preset.bands[index] ?? 0,
+    }));
+
+    setBands(mergedBands);
+    setCurrentPreset(preset.name);
+    setIsEnabled(storedEnabled);
+    persistLocalPreferences(mergedBands, preset.name, storedEnabled);
+  }, [persistLocalPreferences]);
+
   // Fetch preferences from server
   const { data: preferences, error: preferencesError } =
     api.equalizer.getPreferences.useQuery(undefined, {
       refetchOnWindowFocus: false,
       refetchOnMount: true,
+    enabled: isAuthenticated,
     });
 
   // Mutations for persisting to database
@@ -74,16 +114,20 @@ const debounceTimerRef = useRef<number | null>(null);
 
   // Load saved EQ settings from server
   useEffect(() => {
-    if (preferences) {
-      setBands((prev) =>
-        prev.map((b, i) => ({ ...b, gain: preferences.bands[i] ?? 0 }))
-      );
+    if (preferences && isAuthenticated) {
+      const nextBands = DEFAULT_BANDS.map((band, index) => ({
+        ...band,
+        gain: preferences.bands[index] ?? 0,
+      }));
+
+      setBands(nextBands);
       setCurrentPreset(preferences.preset);
       setIsEnabled(preferences.enabled);
-    } else if (preferencesError) {
+      persistLocalPreferences(nextBands, preferences.preset, preferences.enabled);
+    } else if (preferencesError && isAuthenticated) {
       console.error("Failed to load preferences from server:", preferencesError.message);
     }
-  }, [preferences, preferencesError]);
+  }, [preferences, preferencesError, isAuthenticated, persistLocalPreferences]);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -93,6 +137,12 @@ const debounceTimerRef = useRef<number | null>(null);
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated && status !== "loading") {
+      loadLocalPreferences();
+    }
+  }, [isAuthenticated, status, loadLocalPreferences]);
 
   // Initialize equalizer
   const initialize = useCallback(() => {
@@ -145,12 +195,12 @@ const debounceTimerRef = useRef<number | null>(null);
     (index: number, gain: number) => {
       if (index < 0 || index >= bands.length) return;
 
+      const updatedBands = bands.map((band, idx) =>
+        idx === index ? { ...band, gain } : band,
+      );
+
       // Update state for immediate UI feedback
-      setBands((prev) => {
-        const newBands = [...prev];
-        newBands[index] = { ...newBands[index]!, gain };
-        return newBands;
-      });
+      setBands(updatedBands);
 
       // Update filter node immediately
       const filter = filtersRef.current[index];
@@ -160,21 +210,32 @@ const debounceTimerRef = useRef<number | null>(null);
 
       // Mark as custom preset
       setCurrentPreset("Custom");
+      persistLocalPreferences(updatedBands, "Custom", isEnabled);
 
       // Debounce the database save (1 second after user stops dragging)
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
 
-      debounceTimerRef.current = window.setTimeout(() => {
-        updatePreferencesMutation.mutate({
-          bands: bands.map((b) => b.gain),
-          preset: "Custom",
-          enabled: isEnabled,
-        });
-      }, 1000);
+      if (isAuthenticated) {
+        debounceTimerRef.current = window.setTimeout(() => {
+          updatePreferencesMutation.mutate({
+            bands: updatedBands.map((b) => b.gain),
+            preset: "Custom",
+            enabled: isEnabled,
+          });
+        }, 1000);
+      } else {
+        debounceTimerRef.current = null;
+      }
     },
-    [bands, updatePreferencesMutation, isEnabled]
+    [
+      bands,
+      updatePreferencesMutation,
+      isEnabled,
+      isAuthenticated,
+      persistLocalPreferences,
+    ],
   );
 
   // Apply preset and save to database
@@ -197,12 +258,28 @@ const debounceTimerRef = useRef<number | null>(null);
       });
 
       // Save preset to database
-      applyPresetMutation.mutate({
-        preset: presetName,
-        bands: preset.bands,
-      });
+      persistLocalPreferences(newBands, presetName, isEnabled);
+
+      if (isAuthenticated) {
+        applyPresetMutation.mutate({
+          preset: presetName,
+          bands: preset.bands,
+        });
+        updatePreferencesMutation.mutate({
+          bands: newBands.map((b) => b.gain),
+          preset: presetName,
+          enabled: isEnabled,
+        });
+      }
     },
-    [applyPresetMutation, bands]
+    [
+      applyPresetMutation,
+      bands,
+      isEnabled,
+      isAuthenticated,
+      persistLocalPreferences,
+      updatePreferencesMutation,
+    ],
   );
 
   // Reset all bands to 0
