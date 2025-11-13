@@ -246,15 +246,48 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       if (!audioRef.current) return;
 
       // Pause and reset current audio to prevent "aborted" errors on rapid track changes
-      audioRef.current.pause();
-      audioRef.current.src = "";
+      try {
+        audioRef.current.pause();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.debug("[useAudioPlayer] Audio pause aborted (ignored).");
+        } else {
+          console.warn("[useAudioPlayer] Failed to pause audio element:", error);
+        }
+      }
+
+      try {
+        audioRef.current.currentTime = 0;
+      } catch (error) {
+        console.debug("[useAudioPlayer] Unable to reset currentTime:", error);
+      }
 
       setHistory((prev) => (currentTrack ? [...prev, currentTrack] : prev));
       setCurrentTrack(track);
 
       // Set new source and load
-      audioRef.current.src = streamUrl;
-      audioRef.current.load();
+      const applySource = () => {
+        try {
+          audioRef.current!.src = streamUrl;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
+            return false;
+          } else {
+            console.error("[useAudioPlayer] Failed to load new audio source:", error);
+          }
+        }
+        return true;
+      };
+
+      const applied = applySource();
+      if (!applied) {
+        setTimeout(() => {
+          if (!audioRef.current) return;
+          applySource();
+        }, 50);
+      }
+
       onTrackChange?.(track);
     },
     [currentTrack, onTrackChange]
@@ -307,6 +340,13 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     (track: Track | Track[], checkDuplicates = true) => {
       const tracks = Array.isArray(track) ? track : [track];
 
+      console.log("[useAudioPlayer] 📥 addToQueue called:", {
+        trackCount: tracks.length,
+        checkDuplicates,
+        currentQueueSize: queue.length,
+        tracks: tracks.map(t => `${t.title} - ${t.artist.name}`),
+      });
+
       if (checkDuplicates) {
         const duplicates = tracks.filter(
           (t) =>
@@ -325,11 +365,33 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
             (!currentTrack || currentTrack.id !== t.id)
         );
 
+        console.log("[useAudioPlayer] 🔍 After duplicate check:", {
+          duplicates: duplicates.length,
+          uniqueTracks: uniqueTracks.length,
+        });
+
         if (uniqueTracks.length > 0) {
-          setQueue((prev) => [...prev, ...uniqueTracks]);
+          setQueue((prev) => {
+            console.log("[useAudioPlayer] ✅ Adding tracks to queue:", {
+              previousSize: prev.length,
+              adding: uniqueTracks.length,
+              newSize: prev.length + uniqueTracks.length,
+            });
+            return [...prev, ...uniqueTracks];
+          });
+        } else {
+          console.log("[useAudioPlayer] ⚠️ No unique tracks to add (all duplicates)");
         }
       } else {
-        setQueue((prev) => [...prev, ...tracks]);
+        console.log("[useAudioPlayer] ➕ Adding tracks without duplicate check");
+        setQueue((prev) => {
+          console.log("[useAudioPlayer] ✅ Queue updated:", {
+            previousSize: prev.length,
+            adding: tracks.length,
+            newSize: prev.length + tracks.length,
+          });
+          return [...prev, ...tracks];
+        });
       }
     },
     [queue, currentTrack, onDuplicateTrack]
@@ -528,10 +590,21 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
               queue.length
             );
 
+            // Calculate how many tracks to add:
+            // - Always add at least 5 tracks
+            // - OR fill up to 8 if queue has fewer than 8 tracks
+            const targetCount = Math.max(5, 8 - queue.length);
+
+            console.log("[SmartQueue] 🎯 Auto-queue calculation:", {
+              currentQueueLength: queue.length,
+              targetCount,
+              availableRecommendations: recommendations.length,
+            });
+
             // Add recommendations to queue
             if (recommendations.length > 0) {
               addToQueue(
-                recommendations.slice(0, settings.autoQueueCount),
+                recommendations.slice(0, targetCount),
                 false
               );
             }

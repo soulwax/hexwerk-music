@@ -15,6 +15,7 @@ import {
   playlists,
   playlistTracks,
   recommendationCache,
+  recommendationLogs,
   searchHistory,
   userPreferences,
   users,
@@ -26,7 +27,7 @@ import {
   getCacheExpiryDate,
   shuffleWithDiversity,
 } from "@/server/services/recommendations";
-import type { Track } from "@/types";
+import { isTrack, type Track } from "@/types";
 
 const trackSchema = z.object({
   id: z.number(),
@@ -171,6 +172,91 @@ export const musicRouter = createTRPCRouter({
         .returning();
 
       return playlist;
+    }),
+
+  updatePlaylistVisibility: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        isPublic: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const playlist = await ctx.db.query.playlists.findFirst({
+        where: and(
+          eq(playlists.id, input.id),
+          eq(playlists.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+
+      await ctx.db
+        .update(playlists)
+        .set({
+          isPublic: input.isPublic,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(playlists.id, input.id),
+            eq(playlists.userId, ctx.session.user.id),
+          ),
+        );
+
+      return { success: true, isPublic: input.isPublic };
+    }),
+
+  updatePlaylistMetadata: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1).max(256).optional(),
+        description: z.string().max(1024).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const playlist = await ctx.db.query.playlists.findFirst({
+        where: and(
+          eq(playlists.id, input.id),
+          eq(playlists.userId, ctx.session.user.id),
+        ),
+      });
+
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+
+      const updateData: Partial<typeof playlists.$inferInsert> = {};
+
+      if (input.name !== undefined) {
+        updateData.name = input.name;
+      }
+
+      if (input.description !== undefined) {
+        updateData.description =
+          input.description.trim().length > 0 ? input.description : null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return { success: true };
+      }
+
+      updateData.updatedAt = new Date();
+
+      await ctx.db
+        .update(playlists)
+        .set(updateData)
+        .where(
+          and(
+            eq(playlists.id, input.id),
+            eq(playlists.userId, ctx.session.user.id),
+          ),
+        );
+
+      return { success: true };
     }),
 
   getPlaylists: protectedProcedure.query(async ({ ctx }) => {
@@ -943,6 +1029,78 @@ export const musicRouter = createTRPCRouter({
       return filtered.slice(0, input.limit);
     }),
 
+  // Get intelligent recommendations using HexMusic API
+  getIntelligentRecommendations: protectedProcedure
+    .input(
+      z.object({
+        trackNames: z.array(z.string()).min(1),
+        count: z.number().min(1).max(50).default(10),
+        excludeTrackIds: z.array(z.number()).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
+
+      try {
+        // Get user's similarity preference from database
+        const userPrefs = await ctx.db.query.userPreferences.findFirst({
+          where: eq(userPreferences.userId, ctx.session.user.id),
+        });
+
+        // Map similarity preference to API mode
+        // strict → 0, balanced → 1 (default), diverse → 2
+        const similarityPreference = userPrefs?.similarityPreference ?? "balanced";
+        const mode = similarityPreference === "strict" ? 0 
+                    : similarityPreference === "diverse" ? 2 
+                    : 1; // balanced is default
+
+        console.log("[IntelligentRecommendations] Using mode:", {
+          similarityPreference,
+          mode,
+          userId: ctx.session.user.id,
+        });
+
+        // Call the HexMusic recommendation API from server-side (no CORS issues)
+        const response = await fetch(`${API_URL}/hexmusic/recommendations/deezer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trackNames: input.trackNames,
+            n: input.count * 2, // Request more to account for filtering
+            mode, // Use user's preference
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as unknown;
+        const tracks = Array.isArray(payload)
+          ? payload.filter((item): item is Track => isTrack(item))
+          : [];
+
+        if (tracks.length === 0) {
+          console.warn("[IntelligentRecommendations] Backend returned no valid tracks", {
+            payloadPreview: Array.isArray(payload) ? payload.slice(0, 2) : payload,
+          });
+          return [];
+        }
+
+        // Filter out excluded tracks
+        const filtered = filterRecommendations(tracks, {
+          excludeTrackIds: input.excludeTrackIds,
+        });
+
+        return filtered.slice(0, input.count);
+      } catch (error) {
+        console.error("Failed to get intelligent recommendations:", error);
+        return [];
+      }
+    }),
+
   getSimilarTracks: protectedProcedure
     .input(
       z.object({
@@ -1005,45 +1163,158 @@ export const musicRouter = createTRPCRouter({
         diversity: z.enum(["strict", "balanced", "diverse"]).default("balanced"),
       }),
     )
-    .mutation(async ({ input }) => {
-      const allRecommendations: Track[] = [];
-      const seenTrackIds = new Set<number>(input.seedTrackIds);
+    .mutation(async ({ ctx, input }) => {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.starchildmusic.com";
 
-      // Get recommendations for each seed track
-      for (const seedTrackId of input.seedTrackIds) {
-        const recs = await fetchDeezerRecommendations(seedTrackId, 20);
-        for (const track of recs) {
-          if (!seenTrackIds.has(track.id)) {
-            allRecommendations.push(track);
-            seenTrackIds.add(track.id);
+      try {
+        // Fetch seed tracks to get their names
+        const seedTracks: Track[] = [];
+        for (const trackId of input.seedTrackIds) {
+          try {
+            const response = await fetch(`https://api.deezer.com/track/${trackId}`);
+            if (response.ok) {
+              const track = (await response.json()) as Track;
+              seedTracks.push(track);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch seed track ${trackId}:`, error);
           }
         }
-      }
 
-      // Apply diversity algorithm
-      let finalMix: Track[];
-      switch (input.diversity) {
-        case "strict":
-          // Only tracks similar to all seeds
-          finalMix = allRecommendations.slice(0, input.limit);
-          break;
-        case "balanced":
-          // Mix with some artist diversity
-          finalMix = shuffleWithDiversity(allRecommendations).slice(0, input.limit);
-          break;
-        case "diverse":
-          // Maximum variety, shuffle completely
-          finalMix = allRecommendations
-            .sort(() => Math.random() - 0.5)
-            .slice(0, input.limit);
-          break;
-      }
+        if (seedTracks.length === 0) {
+          throw new Error("Could not fetch any seed tracks");
+        }
 
-      return {
-        tracks: finalMix,
-        seedCount: input.seedTrackIds.length,
-        totalCandidates: allRecommendations.length,
-      };
+        // Map diversity preference to API mode
+        const mode = input.diversity === "strict" ? 0 
+                    : input.diversity === "diverse" ? 2 
+                    : 1; // balanced is default
+
+        console.log("[SmartMix] Generating with mode:", {
+          diversity: input.diversity,
+          mode,
+          seedCount: seedTracks.length,
+          userId: ctx.session.user.id,
+        });
+
+        // Build track names for API
+        const trackNames = seedTracks.map(t => `${t.artist.name} ${t.title}`);
+
+        // Call intelligent API
+        const response = await fetch(`${API_URL}/hexmusic/recommendations/deezer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trackNames,
+            n: input.limit * 2, // Request more for better variety
+            mode,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as unknown;
+        if (!Array.isArray(payload)) {
+          throw new Error("Unexpected recommendation response format");
+        }
+
+        const candidateTracks = payload
+          .filter((item): item is Track => isTrack(item))
+          .filter((track) => !input.seedTrackIds.includes(track.id));
+
+        if (candidateTracks.length === 0) {
+          throw new Error("No valid recommendation tracks received");
+        }
+
+        // Apply additional diversity shuffling if needed
+        let finalMix: Track[];
+        switch (input.diversity) {
+          case "diverse":
+            finalMix = candidateTracks
+              .sort(() => Math.random() - 0.5)
+              .slice(0, input.limit);
+            break;
+          case "balanced":
+            finalMix = shuffleWithDiversity(candidateTracks).slice(0, input.limit);
+            break;
+          case "strict":
+            finalMix = candidateTracks.slice(0, input.limit);
+            break;
+          default:
+            finalMix = candidateTracks.slice(0, input.limit);
+            break;
+        }
+
+        return {
+          tracks: finalMix,
+          seedCount: seedTracks.length,
+          totalCandidates: candidateTracks.length,
+        };
+      } catch (error) {
+        console.error("[SmartMix] Error generating mix:", error);
+        
+        // Fallback to old method
+        const allRecommendations: Track[] = [];
+        const seenTrackIds = new Set<number>(input.seedTrackIds);
+
+        for (const seedTrackId of input.seedTrackIds) {
+          const recs = await fetchDeezerRecommendations(seedTrackId, 20);
+          for (const track of recs) {
+            if (!seenTrackIds.has(track.id)) {
+              allRecommendations.push(track);
+              seenTrackIds.add(track.id);
+            }
+          }
+        }
+
+        const finalMix = shuffleWithDiversity(allRecommendations).slice(0, input.limit);
+
+        return {
+          tracks: finalMix,
+          seedCount: input.seedTrackIds.length,
+          totalCandidates: allRecommendations.length,
+        };
+      }
+    }),
+
+  // Log recommendation requests for analytics and debugging
+  logRecommendation: protectedProcedure
+    .input(
+      z.object({
+        seedTracks: z.array(trackSchema).min(1),
+        recommendedTracks: z.array(trackSchema),
+        source: z.enum(["hexmusic-api", "deezer-fallback", "artist-radio", "cached"]),
+        requestParams: z.object({
+          count: z.number().optional(),
+          similarityLevel: z.enum(["strict", "balanced", "diverse"]).optional(),
+          useAudioFeatures: z.boolean().optional(),
+        }).optional(),
+        responseTime: z.number().optional(),
+        success: z.boolean(),
+        errorMessage: z.string().optional(),
+        context: z.enum(["auto-queue", "smart-mix", "manual", "similar-tracks"]).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.insert(recommendationLogs).values({
+        userId: ctx.session.user.id,
+        seedTrackIds: input.seedTracks.map(t => t.id),
+        seedTrackData: input.seedTracks as unknown as Record<string, unknown>,
+        recommendedTrackIds: input.recommendedTracks.map(t => t.id),
+        recommendedTracksData: input.recommendedTracks as unknown as Record<string, unknown>,
+        source: input.source,
+        requestParams: input.requestParams as unknown as Record<string, unknown>,
+        responseTime: input.responseTime,
+        success: input.success,
+        errorMessage: input.errorMessage,
+        context: input.context,
+      });
+
+      return { success: true };
     }),
 
   getSmartQueueSettings: protectedProcedure.query(async ({ ctx }) => {
@@ -1112,6 +1383,30 @@ export const musicRouter = createTRPCRouter({
   }),
 
   // ============================================
+  // USER PROFILE
+  // ============================================
+
+  getCurrentUserProfile: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.query.users.findFirst({
+      where: eq(users.id, ctx.session.user.id),
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      userHash: user.userHash,
+      profilePublic: user.profilePublic,
+      bio: user.bio,
+    };
+  }),
+
+  // ============================================
   // PUBLIC PROFILE
   // ============================================
 
@@ -1172,13 +1467,29 @@ export const musicRouter = createTRPCRouter({
       const history = await ctx.db.query.listeningHistory.findMany({
         where: eq(listeningHistory.userId, user.id),
         orderBy: desc(listeningHistory.playedAt),
-        limit: input.limit ?? 20,
+        limit: (input.limit ?? 20) * 3, // Fetch more to account for deduplication
       });
 
-      return history.map((h) => ({
-        trackData: h.trackData,
-        playedAt: h.playedAt,
-      }));
+      // Deduplicate by trackId, keeping only the most recent occurrence
+      const seenTrackIds = new Set<number>();
+      const deduplicated = [];
+
+      for (const h of history) {
+        const track = h.trackData as Track;
+        if (!seenTrackIds.has(track.id)) {
+          seenTrackIds.add(track.id);
+          deduplicated.push({
+            trackData: h.trackData,
+            playedAt: h.playedAt,
+          });
+
+          if (deduplicated.length >= (input.limit ?? 20)) {
+            break;
+          }
+        }
+      }
+
+      return deduplicated;
     }),
 
   getPublicFavorites: publicProcedure
@@ -1215,9 +1526,38 @@ export const musicRouter = createTRPCRouter({
       const userPlaylists = await ctx.db.query.playlists.findMany({
         where: and(eq(playlists.userId, user.id), eq(playlists.isPublic, true)),
         orderBy: desc(playlists.createdAt),
+        with: {
+          tracks: {
+            limit: 4,
+            orderBy: playlistTracks.position,
+          },
+        },
       });
 
-      return userPlaylists;
+      // Generate 2x2 grid cover image from first 4 tracks if no coverImage exists
+      return userPlaylists.map((playlist) => {
+        let coverImage = playlist.coverImage;
+
+        // If no custom cover image, generate from tracks
+        if (!coverImage && playlist.tracks && playlist.tracks.length > 0) {
+          const albumCovers = playlist.tracks
+            .map((pt) => {
+              const track = pt.trackData as Track;
+              return track.album?.cover_medium ?? track.album?.cover;
+            })
+            .filter(Boolean)
+            .slice(0, 4);
+
+          // Store album covers as array for frontend to create 2x2 grid
+          coverImage = JSON.stringify(albumCovers);
+        }
+
+        return {
+          ...playlist,
+          coverImage,
+          trackCount: playlist.tracks?.length ?? 0,
+        };
+      });
     }),
 
   getPublicTopTracks: publicProcedure
@@ -1225,7 +1565,6 @@ export const musicRouter = createTRPCRouter({
       z.object({
         userHash: z.string(),
         limit: z.number().min(1).max(50).default(10),
-        days: z.number().min(1).max(365).default(30),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -1237,9 +1576,7 @@ export const musicRouter = createTRPCRouter({
         return [];
       }
 
-      const since = new Date();
-      since.setDate(since.getDate() - input.days);
-
+      // Calculate top tracks from ALL TIME (no date filter)
       const topTracks = await ctx.db
         .select({
           trackId: listeningAnalytics.trackId,
@@ -1248,12 +1585,7 @@ export const musicRouter = createTRPCRouter({
           totalDuration: sql<number>`SUM(${listeningAnalytics.duration})`,
         })
         .from(listeningAnalytics)
-        .where(
-          and(
-            eq(listeningAnalytics.userId, user.id),
-            sql`${listeningAnalytics.playedAt} >= ${since}`,
-          ),
-        )
+        .where(eq(listeningAnalytics.userId, user.id))
         .groupBy(listeningAnalytics.trackId, listeningAnalytics.trackData)
         .orderBy(desc(sql`COUNT(*)`))
         .limit(input.limit);
@@ -1270,7 +1602,6 @@ export const musicRouter = createTRPCRouter({
       z.object({
         userHash: z.string(),
         limit: z.number().min(1).max(50).default(10),
-        days: z.number().min(1).max(365).default(30),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -1282,20 +1613,13 @@ export const musicRouter = createTRPCRouter({
         return [];
       }
 
-      const since = new Date();
-      since.setDate(since.getDate() - input.days);
-
+      // Calculate top artists from ALL TIME (no date filter)
       const items = await ctx.db
         .select({
           trackData: listeningAnalytics.trackData,
         })
         .from(listeningAnalytics)
-        .where(
-          and(
-            eq(listeningAnalytics.userId, user.id),
-            sql`${listeningAnalytics.playedAt} >= ${since}`,
-          ),
-        );
+        .where(eq(listeningAnalytics.userId, user.id));
 
       // Group by artist in memory (since artist is nested in JSON)
       const artistCounts = new Map<number, { name: string; count: number; artistData: Track["artist"] }>();

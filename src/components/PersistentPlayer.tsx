@@ -107,9 +107,9 @@ export default function PersistentPlayer() {
       {isMobile ? (
         <MobilePlayer {...playerProps} />
       ) : (
-        <div className="fixed right-0 bottom-0 left-0 z-50">
-          <div className="container">
-            <div className="card p-3">
+        <div className="fixed inset-x-0 bottom-0 z-50">
+          <div className="player-backdrop">
+            <div className="player-backdrop-inner">
               <MaturePlayer {...playerProps} />
             </div>
           </div>
@@ -126,14 +126,17 @@ export default function PersistentPlayer() {
           onClear={player.clearQueue}
           onReorder={player.reorderQueue}
           onPlayFrom={player.playFromQueue}
-          onSaveAsPlaylist={() => {
-            // TODO: Implement save queue as playlist functionality
-            console.log("Save queue as playlist - to be implemented");
-          }}
+          onSaveAsPlaylist={player.saveQueueAsPlaylist}
           onAddSimilarTracks={
             player.addSimilarTracks ??
             (() => {
               /* No similar tracks available */
+            })
+          }
+          onGenerateSmartMix={
+            player.generateSmartMix ??
+            (() => {
+              /* Smart mix not available */
             })
           }
           isAutoQueueing={player.isAutoQueueing ?? false}
@@ -150,7 +153,7 @@ export default function PersistentPlayer() {
 
       {/* Audio Visualizer (embedded in player or as overlay) */}
       {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && (
-        <div className="fixed bottom-20 left-4 z-40 hidden lg:block">
+        <div className="fixed left-4 z-40 hidden lg:block bottom-[162px]">
           <div className="rounded-lg bg-black/80 p-2 backdrop-blur-lg">
             <AudioVisualizer
               audioElement={player.audioElement}

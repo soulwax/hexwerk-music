@@ -64,7 +64,7 @@ export class FrequencyRingsRenderer {
       // Calculate ring properties
       const baseRadius = ((i + 1) / numRings) * maxRadius;
       const pulseAmount = Math.sin(currentPhase) * smoothValue * 15;
-      const radius = baseRadius + pulseAmount;
+      const radius = Math.max(0, baseRadius + pulseAmount);
 
       // Dynamic line width based on amplitude
       const lineWidth = (smoothValue * 15) + 2;
@@ -130,7 +130,7 @@ export class FrequencyRingsRenderer {
         const numRipples = 3;
         for (let r = 0; r < numRipples; r++) {
           const ripplePhase = (currentPhase + r * Math.PI * 0.66) % (Math.PI * 2);
-          const rippleRadius = radius + Math.sin(ripplePhase) * 8;
+          const rippleRadius = Math.max(0, radius + Math.sin(ripplePhase) * 8);
           const rippleAlpha = (1 - Math.abs(Math.sin(ripplePhase))) * smoothValue * 0.3;
 
           ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${rippleAlpha})`;
@@ -167,7 +167,7 @@ export class FrequencyRingsRenderer {
 
         const particleGradient = ctx.createRadialGradient(
           px, py, 0,
-          px, py, size * 2
+          px, py, Math.max(0.1, size * 2)
         );
         particleGradient.addColorStop(0, `hsla(${particle.hue}, 100%, 85%, ${alpha})`);
         particleGradient.addColorStop(0.5, `hsla(${particle.hue}, 100%, 65%, ${alpha * 0.8})`);
@@ -175,7 +175,7 @@ export class FrequencyRingsRenderer {
 
         ctx.fillStyle = particleGradient;
         ctx.beginPath();
-        ctx.arc(px, py, size * 1.5, 0, Math.PI * 2);
+        ctx.arc(px, py, Math.max(0, size * 1.5), 0, Math.PI * 2);
         ctx.fill();
 
         newParticles.push(particle);
@@ -188,13 +188,14 @@ export class FrequencyRingsRenderer {
     // Draw center orb with pulsing effect
     const orbSize = 8 + avgAmplitude * 15;
     const orbPulse = Math.sin(this.rotationOffset * 5) * 0.3 + 1;
+    const finalOrbSize = Math.max(0.1, orbSize * orbPulse);
 
     ctx.shadowBlur = 40 + avgAmplitude * 40;
     ctx.shadowColor = `rgba(200, 150, 255, ${0.7 + avgAmplitude * 0.3})`;
 
     const orbGradient = ctx.createRadialGradient(
       centerX, centerY, 0,
-      centerX, centerY, orbSize * orbPulse
+      centerX, centerY, finalOrbSize
     );
     orbGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
     orbGradient.addColorStop(0.3, 'rgba(230, 200, 255, 0.95)');
@@ -203,7 +204,7 @@ export class FrequencyRingsRenderer {
 
     ctx.fillStyle = orbGradient;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, orbSize * orbPulse, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, finalOrbSize, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.shadowBlur = 0;

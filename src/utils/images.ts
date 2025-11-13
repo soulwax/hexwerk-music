@@ -21,20 +21,23 @@ export function getCoverImage(
   const album = track.album;
 
   // Try to get the requested size
+  const normalize = (value?: string | null) =>
+    value && value.trim().length > 0 ? value : undefined;
+
   const sizeMap = {
-    small: album.cover_small,
-    medium: album.cover_medium,
-    big: album.cover_big,
-    xl: album.cover_xl,
+    small: normalize(album.cover_small),
+    medium: normalize(album.cover_medium),
+    big: normalize(album.cover_big),
+    xl: normalize(album.cover_xl),
   };
 
   // Fallback chain
   return (
     sizeMap[size] ??
-    album.cover_medium ??
-    album.cover_small ??
-    album.cover ??
-    "/placeholder.png"
+    normalize(album.cover_medium) ??
+    normalize(album.cover_small) ??
+    normalize(album.cover) ??
+    "/images/placeholder-cover.svg"
   );
 }
 
@@ -48,19 +51,22 @@ export function getAlbumCover(
   album: Album,
   size: "small" | "medium" | "big" | "xl" = "medium"
 ): string {
+  const normalize = (value?: string | null) =>
+    value && value.trim().length > 0 ? value : undefined;
+
   const sizeMap = {
-    small: album.cover_small,
-    medium: album.cover_medium,
-    big: album.cover_big,
-    xl: album.cover_xl,
+    small: normalize(album.cover_small),
+    medium: normalize(album.cover_medium),
+    big: normalize(album.cover_big),
+    xl: normalize(album.cover_xl),
   };
 
   return (
     sizeMap[size] ??
-    album.cover_medium ??
-    album.cover_small ??
-    album.cover ??
-    "/placeholder.png"
+    normalize(album.cover_medium) ??
+    normalize(album.cover_small) ??
+    normalize(album.cover) ??
+    "/images/placeholder-cover.svg"
   );
 }
 
@@ -74,19 +80,22 @@ export function getArtistPicture(
   artist: Artist,
   size: "small" | "medium" | "big" | "xl" = "medium"
 ): string {
+  const normalize = (value?: string | null) =>
+    value && value.trim().length > 0 ? value : undefined;
+
   const sizeMap = {
-    small: artist.picture_small,
-    medium: artist.picture_medium,
-    big: artist.picture_big,
-    xl: artist.picture_xl,
+    small: normalize(artist.picture_small),
+    medium: normalize(artist.picture_medium),
+    big: normalize(artist.picture_big),
+    xl: normalize(artist.picture_xl),
   };
 
   return (
     sizeMap[size] ??
-    artist.picture_medium ??
-    artist.picture_small ??
-    artist.picture ??
-    "/placeholder.png"
+    normalize(artist.picture_medium) ??
+    normalize(artist.picture_small) ??
+    normalize(artist.picture) ??
+    "/images/placeholder-cover.svg"
   );
 }
 

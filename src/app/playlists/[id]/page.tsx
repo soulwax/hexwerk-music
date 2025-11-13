@@ -4,11 +4,12 @@
 
 import EnhancedTrackCard from "@/components/EnhancedTrackCard";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
+import { useToast } from "@/contexts/ToastContext";
 import { api } from "@/trpc/react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function PlaylistDetailPage() {
   const params = useParams<{ id: string }>();
@@ -16,9 +17,15 @@ export default function PlaylistDetailPage() {
   const playlistId = parseInt(params.id);
   const player = useGlobalPlayer();
   const { data: session } = useSession();
+  const { showToast } = useToast();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [localVisibility, setLocalVisibility] = useState<boolean | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
 
   // Try authenticated query first if user is logged in
   const { data: privatePlaylist, isLoading: isLoadingPrivate } =
@@ -42,6 +49,8 @@ export default function PlaylistDetailPage() {
   const isOwner: boolean = !!session && !!privatePlaylist;
 
   const utils = api.useUtils();
+  const updateVisibilityMutation = api.music.updatePlaylistVisibility.useMutation();
+  const updateMetadataMutation = api.music.updatePlaylistMetadata.useMutation();
   const removeFromPlaylist = api.music.removeFromPlaylist.useMutation({
     onSuccess: async () => {
       try {
@@ -103,7 +112,9 @@ export default function PlaylistDetailPage() {
   };
 
   const handleSharePlaylist = async (): Promise<void> => {
-    if (!playlist?.isPublic) {
+    const canShare = (localVisibility ?? playlist?.isPublic) ?? false;
+
+    if (!canShare) {
       alert("Only public playlists can be shared!");
       return;
     }
@@ -118,6 +129,81 @@ export default function PlaylistDetailPage() {
       alert("Failed to copy link to clipboard");
     }
   };
+
+  useEffect(() => {
+    if (playlist) {
+      setLocalVisibility(playlist.isPublic);
+      setDraftTitle(playlist.name ?? "");
+      setDraftDescription(playlist.description ?? "");
+    }
+  }, [playlist?.isPublic]);
+
+  const handleToggleVisibility = async (): Promise<void> => {
+    if (!playlist) return;
+
+    const currentVisibility = localVisibility ?? playlist.isPublic;
+    const nextVisibility = !currentVisibility;
+
+    setLocalVisibility(nextVisibility);
+
+    try {
+      await updateVisibilityMutation.mutateAsync({
+        id: playlist.id,
+        isPublic: nextVisibility,
+      });
+      await Promise.all([
+        utils.music.getPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPublicPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPlaylists.invalidate(),
+      ]);
+      showToast(
+        nextVisibility
+          ? "Playlist is now public"
+          : "Playlist is now private",
+        "success",
+      );
+    } catch (error) {
+      console.error("Failed to update playlist visibility:", error);
+      setLocalVisibility(playlist.isPublic);
+      showToast("Failed to update playlist visibility", "error");
+    }
+  };
+
+  const handleSaveMetadata = async () => {
+    if (!playlist) return;
+
+    const trimmedTitle = draftTitle.trim();
+    if (!trimmedTitle) {
+      showToast("Playlist name cannot be empty", "error");
+      return;
+    }
+
+    try {
+      await updateMetadataMutation.mutateAsync({
+        id: playlist.id,
+        name: trimmedTitle !== playlist.name ? trimmedTitle : undefined,
+        description:
+          draftDescription.trim() !== (playlist.description ?? "")
+            ? draftDescription.trim()
+            : undefined,
+      });
+
+      await Promise.all([
+        utils.music.getPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPublicPlaylist.invalidate({ id: playlistId }),
+        utils.music.getPlaylists.invalidate(),
+      ]);
+
+      setIsEditingTitle(false);
+      setIsEditingDescription(false);
+      showToast("Playlist details updated", "success");
+    } catch (error) {
+      console.error("Failed to update playlist metadata:", error);
+      showToast("Failed to update playlist details", "error");
+    }
+  };
+
+  const isSavingMetadata = updateMetadataMutation.isPending;
 
   const handleDragStart = (index: number): void => {
     setDraggedIndex(index);
@@ -181,7 +267,7 @@ export default function PlaylistDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="mb-4 text-gray-400">Playlist not found</p>
+          <p className="mb-4 text-[var(--color-subtext)]">Playlist not found</p>
           <Link href="/playlists" className="text-accent hover:underline">
             Back to Playlists
           </Link>
@@ -190,42 +276,13 @@ export default function PlaylistDetailPage() {
     );
   }
 
+  const effectiveIsPublic = (localVisibility ?? playlist.isPublic) ?? false;
+  const isDirty =
+    (draftTitle.trim() !== (playlist.name ?? "")) ||
+    (draftDescription.trim() !== (playlist.description ?? ""));
+
   return (
     <div className="flex min-h-screen flex-col pb-32">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <h1 className="accent-gradient text-glow text-2xl font-bold">
-                🌟 Starchild Music
-              </h1>
-            </Link>
-
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Home
-              </Link>
-              <Link
-                href="/library"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Library
-              </Link>
-              <Link
-                href="/playlists"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Playlists
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         {/* Playlist Header */}
@@ -233,7 +290,7 @@ export default function PlaylistDetailPage() {
           <div className="mb-2 flex items-start gap-2">
             <Link
               href="/playlists"
-              className="text-gray-400 transition hover:text-white"
+              className="text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
             >
               <svg
                 className="h-6 w-6"
@@ -250,17 +307,68 @@ export default function PlaylistDetailPage() {
               </svg>
             </Link>
             <div className="flex-1">
-              <h1 className="mb-2 text-3xl font-bold text-white">
-                {playlist.name}
-              </h1>
-              {playlist.description && (
-                <p className="mb-4 text-gray-400">{playlist.description}</p>
+              {isOwner ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    {isEditingTitle ? (
+                      <input
+                        value={draftTitle}
+                        onChange={(e) => setDraftTitle(e.target.value)}
+                        className="input-text w-full text-3xl font-bold"
+                        maxLength={256}
+                      />
+                    ) : (
+                      <h1 className="text-3xl font-bold text-[var(--color-text)]">
+                        {playlist.name}
+                      </h1>
+                    )}
+                    <button
+                      onClick={() => setIsEditingTitle((prev) => !prev)}
+                      className="btn-secondary px-3 py-1 text-sm"
+                    >
+                      {isEditingTitle ? "Cancel" : "Rename"}
+                    </button>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    {isEditingDescription ? (
+                      <textarea
+                        value={draftDescription}
+                        onChange={(e) => setDraftDescription(e.target.value)}
+                        className="input-text h-full min-h-[90px] w-full"
+                        rows={3}
+                        maxLength={1024}
+                        placeholder="Add a description..."
+                      />
+                    ) : playlist.description ? (
+                      <p className="text-[var(--color-subtext)]">{playlist.description}</p>
+                    ) : (
+                      <p className="italic text-[var(--color-muted)]">
+                        No description yet.
+                      </p>
+                    )}
+                    <button
+                      onClick={() => setIsEditingDescription((prev) => !prev)}
+                      className="btn-secondary px-3 py-1 text-sm"
+                    >
+                      {isEditingDescription ? "Cancel" : "Edit Description"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="mb-2 text-3xl font-bold text-[var(--color-text)]">
+                    {playlist.name}
+                  </h1>
+                  {playlist.description && (
+                    <p className="mb-4 text-[var(--color-subtext)]">{playlist.description}</p>
+                  )}
+                </>
               )}
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-4 text-sm text-[var(--color-muted)]">
                 <span>{playlist.tracks.length} tracks</span>
-                {playlist.isPublic && (
-                  <span className="text-accent">Public</span>
-                )}
+                <span className={effectiveIsPublic ? "text-[var(--color-accent)]" : "text-[var(--color-subtext)]"}>
+                  {effectiveIsPublic ? "Public" : "Private"}
+                </span>
                 <span>
                   Created {new Date(playlist.createdAt).toLocaleDateString()}
                 </span>
@@ -284,10 +392,36 @@ export default function PlaylistDetailPage() {
               Play All
             </button>
 
-            {playlist.isPublic && (
+            {isOwner && (
+              <button
+                onClick={handleToggleVisibility}
+                className="btn-secondary flex items-center gap-2 text-sm"
+                disabled={updateVisibilityMutation.isPending}
+              >
+                {updateVisibilityMutation.isPending ? (
+                  "Updating..."
+                ) : effectiveIsPublic ? (
+                  "Make Private"
+                ) : (
+                  "Make Public"
+                )}
+              </button>
+            )}
+
+            {isOwner && (
+              <button
+                onClick={handleSaveMetadata}
+                className="btn-primary flex items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!isDirty || isSavingMetadata}
+              >
+                {isSavingMetadata ? "Saving..." : "Save Changes"}
+              </button>
+            )}
+
+            {effectiveIsPublic && (
               <button
                 onClick={handleSharePlaylist}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
+                className="btn-secondary flex items-center gap-2 text-sm"
               >
                 <svg
                   className="h-5 w-5"
@@ -313,7 +447,7 @@ export default function PlaylistDetailPage() {
                     deletePlaylist.mutate({ id: playlistId });
                   }
                 }}
-                className="rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
+                className="btn-danger"
               >
                 Delete Playlist
               </button>
@@ -323,7 +457,7 @@ export default function PlaylistDetailPage() {
 
         {/* Drag-and-drop hint */}
         {isOwner && playlist.tracks && playlist.tracks.length > 0 && (
-          <div className="mb-4 rounded-lg bg-gray-800/50 px-4 py-2 text-sm text-gray-400">
+          <div className="mb-4 rounded-lg bg-[rgba(16,22,31,0.65)] px-4 py-2 text-sm text-[var(--color-subtext)]">
             💡 Tip: Drag and drop tracks to reorder them
           </div>
         )}
@@ -348,7 +482,7 @@ export default function PlaylistDetailPage() {
                 <div className="flex items-center gap-3">
                   {/* Drag handle or track number */}
                   {isOwner ? (
-                    <div className="flex flex-col items-center text-gray-500">
+                    <div className="flex flex-col items-center text-[var(--color-muted)]">
                       <svg
                         className="h-5 w-5"
                         fill="currentColor"
@@ -359,7 +493,7 @@ export default function PlaylistDetailPage() {
                       <span className="text-xs">{index + 1}</span>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center text-gray-500">
+                    <div className="flex items-center justify-center text-[var(--color-muted)]">
                       <span className="text-sm font-medium">{index + 1}</span>
                     </div>
                   )}
@@ -378,7 +512,7 @@ export default function PlaylistDetailPage() {
                   {isOwner && (
                     <button
                       onClick={() => handleRemoveTrack(item.id)}
-                      className="rounded-full bg-gray-900/80 p-2 text-gray-400 transition hover:text-red-500"
+                      className="rounded-full bg-[rgba(16,22,31,0.85)] p-2 text-[var(--color-subtext)] transition hover:text-[var(--color-danger)]"
                       title="Remove from playlist"
                     >
                       <svg
@@ -401,13 +535,13 @@ export default function PlaylistDetailPage() {
         ) : (
           <div className="py-12 text-center">
             <svg
-              className="mx-auto mb-4 h-16 w-16 text-gray-600"
+              className="mx-auto mb-4 h-16 w-16 text-[var(--color-muted)]"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
               <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
             </svg>
-            <p className="mb-2 text-gray-400">This playlist is empty</p>
+            <p className="mb-2 text-[var(--color-subtext)]">This playlist is empty</p>
             <Link href="/" className="text-accent hover:underline">
               Search for music to add tracks
             </Link>

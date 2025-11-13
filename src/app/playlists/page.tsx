@@ -63,7 +63,7 @@ export default function PlaylistsPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="mb-4 text-gray-400">
+          <p className="mb-4 text-[var(--color-subtext)]">
             Please sign in to view your playlists
           </p>
           <Link href="/api/auth/signin" className="btn-primary">
@@ -76,44 +76,11 @@ export default function PlaylistsPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/80 backdrop-blur-lg">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <h1 className="accent-gradient text-glow text-2xl font-bold">
-                🌟 Starchild Music
-              </h1>
-            </Link>
-
-            <nav className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Home
-              </Link>
-              <Link
-                href="/library"
-                className="text-gray-300 transition hover:text-white"
-              >
-                Library
-              </Link>
-              <Link
-                href="/playlists"
-                className="text-white"
-              >
-                Playlists
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+      { /* No Need For Header Because It's Already In The Header Component */ }
       {/* Main Content */}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Your Playlists</h1>
+          <h1 className="text-3xl font-bold text-[var(--color-text)]">Your Playlists</h1>
           <button
             onClick={() => setShowCreateModal(true)}
             className="btn-primary flex items-center gap-2"
@@ -138,20 +105,20 @@ export default function PlaylistsPage() {
         {isLoading ? (
           <LoadingState message="Loading your playlists..." />
         ) : playlists && playlists.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {playlists.map((playlist) => (
               <Link
                 key={playlist.id}
                 href={`/playlists/${playlist.id}`}
-                className="card group overflow-hidden transition hover:scale-105"
+                className="surface-panel group flex h-full flex-col overflow-hidden transition-transform hover:-translate-y-1"
               >
-                <div className="relative aspect-square bg-gradient-to-br from-indigo-600 to-purple-600">
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-[linear-gradient(135deg,rgba(244,178,102,0.28),rgba(88,198,177,0.22))]">
                   {playlist.tracks && playlist.tracks.length > 0 ? (
                     <div className="grid h-full grid-cols-2 grid-rows-2 gap-0.5">
                       {playlist.tracks.slice(0, 4).map((track, idx) => (
                         <div
                           key={idx}
-                          className="relative h-full w-full bg-gray-800"
+                          className="relative h-full w-full overflow-hidden rounded-[0.65rem] bg-[rgba(12,18,27,0.9)]"
                         >
                           <Image
                             src={
@@ -173,9 +140,9 @@ export default function PlaylistsPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex h-full items-center justify-center">
+                    <div className="flex h-full items-center justify-center text-[var(--color-text)]/60">
                       <svg
-                        className="h-16 w-16 text-white/50"
+                        className="h-16 w-16"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -183,25 +150,31 @@ export default function PlaylistsPage() {
                       </svg>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 transition group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-black/35 opacity-0 transition group-hover:opacity-100" />
                 </div>
-                <div className="p-4">
-                  <h3 className="mb-1 truncate font-semibold text-white">
+                <div className="p-5">
+                  <h3 className="mb-1 truncate font-semibold text-[var(--color-text)]">
                     {playlist.name}
                   </h3>
                   {playlist.description && (
-                    <p className="mb-2 line-clamp-2 text-sm text-gray-400">
+                    <p className="mb-2 line-clamp-2 text-sm text-[var(--color-subtext)]">
                       {playlist.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
                     <span>
                       {playlist.tracks?.length ?? 0} track
                       {(playlist.tracks?.length ?? 0) !== 1 ? "s" : ""}
                     </span>
-                    {playlist.isPublic && (
-                      <span className="text-accent">• Public</span>
-                    )}
+                    <span
+                      className={
+                        playlist.isPublic
+                          ? "text-[var(--color-accent)]"
+                          : "text-[var(--color-subtext)]"
+                      }
+                    >
+                      • {playlist.isPublic ? "Public" : "Private"}
+                    </span>
                   </div>
                 </div>
               </Link>
@@ -228,14 +201,14 @@ export default function PlaylistsPage() {
       {/* Create Playlist Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="card w-full max-w-md p-6">
-            <h2 className="mb-4 text-2xl font-bold text-white">
+          <div className="surface-panel w-full max-w-md p-6">
+            <h2 className="mb-4 text-2xl font-bold text-[var(--color-text)]">
               Create Playlist
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm text-gray-400">
+                <label className="mb-1 block text-sm text-[var(--color-subtext)]">
                   Playlist Name *
                 </label>
                 <input
@@ -249,7 +222,7 @@ export default function PlaylistsPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm text-gray-400">
+                <label className="mb-1 block text-sm text-[var(--color-subtext)]">
                   Description (optional)
                 </label>
                 <textarea
@@ -267,9 +240,9 @@ export default function PlaylistsPage() {
                   id="isPublic"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                  className="h-4 w-4 rounded border-[rgba(244,178,102,0.25)] bg-[rgba(16,22,31,0.85)] text-[var(--color-accent)] focus:ring-2 focus:ring-[rgba(244,178,102,0.25)]"
                 />
-                <label htmlFor="isPublic" className="text-sm text-gray-400">
+                <label htmlFor="isPublic" className="text-sm text-[var(--color-subtext)]">
                   Make this playlist public
                 </label>
               </div>
@@ -283,7 +256,7 @@ export default function PlaylistsPage() {
                   setNewPlaylistDescription("");
                   setIsPublic(false);
                 }}
-                className="flex-1 rounded-lg bg-gray-700 px-4 py-2 text-white transition hover:bg-gray-600"
+                className="btn-secondary flex-1"
               >
                 Cancel
               </button>

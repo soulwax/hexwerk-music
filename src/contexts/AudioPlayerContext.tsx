@@ -2,6 +2,7 @@
 
 "use client";
 
+import { useToast } from "@/contexts/ToastContext";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { api } from "@/trpc/react";
 import type { Track } from "@/types";
@@ -55,6 +56,7 @@ interface AudioPlayerContextType {
   // Smart Queue
   addSimilarTracks: (trackId: number, count?: number) => Promise<void>;
   generateSmartMix: (seedTrackIds: number[], count?: number) => Promise<void>;
+  saveQueueAsPlaylist: () => Promise<void>;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(
@@ -63,7 +65,10 @@ const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
+  const { showToast } = useToast();
   const addToHistory = api.music.addToHistory.useMutation();
+  const createPlaylistMutation = api.music.createPlaylist.useMutation();
+  const addToPlaylistMutation = api.music.addToPlaylist.useMutation();
 
   // Fetch smart queue settings
   const { data: smartQueueSettings } = api.music.getSmartQueueSettings.useQuery(
@@ -77,17 +82,122 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Mutation for fetching recommendations
   const generateSmartMixMutation = api.music.generateSmartMix.useMutation();
 
-  // Auto-queue trigger callback
+  // Mutation for logging recommendations
+  const logRecommendationMutation = api.music.logRecommendation.useMutation();
+
+const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
+  if (!track) return false;
+
+  const {
+    id,
+    readable,
+    title,
+    title_short,
+    title_version,
+    duration,
+    rank,
+    explicit_lyrics,
+    explicit_content_lyrics,
+    explicit_content_cover,
+    preview,
+    md5_image,
+    artist,
+    album,
+  } = track as Partial<Track>;
+
+  return (
+    typeof id === "number" &&
+    typeof readable === "boolean" &&
+    typeof title === "string" &&
+    typeof title_short === "string" &&
+    typeof title_version === "string" &&
+    typeof duration === "number" &&
+    typeof rank === "number" &&
+    typeof explicit_lyrics === "boolean" &&
+    typeof explicit_content_lyrics === "number" &&
+    typeof explicit_content_cover === "number" &&
+    typeof preview === "string" &&
+    typeof md5_image === "string" &&
+    artist !== undefined &&
+    album !== undefined &&
+    typeof artist?.id === "number" &&
+    typeof artist?.name === "string" &&
+    typeof artist?.link === "string" &&
+    typeof artist?.picture === "string" &&
+    typeof artist?.picture_small === "string" &&
+    typeof artist?.picture_medium === "string" &&
+    typeof artist?.picture_big === "string" &&
+    typeof artist?.picture_xl === "string" &&
+    typeof artist?.tracklist === "string" &&
+    typeof artist?.type === "string" &&
+    typeof album?.id === "number" &&
+    typeof album?.title === "string" &&
+    typeof album?.cover === "string" &&
+    typeof album?.cover_small === "string" &&
+    typeof album?.cover_medium === "string" &&
+    typeof album?.cover_big === "string" &&
+    typeof album?.cover_xl === "string" &&
+    typeof album?.md5_image === "string" &&
+    typeof album?.tracklist === "string" &&
+    typeof album?.type === "string"
+  );
+};
+
+  // Auto-queue trigger callback using the intelligent backend API
   const handleAutoQueueTrigger = useCallback(
     async (currentTrack: Track, _queueLength: number) => {
       if (!session || !smartQueueSettings) return [];
-
       try {
-        // Fetch recommendations based on current track using TRPC client
-        const tracks = await utils.client.music.getSimilarTracks.query({
-          trackId: currentTrack.id,
-          limit: smartQueueSettings.autoQueueCount,
+        const startTime = performance.now();
+        const artistName = currentTrack.artist?.name ?? "";
+        const title = currentTrack.title ?? "";
+        const trackName = [artistName, title].filter(Boolean).join(" ").trim();
+        const excludeIds = [currentTrack.id]
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id));
+
+        // Calculate how many tracks we need:
+        // - Always request at least 10 to have enough for the dynamic calculation
+        // - The actual number added will be calculated in useAudioPlayer based on _queueLength
+        const requestCount = Math.max(10, Math.ceil((20 - _queueLength) * 1.5));
+
+        // Use the intelligent recommendations API through tRPC (server-side, no CORS)
+        const tracks = await utils.client.music.getIntelligentRecommendations.query({
+          trackNames: trackName ? [trackName] : [String(currentTrack.id)],
+          count: requestCount,
+          excludeTrackIds: excludeIds,
         });
+
+        const responseTime = Math.round(performance.now() - startTime);
+
+        // Log the recommendation
+        if (tracks && tracks.length > 0) {
+          const validSeedTracks = hasCompleteTrackData(currentTrack) ? [currentTrack] : [];
+          const validRecommendedTracks = tracks.filter(
+            (t): t is Track => hasCompleteTrackData(t)
+          );
+
+          if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
+            logRecommendationMutation.mutate({
+              seedTracks: validSeedTracks,
+              recommendedTracks: validRecommendedTracks,
+              source: "hexmusic-api",
+              requestParams: {
+                count: requestCount,
+                similarityLevel: smartQueueSettings.similarityPreference || "balanced",
+                useAudioFeatures: smartQueueSettings.smartMixEnabled,
+              },
+              responseTime,
+              success: true,
+              context: "auto-queue",
+            });
+          } else {
+            console.warn("[AudioPlayerContext] ⚠️ Skipping logRecommendation due to incomplete track data", {
+              seedTrackValid: validSeedTracks.length > 0,
+              recommendedCount: validRecommendedTracks.length,
+            });
+          }
+        }
 
         return tracks ?? [];
       } catch (error) {
@@ -95,13 +205,22 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         return [];
       }
     },
-    [session, smartQueueSettings, utils],
+    [session, smartQueueSettings, utils, logRecommendationMutation],
   );
 
   const player = useAudioPlayer({
     onTrackChange: (track) => {
       if (track && session) {
-        addToHistory.mutate({ track });
+        if (hasCompleteTrackData(track)) {
+          addToHistory.mutate({
+            track,
+            duration: typeof track.duration === "number" ? track.duration : undefined,
+          });
+        } else {
+          console.warn("[AudioPlayerContext] ⚠️ Skipping addToHistory due to incomplete track data", {
+            trackId: track.id,
+          });
+        }
       }
     },
     onAutoQueueTrigger: handleAutoQueueTrigger,
@@ -150,10 +269,26 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Smart Queue Functions
   const addSimilarTracks = useCallback(
     async (trackId: number, count = 5) => {
-      if (!session) return;
+      console.log("[AudioPlayerContext] 🎵 addSimilarTracks called", {
+        trackId,
+        count,
+        hasSession: !!session,
+      });
+
+      if (!session) {
+        console.log("[AudioPlayerContext] ❌ No session, cannot add similar tracks");
+        return;
+      }
 
       try {
-        // Use TRPC client to fetch similar tracks
+        console.log("[AudioPlayerContext] 🚀 Calling tRPC getSimilarTracks...");
+
+        // Find the seed track for logging
+        const seedTrack = player.currentTrack?.id === trackId
+          ? player.currentTrack
+          : player.queue.find(t => t.id === trackId);
+
+        // Use tRPC endpoint directly - goes through Next.js backend, no CORS issues
         const tracks = await utils.client.music.getSimilarTracks.query({
           trackId,
           limit: count,
@@ -163,37 +298,208 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
           ],
         });
 
+        console.log("[AudioPlayerContext] 📦 Received recommendations:", {
+          count: tracks?.length ?? 0,
+          tracks: tracks?.slice(0, 3).map(t => `${t.title} - ${t.artist.name}`) ?? [],
+        });
+
         if (tracks && tracks.length > 0) {
+          // Log the recommendation
+          if (seedTrack) {
+            const validSeedTracks = hasCompleteTrackData(seedTrack) ? [seedTrack] : [];
+            const validRecommendedTracks = tracks.filter(
+              (t): t is Track => hasCompleteTrackData(t)
+            );
+
+            if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
+              logRecommendationMutation.mutate({
+                seedTracks: validSeedTracks,
+                recommendedTracks: validRecommendedTracks,
+                source: "cached",
+                requestParams: { count },
+                success: true,
+                context: "similar-tracks",
+              });
+            } else {
+              console.warn("[AudioPlayerContext] ⚠️ Skipping logRecommendation for similar tracks due to incomplete data", {
+                hasSeedTrack: validSeedTracks.length > 0,
+                recommendedCount: validRecommendedTracks.length,
+              });
+            }
+          }
+
+          console.log("[AudioPlayerContext] ➕ Adding tracks to queue...");
           player.addToQueue(tracks, false);
+          console.log("[AudioPlayerContext] ✅ Tracks added successfully");
+          showToast(`Added ${tracks.length} similar ${tracks.length === 1 ? 'track' : 'tracks'}`, "success");
+        } else {
+          console.log("[AudioPlayerContext] ⚠️ No recommendations received");
+          showToast("No similar tracks found", "info");
         }
       } catch (error) {
-        console.error("Error adding similar tracks:", error);
+        console.error("[AudioPlayerContext] ❌ Error adding similar tracks:", error);
+        showToast("Failed to add similar tracks", "error");
+        throw error;
       }
     },
-    [session, player, utils],
+    [session, player, utils, showToast, logRecommendationMutation],
   );
 
   const generateSmartMix = useCallback(
     async (seedTrackIds: number[], count = 50) => {
-      if (!session) return;
+      console.log("[AudioPlayerContext] ⚡ generateSmartMix called", {
+        seedTrackIds,
+        count,
+        hasSession: !!session,
+      });
+
+      if (!session) {
+        console.log("[AudioPlayerContext] ❌ No session, cannot generate smart mix");
+        return;
+      }
+
+      if (seedTrackIds.length === 0) {
+        console.error("[AudioPlayerContext] ❌ No seed track IDs provided");
+        showToast("No tracks to generate mix from", "error");
+        return;
+      }
 
       try {
+        console.log("[AudioPlayerContext] 🚀 Calling tRPC generateSmartMix...");
+
+        // Find seed tracks for logging
+        const seedTracks = seedTrackIds
+          .map(id => player.queue.find(t => t.id === id) ?? (player.currentTrack?.id === id ? player.currentTrack : null))
+          .filter((t): t is Track => t !== null);
+
+        // Use tRPC mutation - goes through Next.js backend, no CORS issues
         const result = await generateSmartMixMutation.mutateAsync({
           seedTrackIds,
           limit: count,
           diversity: smartQueueSettings?.similarityPreference ?? "balanced",
         });
 
+        console.log("[AudioPlayerContext] 📦 Smart mix received:", {
+          count: result.tracks.length,
+          targetCount: count,
+        });
+
         if (result.tracks.length > 0) {
+          // Log the smart mix generation
+          if (seedTracks.length > 0) {
+            const validSeedTracks = seedTracks.filter(
+              (t): t is Track => hasCompleteTrackData(t)
+            );
+            const validRecommendedTracks = result.tracks.filter(
+              (t): t is Track => hasCompleteTrackData(t)
+            );
+
+            if (validSeedTracks.length > 0 && validRecommendedTracks.length > 0) {
+              logRecommendationMutation.mutate({
+                seedTracks: validSeedTracks,
+                recommendedTracks: validRecommendedTracks,
+                source: "cached",
+                requestParams: {
+                  count,
+                  similarityLevel: smartQueueSettings?.similarityPreference ?? "balanced",
+                },
+                success: true,
+                context: "smart-mix",
+              });
+            } else {
+              console.warn("[AudioPlayerContext] ⚠️ Skipping smart-mix logRecommendation due to incomplete track data", {
+                seedCount: validSeedTracks.length,
+                recommendedCount: validRecommendedTracks.length,
+              });
+            }
+          }
+
+          console.log("[AudioPlayerContext] 🔄 Clearing queue and adding new tracks...");
           player.clearQueue();
           player.addToQueue(result.tracks, false);
+          console.log("[AudioPlayerContext] ✅ Smart mix applied successfully");
+          showToast(`Smart mix created with ${result.tracks.length} tracks`, "success");
+        } else {
+          console.log("[AudioPlayerContext] ⚠️ No tracks in smart mix");
+          showToast("Could not generate smart mix", "error");
         }
       } catch (error) {
-        console.error("Error generating smart mix:", error);
+        console.error("[AudioPlayerContext] ❌ Error generating smart mix:", error);
+        showToast("Failed to generate smart mix", "error");
+        throw error;
       }
     },
-    [session, generateSmartMixMutation, smartQueueSettings, player],
+    [session, generateSmartMixMutation, smartQueueSettings, player, showToast, logRecommendationMutation],
   );
+
+  const saveQueueAsPlaylist = useCallback(async () => {
+    console.log("[AudioPlayerContext] 💾 saveQueueAsPlaylist called", {
+      hasSession: !!session,
+      currentTrack: player.currentTrack ? player.currentTrack.title : null,
+      queueSize: player.queue.length,
+    });
+
+    if (!session) {
+      showToast("Sign in to save playlists", "info");
+      return;
+    }
+
+    const tracksToSave: Track[] = [
+      ...(player.currentTrack ? [player.currentTrack] : []),
+      ...player.queue,
+    ];
+
+    if (tracksToSave.length === 0) {
+      showToast("Queue is empty", "info");
+      return;
+    }
+
+    const defaultName = player.currentTrack
+      ? `${player.currentTrack.title} Queue`
+      : `Queue ${new Date().toLocaleDateString()}`;
+    const playlistName = prompt("Name your new playlist", defaultName);
+
+    if (playlistName === null) {
+      console.log("[AudioPlayerContext] ⚪ Playlist creation cancelled by user");
+      return;
+    }
+
+    const trimmedName = playlistName.trim();
+
+    if (!trimmedName) {
+      showToast("Playlist name cannot be empty", "error");
+      return;
+    }
+
+    showToast("Saving queue as playlist...", "info");
+
+    try {
+      const playlist = await createPlaylistMutation.mutateAsync({
+        name: trimmedName,
+        isPublic: false,
+      });
+
+      if (!playlist) {
+        throw new Error("Playlist creation returned no data");
+      }
+
+      for (const track of tracksToSave) {
+        await addToPlaylistMutation.mutateAsync({
+          playlistId: playlist.id,
+          track,
+        });
+      }
+
+      showToast(
+        `Saved ${tracksToSave.length} track${tracksToSave.length === 1 ? "" : "s"} to "${trimmedName}"`,
+        "success"
+      );
+      void utils.music.getPlaylists.invalidate();
+    } catch (error) {
+      console.error("[AudioPlayerContext] ❌ Failed to save queue as playlist:", error);
+      showToast("Failed to save playlist", "error");
+    }
+  }, [session, player, createPlaylistMutation, addToPlaylistMutation, showToast, utils]);
 
   const value: AudioPlayerContextType = {
     // State
@@ -236,6 +542,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     // Smart Queue
     addSimilarTracks,
     generateSmartMix,
+    saveQueueAsPlaylist,
   };
 
   return (

@@ -1,1 +1,0 @@
-(()=>{"use strict";self.fallback=async e=>{const{destination:n,url:o}=e,t={document:"/offline.html",image:!1,audio:!1,video:!1,font:!1}[n];return t?caches.match(t,{ignoreSearch:!0}):Response.error()}})();

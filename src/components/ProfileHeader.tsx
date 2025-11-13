@@ -25,8 +25,11 @@ export default function ProfileHeader({
   onShare,
 }: ProfileHeaderProps) {
   return (
-    <div className="mb-8 rounded-2xl bg-gradient-to-br from-indigo-900/50 to-purple-900/50 p-8 backdrop-blur-lg">
-      <div className="flex flex-col items-center gap-6 md:flex-row">
+    <div className="surface-panel relative mb-8 overflow-hidden p-8">
+      <div className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(244,178,102,0.2),transparent 60%)] blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(88,198,177,0.18),transparent 65%)] blur-3xl" />
+
+      <div className="relative flex flex-col items-center gap-6 md:flex-row">
         {/* Avatar */}
         <div className="relative">
           {profile.image ? (
@@ -35,14 +38,14 @@ export default function ProfileHeader({
               alt={profile.name ?? "User"}
               width={128}
               height={128}
-              className="h-32 w-32 rounded-full border-4 border-indigo-500 shadow-lg shadow-indigo-500/50"
+              className="h-32 w-32 rounded-full border-4 border-[rgba(244,178,102,0.55)] shadow-lg shadow-[rgba(244,178,102,0.28)]"
             />
           ) : (
-            <div className="flex h-32 w-32 items-center justify-center rounded-full border-4 border-indigo-500 bg-gradient-to-br from-indigo-600 to-purple-600 text-5xl font-bold text-white shadow-lg shadow-indigo-500/50">
+            <div className="flex h-32 w-32 items-center justify-center rounded-full border-4 border-[rgba(244,178,102,0.55)] bg-[linear-gradient(135deg,rgba(244,178,102,0.35),rgba(88,198,177,0.35))] text-5xl font-bold text-[var(--color-text)] shadow-lg shadow-[rgba(244,178,102,0.28)]">
               {profile.name?.charAt(0).toUpperCase() ?? "U"}
             </div>
           )}
-          <div className="absolute -bottom-2 -right-2 rounded-full bg-green-500 p-2 shadow-lg">
+          <div className="absolute -bottom-2 -right-2 rounded-full bg-[var(--color-success)] p-2 shadow-lg shadow-[rgba(88,198,177,0.35)]">
             <svg
               className="h-6 w-6 text-white"
               fill="currentColor"
@@ -54,33 +57,33 @@ export default function ProfileHeader({
         </div>
 
         {/* Profile Info */}
-        <div className="flex-1 text-center md:text-left">
-          <h1 className="mb-2 text-4xl font-bold text-white">
+        <div className="relative flex-1 text-center md:text-left">
+          <h1 className="mb-2 text-4xl font-bold text-[var(--color-text)] text-glow">
             {profile.name ?? "Anonymous User"}
           </h1>
           {profile.bio && (
-            <p className="mb-4 text-lg text-gray-300">{profile.bio}</p>
+            <p className="mb-4 text-lg text-[var(--color-subtext)]">{profile.bio}</p>
           )}
 
           {/* Stats */}
           <div className="flex flex-wrap justify-center gap-6 md:justify-start">
             <div className="text-center">
-              <div className="text-2xl font-bold text-indigo-400">
+              <div className="text-2xl font-bold text-[var(--color-accent)]">
                 {profile.stats?.tracksPlayed ?? 0}
               </div>
-              <div className="text-sm text-gray-400">Tracks Played</div>
+              <div className="text-sm text-[var(--color-subtext)]">Tracks Played</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-400">
+              <div className="text-2xl font-bold text-[var(--color-accent-strong)]">
                 {profile.stats?.favorites ?? 0}
               </div>
-              <div className="text-sm text-gray-400">Favorites</div>
+              <div className="text-sm text-[var(--color-subtext)]">Favorites</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-pink-400">
+              <div className="text-2xl font-bold text-[var(--color-danger)]">
                 {profile.stats?.playlists ?? 0}
               </div>
-              <div className="text-sm text-gray-400">Playlists</div>
+              <div className="text-sm text-[var(--color-subtext)]">Playlists</div>
             </div>
           </div>
         </div>
@@ -89,7 +92,7 @@ export default function ProfileHeader({
         {isShareSupported && (
           <button
             onClick={onShare}
-            className="touch-target flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-white transition-colors hover:bg-white/20"
+            className="touch-target flex items-center gap-2 rounded-lg border border-[rgba(244,178,102,0.25)] bg-[rgba(244,178,102,0.12)] px-4 py-2 text-[var(--color-text)] transition-colors hover:bg-[rgba(244,178,102,0.2)]"
             aria-label={`Share ${profile.name ?? "user"}'s profile`}
           >
             <svg

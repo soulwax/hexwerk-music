@@ -5,6 +5,7 @@
 import type { Track } from "@/types";
 import { hapticLight, hapticMedium } from "@/utils/haptics";
 import { formatTime } from "@/utils/time";
+import { PLAYBACK_RATES } from "@/config/player";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -52,13 +53,13 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     onNext,
     onPrevious,
     onSeek,
-    onVolumeChange,
+    onVolumeChange: _onVolumeChange,
     onToggleMute,
     onToggleShuffle,
     onCycleRepeat,
     onPlaybackRateChange,
-    onSkipForward,
-    onSkipBackward,
+    onSkipForward: _onSkipForward,
+    onSkipBackward: _onSkipBackward,
     onToggleQueue,
     onToggleEqualizer,
   } = props;
@@ -68,6 +69,12 @@ export default function MobilePlayer(props: MobilePlayerProps) {
   const dragStartY = useRef<number>(0);
   const isDragging = useRef(false);
   const progressRef = useRef<HTMLDivElement>(null);
+
+  const shouldIgnoreTouch = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.closest("[data-drag-exempt='true']")) return true;
+    return Boolean(target.closest("button") || target.closest("input") || target.closest("select"));
+  };
 
   // Wrapper functions with haptic feedback
   const handlePlayPause = () => {
@@ -147,16 +154,43 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     isDragging.current = false;
   };
 
+  const handleMiniTouchStart = (e: React.TouchEvent) => {
+    if (shouldIgnoreTouch(e.target)) return;
+    dragStartY.current = e.touches[0]?.clientY ?? 0;
+    isDragging.current = true;
+  };
+
+  const handleMiniTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    const currentY = e.touches[0]?.clientY ?? 0;
+    const diff = currentY - dragStartY.current;
+
+    if (!isExpanded && diff < -50) {
+      setIsExpanded(true);
+      isDragging.current = false;
+    }
+  };
+
+  const handleMiniTouchEnd = () => {
+    isDragging.current = false;
+  };
+
   if (!currentTrack) return null;
 
   return (
     <>
       {/* Mini Player */}
       {!isExpanded && (
-        <div className="safe-bottom fixed right-0 bottom-0 left-0 z-50 border-t border-gray-800 bg-black/95 backdrop-blur-lg">
+        <div
+          className="safe-bottom fixed right-0 bottom-0 left-0 z-50 border-t border-[rgba(244,178,102,0.14)] bg-[rgba(10,16,24,0.94)] backdrop-blur-xl shadow-[0_-12px_32px_rgba(5,10,18,0.6)]"
+          onTouchStart={handleMiniTouchStart}
+          onTouchMove={handleMiniTouchMove}
+          onTouchEnd={handleMiniTouchEnd}
+        >
           {/* Progress Bar */}
           <div
-            className="h-1 w-full cursor-pointer bg-gray-700"
+            className="h-1 w-full cursor-pointer bg-[rgba(255,255,255,0.12)]"
+            data-drag-exempt="true"
             onClick={handleProgressClick}
             onTouchMove={handleProgressTouch}
           >
@@ -171,20 +205,26 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             className="flex items-center gap-3 px-4 py-3"
             onClick={() => setIsExpanded(true)}
           >
-            <Image
-              src={currentTrack.album.cover_small}
-              alt={currentTrack.title}
-              width={48}
-              height={48}
-              className="flex-shrink-0 rounded-lg"
-              priority
-              quality={75}
-            />
+            {currentTrack.album.cover_small ? (
+              <Image
+                src={currentTrack.album.cover_small}
+                alt={currentTrack.title}
+                width={48}
+                height={48}
+                className="flex-shrink-0 rounded-lg"
+                priority
+                quality={75}
+              />
+            ) : (
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(244,178,102,0.12)] text-[var(--color-muted)]">
+                🎵
+              </div>
+            )}
             <div className="min-w-0 flex-1">
-              <h4 className="truncate font-medium text-white">
+              <h4 className="truncate font-medium text-[var(--color-text)]">
                 {currentTrack.title}
               </h4>
-              <p className="truncate text-sm text-gray-400">
+              <p className="truncate text-sm text-[var(--color-subtext)]">
                 {currentTrack.artist.name}
               </p>
             </div>
@@ -193,7 +233,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 e.stopPropagation();
                 handlePlayPause();
               }}
-              className="touch-target-lg flex-shrink-0 text-white transition hover:scale-105"
+              className="touch-target-lg flex-shrink-0 text-[var(--color-text)] transition hover:scale-105"
             >
               {isPlaying ? (
                 <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20">
@@ -219,7 +259,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 onNext();
               }}
               disabled={queue.length === 0}
-              className="touch-target-lg flex-shrink-0 text-gray-400 transition hover:text-white disabled:opacity-50"
+              className="touch-target-lg flex-shrink-0 text-[var(--color-subtext)] transition hover:text-[var(--color-text)] disabled:opacity-50"
             >
               <svg className="h-7 w-7" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798l-5.445-3.63z" />
@@ -239,7 +279,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
           />
 
           {/* Full Player */}
-          <div className="safe-bottom fixed inset-0 z-[99] flex flex-col bg-gradient-to-b from-gray-900 to-black">
+          <div className="safe-bottom fixed inset-0 z-[99] flex flex-col bg-[linear-gradient(165deg,rgba(13,20,29,0.98),rgba(8,13,20,0.92))]">
             {/* Header with drag handle */}
             <div
               className="flex flex-col items-center pt-4"
@@ -250,7 +290,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               <div className="bottom-sheet-handle mb-4" />
               <button
                 onClick={() => setIsExpanded(false)}
-                className="touch-target text-gray-400"
+                className="touch-target text-[var(--color-subtext)]"
               >
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -266,15 +306,21 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             {/* Album Art */}
             <div className="flex flex-1 items-center justify-center px-8 py-8">
               <div className="relative w-full max-w-sm">
-                <Image
-                  src={currentTrack.album.cover_medium ?? currentTrack.album.cover_small}
-                  alt={currentTrack.title}
-                  width={400}
-                  height={400}
-                  className="w-full rounded-2xl shadow-2xl"
-                  priority
-                  quality={85}
-                />
+                {coverArt ? (
+                  <Image
+                    src={coverArt}
+                    alt={currentTrack.title}
+                    width={400}
+                    height={400}
+                    className="w-full rounded-2xl shadow-2xl"
+                    priority
+                    quality={85}
+                  />
+                ) : (
+                  <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-[rgba(244,178,102,0.12)] text-6xl text-[var(--color-muted)]">
+                    🎵
+                  </div>
+                )}
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/60">
                     <div className="border-accent h-12 w-12 animate-spin rounded-full border-4 border-t-transparent" />
@@ -285,17 +331,17 @@ export default function MobilePlayer(props: MobilePlayerProps) {
 
             {/* Track Info */}
             <div className="px-8 pb-4">
-              <h2 className="mb-2 text-2xl font-bold text-white">
+              <h2 className="mb-2 text-2xl font-bold text-[var(--color-text)]">
                 {currentTrack.title}
               </h2>
-              <p className="text-lg text-gray-400">{currentTrack.artist.name}</p>
+              <p className="text-lg text-[var(--color-subtext)]">{currentTrack.artist.name}</p>
             </div>
 
             {/* Progress Bar */}
             <div className="px-8 pb-2">
               <div
                 ref={progressRef}
-                className="group relative h-2 cursor-pointer rounded-full bg-gray-700"
+                className="group relative h-2 cursor-pointer rounded-full bg-[rgba(255,255,255,0.14)]"
                 onClick={handleProgressClick}
                 onTouchMove={handleProgressTouch}
               >
@@ -304,11 +350,11 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                   style={{ width: `${progress}%` }}
                 />
                 <div
-                  className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-lg transition-all"
+                  className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[var(--color-text)] shadow-lg transition-all"
                   style={{ left: `${progress}%`, transform: "translate(-50%, -50%)" }}
                 />
               </div>
-              <div className="mt-2 flex justify-between text-sm text-gray-400">
+              <div className="mt-2 flex justify-between text-sm text-[var(--color-subtext)]">
                 <span>{formatTime(currentTime)}</span>
                 <span>{formatTime(duration)}</span>
               </div>
@@ -320,8 +366,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 onClick={handleToggleShuffle}
                 className={`touch-target rounded-full p-3 transition ${
                   isShuffled
-                    ? "bg-accent/20 text-accent"
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-[rgba(244,178,102,0.18)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.25)]"
+                    : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
                 }`}
               >
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
@@ -335,7 +381,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
 
               <button
                 onClick={handlePrevious}
-                className="touch-target-lg text-white transition hover:scale-105"
+                className="touch-target-lg text-[var(--color-text)] transition hover:scale-105"
               >
                 <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
@@ -344,7 +390,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
 
               <button
                 onClick={handlePlayPause}
-                className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-black shadow-lg transition hover:scale-105 active:scale-95"
+                className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-text)] text-[#0f141d] shadow-[0_12px_32px_rgba(244,178,102,0.35)] transition hover:scale-105 active:scale-95"
               >
                 {isPlaying ? (
                   <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
@@ -368,7 +414,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               <button
                 onClick={handleNext}
                 disabled={queue.length === 0}
-                className="touch-target-lg text-white transition hover:scale-105 disabled:opacity-50"
+                className="touch-target-lg text-[var(--color-text)] transition hover:scale-105 disabled:opacity-50"
               >
                 <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798l-5.445-3.63z" />
@@ -379,8 +425,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 onClick={handleCycleRepeat}
                 className={`touch-target rounded-full p-3 transition ${
                   repeatMode !== "none"
-                    ? "bg-accent/20 text-accent"
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-[rgba(244,178,102,0.18)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.25)]"
+                    : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
                 }`}
               >
                 {repeatMode === "one" ? (
@@ -409,11 +455,11 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             </div>
 
             {/* Secondary Controls */}
-            <div className="flex items-center justify-around border-t border-gray-800 px-8 py-4">
+            <div className="flex items-center justify-around border-t border-[rgba(244,178,102,0.16)] px-8 py-4">
               {/* Volume */}
               <button
                 onClick={onToggleMute}
-                className="touch-target text-gray-400 transition hover:text-white"
+                className="touch-target text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
               >
                 {isMuted || volume === 0 ? (
                   <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
@@ -438,7 +484,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               <div className="relative">
                 <button
                   onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                  className="touch-target rounded-full px-4 py-2 text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                  className="touch-target rounded-full px-4 py-2 text-sm font-medium text-[var(--color-subtext)] transition hover:bg-[rgba(244,178,102,0.12)] hover:text-[var(--color-text)]"
                 >
                   {playbackRate}x
                 </button>
@@ -448,7 +494,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowSpeedMenu(false)}
                     />
-                    <div className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 rounded-lg border border-gray-700 bg-gray-900 py-2 shadow-lg">
+                    <div className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 rounded-lg border border-[rgba(244,178,102,0.18)] bg-[rgba(12,18,27,0.95)] py-2 shadow-lg shadow-[rgba(5,10,18,0.6)] backdrop-blur-lg">
                       {PLAYBACK_RATES.map((rate) => (
                         <button
                           key={rate}
@@ -456,8 +502,10 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                             onPlaybackRateChange(rate);
                             setShowSpeedMenu(false);
                           }}
-                          className={`w-full px-6 py-3 text-center text-sm transition hover:bg-gray-800 ${
-                            playbackRate === rate ? "text-accent" : "text-gray-400"
+                          className={`w-full px-6 py-3 text-center text-sm transition hover:bg-[rgba(244,178,102,0.12)] ${
+                            playbackRate === rate
+                              ? "text-[var(--color-accent)]"
+                              : "text-[var(--color-subtext)]"
                           }`}
                         >
                           {rate}x
@@ -472,7 +520,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               {onToggleQueue && (
                 <button
                   onClick={onToggleQueue}
-                  className="touch-target relative text-gray-400 transition hover:text-white"
+                  className="touch-target relative text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
                 >
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -483,7 +531,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     />
                   </svg>
                   {queue.length > 0 && (
-                    <span className="bg-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
+                    <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-accent)] text-xs font-semibold text-[#0f141d]">
                       {queue.length}
                     </span>
                   )}
@@ -494,7 +542,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               {onToggleEqualizer && (
                 <button
                   onClick={onToggleEqualizer}
-                  className="touch-target text-gray-400 transition hover:text-white"
+                  className="touch-target text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
                 >
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path

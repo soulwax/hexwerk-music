@@ -168,7 +168,7 @@ export async function handleAsyncError<T>(
   {
     onError,
     errorMessage,
-    showToast = false,
+    showToast: _showToast = false,
   }: {
     onError?: (error: AppError) => void;
     errorMessage?: string;
@@ -181,7 +181,7 @@ export async function handleAsyncError<T>(
     const appError = createError(
       error,
       "error",
-      errorMessage || getErrorMessage(error)
+      errorMessage ?? getErrorMessage(error)
     );
 
     logError(appError);
