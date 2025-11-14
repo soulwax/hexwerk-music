@@ -6,12 +6,10 @@ import { Geist } from "next/font/google";
 import { type ReactNode } from "react";
 
 import Header from "@/components/Header";
-import InstallPrompt from "@/components/InstallPrompt";
 import MobileNavigation from "@/components/MobileNavigation";
 import PersistentPlayer from "@/components/PersistentPlayer";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ServiceWorkerCleanup } from "@/components/ServiceWorkerCleanup";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { TRPCReactProvider } from "@/trpc/react";
@@ -32,7 +30,6 @@ export const metadata = {
       url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/180.png",
     },
   ],
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -40,6 +37,9 @@ export const metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
+    // Enhanced mobile meta tags
+    "format-detection": "telephone=no", // Prevent auto-linking phone numbers
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
   },
 };
 
@@ -57,14 +57,29 @@ export default function RootLayout({
   return (
     <html lang="en" className={geist.variable} suppressHydrationWarning>
       <head>
-        {/* Service Worker Cleanup - runs BEFORE React loads */}
-        <script src="/sw-cleanup.js" defer />
         {/* Preconnect to external resources for faster loading */}
         <link rel="preconnect" href="https://cdn-images.dzcdn.net" />
         <link rel="dns-prefetch" href="https://api.deezer.com" />
+        {/* Enhanced mobile touch icons for better home screen experience */}
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/AppIcons/Assets.xcassets/AppIcon.appiconset/180.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="152x152"
+          href="/AppIcons/Assets.xcassets/AppIcon.appiconset/152.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="144x144"
+          href="/AppIcons/Assets.xcassets/AppIcon.appiconset/144.png"
+        />
+        {/* Enhanced mobile viewport for iOS notch support */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
       </head>
       <body>
-        <ServiceWorkerCleanup />
         <ErrorBoundary>
           <SessionProvider>
             <TRPCReactProvider>
@@ -78,8 +93,6 @@ export default function RootLayout({
                   <MobileNavigation />
                   {/* Persistent player - stays on all pages */}
                   <PersistentPlayer />
-                  {/* PWA install prompt */}
-                  <InstallPrompt />
                 </AudioPlayerProvider>
               </ToastProvider>
             </TRPCReactProvider>
