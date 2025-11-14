@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
 import { getCoverImage } from "@/utils/images";
 import { Activity } from "lucide-react";
-import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { springPresets } from "@/utils/spring-animations";
 
 // Dynamic import for visualizer
