@@ -75,9 +75,10 @@ export function Queue({ queue, onClose, onRemove, onClear }: QueueProps) {
                                                 src={coverImage}
                                                 alt={item.track.album.title}
                                                 fill
-                                                sizes="48px"
+                                                sizes="(max-width: 768px) 48px, 64px"
                                                 className="object-cover"
-                                                unoptimized
+                                                quality={75}
+                                                loading="lazy"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-500">

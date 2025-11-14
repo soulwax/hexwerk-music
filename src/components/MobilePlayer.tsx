@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
 import { getCoverImage } from "@/utils/images";
 import { Activity } from "lucide-react";
-import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
+import { motion, useMotionValue, useTransform, type PanInfo, type TapInfo } from "framer-motion";
 import { springPresets } from "@/utils/spring-animations";
 
 // Dynamic import for visualizer
@@ -184,8 +184,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     }
   };
 
-  const handleMiniTap = (e: React.MouseEvent | React.TouchEvent) => {
-    const target = e.target as HTMLElement;
+  const handleMiniTap = (event: PointerEvent | MouseEvent | TouchEvent, info?: TapInfo) => {
+    const target = event.target as HTMLElement;
     if (shouldIgnoreTouch(target)) return;
     hapticLight();
     setIsExpanded(true);
@@ -259,6 +259,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               whileHover={{ scale: 1.05 }}
               transition={springPresets.snappy}
               className="touch-target-lg flex-shrink-0 text-[var(--color-text)]"
+              aria-label={isPlaying ? "Pause track" : "Play track"}
             >
               {isPlaying ? (
                 <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20">
@@ -288,6 +289,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               whileHover={{ scale: 1.05 }}
               transition={springPresets.snappy}
               className="touch-target-lg flex-shrink-0 text-[var(--color-subtext)] hover:text-[var(--color-text)] disabled:opacity-50"
+              aria-label="Next track"
+              aria-disabled={queue.length === 0}
             >
               <svg className="h-7 w-7" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798l-5.445-3.63z" />
@@ -337,6 +340,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 whileTap={{ scale: 0.9 }}
                 transition={springPresets.immediate}
                 className="touch-target text-[var(--color-subtext)]"
+                aria-label="Collapse player"
               >
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -402,7 +406,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                       ? "bg-[rgba(244,178,102,0.25)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.35)]"
                       : "bg-black/40 text-[var(--color-subtext)] hover:text-[var(--color-text)]"
                   }`}
-                  title={showVisualizer ? "Show Album Art" : "Show Visualizer"}
+                  aria-label={showVisualizer ? "Show album art" : "Show visualizer"}
+                  aria-pressed={showVisualizer}
                 >
                   <Activity className="h-6 w-6" />
                 </motion.button>
@@ -426,12 +431,19 @@ export default function MobilePlayer(props: MobilePlayerProps) {
 
             {/* Progress Bar */}
             <div className="px-8 pb-2">
-              <div
-                ref={progressRef}
-                className="group relative h-2 cursor-pointer rounded-full bg-[rgba(255,255,255,0.14)]"
-                onClick={handleProgressClick}
-                onTouchMove={handleProgressTouch}
-              >
+            <div
+              ref={progressRef}
+              className="group relative h-2 cursor-pointer rounded-full bg-[rgba(255,255,255,0.14)]"
+              onClick={handleProgressClick}
+              onTouchMove={handleProgressTouch}
+              role="slider"
+              aria-label="Seek"
+              aria-valuemin={0}
+              aria-valuemax={duration}
+              aria-valuenow={currentTime}
+              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+              tabIndex={0}
+            >
                 <div
                   className="accent-gradient h-full rounded-full transition-all"
                   style={{ width: `${progress}%` }}
@@ -458,6 +470,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     ? "bg-[rgba(244,178,102,0.18)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.25)]"
                     : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
                 }`}
+                aria-label={isShuffled ? "Disable shuffle" : "Enable shuffle"}
+                aria-pressed={isShuffled}
               >
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
                   <path
@@ -474,6 +488,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 whileHover={{ scale: 1.05 }}
                 transition={springPresets.snappy}
                 className="touch-target-lg text-[var(--color-text)]"
+                aria-label="Previous track"
               >
                 <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
@@ -486,6 +501,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 whileHover={{ scale: 1.05 }}
                 transition={springPresets.snappy}
                 className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-text)] text-[#0f141d] shadow-[0_12px_32px_rgba(244,178,102,0.35)]"
+                aria-label={isPlaying ? "Pause track" : "Play track"}
               >
                 {isPlaying ? (
                   <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
@@ -513,6 +529,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 whileHover={{ scale: 1.05 }}
                 transition={springPresets.snappy}
                 className="touch-target-lg text-[var(--color-text)] disabled:opacity-50"
+                aria-label="Next track"
+                aria-disabled={queue.length === 0}
               >
                 <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798l-5.445-3.63z" />
@@ -528,6 +546,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                     ? "bg-[rgba(244,178,102,0.18)] text-[var(--color-accent)] shadow-[0_0_18px_rgba(244,178,102,0.25)]"
                     : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
                 }`}
+                aria-label={`Repeat: ${repeatMode === "none" ? "off" : repeatMode}`}
+                aria-pressed={repeatMode !== "none"}
               >
                 {repeatMode === "one" ? (
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -560,6 +580,8 @@ export default function MobilePlayer(props: MobilePlayerProps) {
               <button
                 onClick={onToggleMute}
                 className="touch-target text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
+                aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                aria-pressed={isMuted || volume === 0}
               >
                 {isMuted || volume === 0 ? (
                   <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
@@ -621,6 +643,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 <button
                   onClick={onToggleQueue}
                   className="touch-target relative text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
+                  aria-label={`Queue (${queue.length} ${queue.length === 1 ? "track" : "tracks"})`}
                 >
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -643,6 +666,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
                 <button
                   onClick={onToggleEqualizer}
                   className="touch-target text-[var(--color-subtext)] transition hover:text-[var(--color-text)]"
+                  aria-label="Open equalizer"
                 >
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path

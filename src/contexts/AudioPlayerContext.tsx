@@ -231,9 +231,12 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
     (track: Track) => {
       const streamUrl = getStreamUrlById(track.id.toString());
       player.loadTrack(track, streamUrl);
-      void player.play();
+      player.play().catch((error) => {
+        console.error('Playback failed:', error);
+        showToast('Playback failed. Please try again.', 'error');
+      });
     },
-    [player],
+    [player, showToast],
   );
 
   const playNext = useCallback(() => {
@@ -241,18 +244,24 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
     if (nextTrack) {
       const streamUrl = getStreamUrlById(nextTrack.id.toString());
       player.loadTrack(nextTrack, streamUrl);
-      void player.play();
+      player.play().catch((error) => {
+        console.error('Playback failed:', error);
+        showToast('Playback failed. Please try again.', 'error');
+      });
     }
-  }, [player]);
+  }, [player, showToast]);
 
   const playPrevious = useCallback(() => {
     const prevTrack = player.playPrevious();
     if (prevTrack) {
       const streamUrl = getStreamUrlById(prevTrack.id.toString());
       player.loadTrack(prevTrack, streamUrl);
-      void player.play();
+      player.play().catch((error) => {
+        console.error('Playback failed:', error);
+        showToast('Playback failed. Please try again.', 'error');
+      });
     }
-  }, [player]);
+  }, [player, showToast]);
 
   const playFromQueue = useCallback(
     (index: number) => {
@@ -260,10 +269,13 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
       if (track) {
         const streamUrl = getStreamUrlById(track.id.toString());
         player.loadTrack(track, streamUrl);
-        void player.play();
+        player.play().catch((error) => {
+          console.error('Playback failed:', error);
+          showToast('Playback failed. Please try again.', 'error');
+        });
       }
     },
-    [player],
+    [player, showToast],
   );
 
   // Smart Queue Functions

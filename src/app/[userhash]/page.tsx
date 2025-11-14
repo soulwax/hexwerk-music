@@ -223,9 +223,10 @@ export default function PublicProfilePage({
                               src={cover}
                               alt={`${playlist.name} track ${i + 1}`}
                               fill
-                              sizes="100px"
+                              sizes="(max-width: 768px) 100px, 125px"
                               className="object-cover transition-transform group-hover:scale-110"
-                              unoptimized
+                              quality={80}
+                              loading="lazy"
                             />
                           </div>
                         ))}

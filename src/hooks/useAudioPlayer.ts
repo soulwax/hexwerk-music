@@ -3,6 +3,7 @@
 "use client";
 
 import { STORAGE_KEYS } from "@/config/storage";
+import { AUDIO_CONSTANTS } from "@/config/constants";
 import { localStorage } from "@/services/storage";
 import type { SmartQueueSettings, Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
@@ -46,6 +47,8 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const [originalQueueOrder, setOriginalQueueOrder] = useState<Track[]>([]);
   const [isAutoQueueing, setIsAutoQueueing] = useState(false);
   const autoQueueTriggeredRef = useRef(false);
+  const loadIdRef = useRef(0);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load persisted settings and queue state
   useEffect(() => {
@@ -342,21 +345,21 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     (track: Track, streamUrl: string) => {
       if (!audioRef.current) return;
 
+      // Increment load ID to track this specific load
+      const currentLoadId = ++loadIdRef.current;
+
+      // Cancel any pending retry
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+
       // Pause and reset current audio to prevent "aborted" errors on rapid track changes
       try {
         audioRef.current.pause();
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          console.debug("[useAudioPlayer] Audio pause aborted (ignored).");
-        } else {
-          console.warn("[useAudioPlayer] Failed to pause audio element:", error);
-        }
-      }
-
-      try {
         audioRef.current.currentTime = 0;
       } catch (error) {
-        console.debug("[useAudioPlayer] Unable to reset currentTime:", error);
+        console.debug("[useAudioPlayer] Error resetting audio:", error);
       }
 
       setHistory((prev) => (currentTrack ? [...prev, currentTrack] : prev));
@@ -364,25 +367,36 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
       // Set new source and load
       const applySource = () => {
+        // Check if this load is still current
+        if (currentLoadId !== loadIdRef.current) {
+          console.debug("[useAudioPlayer] Load cancelled, newer load in progress");
+          return false;
+        }
+
+        if (!audioRef.current) return false;
+
         try {
-          audioRef.current!.src = streamUrl;
+          audioRef.current.src = streamUrl;
+          return true;
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
             console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
             return false;
           } else {
             console.error("[useAudioPlayer] Failed to load new audio source:", error);
+            return false;
           }
         }
-        return true;
       };
 
       const applied = applySource();
       if (!applied) {
-        setTimeout(() => {
-          if (!audioRef.current) return;
-          applySource();
-        }, 50);
+        // Retry after a short delay if this load is still current
+        retryTimeoutRef.current = setTimeout(() => {
+          if (currentLoadId === loadIdRef.current && audioRef.current) {
+            applySource();
+          }
+        }, AUDIO_CONSTANTS.AUDIO_LOAD_RETRY_DELAY_MS);
       }
 
       onTrackChange?.(track);
@@ -728,6 +742,15 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     onAutoQueueTrigger,
     addToQueue,
   ]);
+
+  // Cleanup retry timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     // State
