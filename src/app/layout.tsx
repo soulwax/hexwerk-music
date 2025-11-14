@@ -76,8 +76,6 @@ export default function RootLayout({
           sizes="144x144"
           href="/AppIcons/Assets.xcassets/AppIcon.appiconset/144.png"
         />
-        {/* Enhanced mobile viewport for iOS notch support */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
       </head>
       <body>
         <ErrorBoundary>
