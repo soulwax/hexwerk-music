@@ -90,7 +90,9 @@ export default function MobilePlayer(props: MobilePlayerProps) {
   const shouldIgnoreTouch = (target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
     if (target.closest("[data-drag-exempt='true']")) return true;
-    return Boolean(target.closest("button") || target.closest("input") || target.closest("select"));
+    return Boolean(
+      target.closest("button") ?? target.closest("input") ?? target.closest("select")
+    );
   };
 
   // Wrapper functions with haptic feedback
