@@ -11,6 +11,7 @@ import MobileNavigation from "@/components/MobileNavigation";
 import PersistentPlayer from "@/components/PersistentPlayer";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ServiceWorkerCleanup } from "@/components/ServiceWorkerCleanup";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { TRPCReactProvider } from "@/trpc/react";
@@ -61,6 +62,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.deezer.com" />
       </head>
       <body>
+        <ServiceWorkerCleanup />
         <ErrorBoundary>
           <SessionProvider>
             <TRPCReactProvider>
