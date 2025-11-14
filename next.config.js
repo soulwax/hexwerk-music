@@ -33,8 +33,9 @@ const withPWA = withPWAInit({
           cacheName: "audio-cache",
           rangeRequests: true,
           expiration: {
-            maxEntries: 50,
-            maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+            maxEntries: 200,        // Increased from 50
+            maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days instead of 7
+            purgeOnQuotaError: true, // Automatically purge on quota errors
           },
           cacheableResponse: {
             statuses: [0, 200, 206], // Include 206 for range requests
@@ -50,6 +51,7 @@ const withPWA = withPWAInit({
           expiration: {
             maxEntries: 200,
             maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            purgeOnQuotaError: true, // Automatically purge on quota errors
           },
           cacheableResponse: {
             statuses: [0, 200],
