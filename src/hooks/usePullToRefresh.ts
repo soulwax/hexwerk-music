@@ -3,6 +3,7 @@
 "use client";
 
 import { useRef, useCallback, useState } from "react";
+import type { TouchEvent } from "react";
 import { hapticMedium } from "@/utils/haptics";
 
 export interface PullToRefreshConfig {
@@ -26,7 +27,7 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
   const isDragging = useRef(false);
   const containerRef = useRef<HTMLElement | null>(null);
 
-  const handleTouchStart = useCallback((e: TouchEvent) => {
+  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
     if (!enabled || isRefreshing) return;
 
     const container = containerRef.current;
@@ -42,7 +43,7 @@ export function usePullToRefresh(config: PullToRefreshConfig) {
     isDragging.current = true;
   }, [enabled, isRefreshing]);
 
-  const handleTouchMove = useCallback((e: TouchEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent<HTMLDivElement>) => {
     if (!isDragging.current || !enabled || isRefreshing) return;
 
     const touch = e.touches[0];
