@@ -57,6 +57,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={geist.variable} suppressHydrationWarning>
       <head>
+        {/* Service Worker Cleanup - runs BEFORE React loads */}
+        <script src="/sw-cleanup.js" defer />
         {/* Preconnect to external resources for faster loading */}
         <link rel="preconnect" href="https://cdn-images.dzcdn.net" />
         <link rel="dns-prefetch" href="https://api.deezer.com" />
