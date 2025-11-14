@@ -955,3 +955,77 @@ img {
   backface-visibility: hidden;
   perspective: 1000px;
 }
+
+/* ------------------------------------------------------------
+   📱 Landscape Mode Optimizations for Mobile
+------------------------------------------------------------- */
+
+/* Mobile landscape - reduce vertical spacing */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Reduce padding in expanded mobile player */
+  .mobile-player-expanded {
+    padding: 0.5rem 1rem;
+  }
+
+  /* Make artwork smaller to fit vertically */
+  .mobile-player-artwork {
+    max-height: 35vh;
+    max-width: 35vh;
+  }
+
+  /* Reduce spacing in controls */
+  .mobile-player-controls {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  /* Make button sizes smaller */
+  .mobile-player-controls button {
+    padding: 0.5rem;
+  }
+
+  /* Hide secondary controls if needed to save space */
+  .mobile-player-secondary-controls {
+    display: none;
+  }
+
+  /* Reduce header/footer heights */
+  .mobile-player-header {
+    padding: 0.5rem;
+  }
+
+  /* Reduce bottom padding for main content */
+  .pb-36 {
+    padding-bottom: 5rem;
+  }
+
+  /* Make mini player more compact */
+  .safe-bottom {
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Tablet landscape - use horizontal space better */
+@media (min-width: 768px) and (max-height: 600px) and (orientation: landscape) {
+  /* Use 2-column layout for expanded player */
+  .mobile-player-expanded {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  /* Artwork on left side */
+  .mobile-player-artwork {
+    align-self: center;
+    justify-self: center;
+  }
+
+  /* Info and controls on right side */
+  .mobile-player-info-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+  }
+}
