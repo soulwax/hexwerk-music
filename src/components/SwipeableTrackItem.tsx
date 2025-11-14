@@ -2,14 +2,15 @@
 
 "use client";
 
-import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import type { Track } from "@/types";
-import { getCoverImage } from "@/utils/images";
 import { hapticLight, hapticMedium } from "@/utils/haptics";
+import { getCoverImage } from "@/utils/images";
 import { springPresets } from "@/utils/spring-animations";
-import Image from "next/image";
-import { useState, useRef } from "react";
+import type { PanInfo } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Heart, ListX, MoreHorizontal } from "lucide-react";
+import Image from "next/image";
+import { useRef, useState } from "react";
 
 export interface SwipeableTrackItemProps {
   track: Track;
