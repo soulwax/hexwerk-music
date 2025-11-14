@@ -24,6 +24,8 @@ const withPWA = withPWAInit({
   // Enhanced workbox configuration for audio streaming
   workboxOptions: {
     disableDevLogs: true,
+    clientsClaim: true,
+    skipWaiting: true,
     runtimeCaching: [
       // Audio streaming - network first with range request support
       {
