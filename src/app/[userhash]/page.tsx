@@ -132,7 +132,7 @@ export default function PublicProfilePage({
               </div>
             </div>
           )}
-          gridColumns={3}
+          gridColumns={2}
           emptyMessage="No top tracks yet"
         />
 
@@ -178,15 +178,15 @@ export default function PublicProfilePage({
           title="⭐ Favorite Tracks"
           loading={favoritesLoading}
           items={favorites}
-          renderItem={(track, idx) => (
+          renderItem={(item, idx) => (
             <EnhancedTrackCard
               key={`fav-${idx}`}
-              track={track as Track}
+              track={item as Track}
               onPlay={(track) => play(track)}
               onAddToQueue={(track) => addToQueue(track)}
             />
           )}
-          gridColumns={3}
+          gridColumns={2}
           emptyIcon="💫"
           emptyMessage="No favorites yet"
         />
