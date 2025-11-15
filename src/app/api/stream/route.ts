@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
           error: isUpstreamError 
             ? "Upstream service unavailable" 
             : `Stream failed: ${response.statusText}`, 
-          message: errorData.message || errorText,
+          message: errorData.message ?? errorText,
           details: errorData,
           status: response.status,
           backendUrl: requestUrl.replace(streamingKey, '***'),
