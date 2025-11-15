@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { ENABLE_AUDIO_FEATURES } from "@/config/features";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
+import { db } from "@/server/db";
 import {
   audioFeatures,
   favorites,
@@ -75,11 +76,11 @@ const trackSchema = z.object({
  * Keeps top 8-16 most played tracks as favorites
  */
 async function syncAutoFavorites(
-  db: typeof import("@/server/db").db,
+  database: typeof db,
   userId: string,
 ) {
   // Get top tracks by play count (excluding skipped plays, requiring at least 50% completion)
-  const topTracks = await db
+  const topTracks = await database
     .select({
       trackId: listeningAnalytics.trackId,
       trackData: listeningAnalytics.trackData,
@@ -97,7 +98,7 @@ async function syncAutoFavorites(
   }
 
   // Get current favorites
-  const currentFavorites = await db.query.favorites.findMany({
+  const currentFavorites = await database.query.favorites.findMany({
     where: eq(favorites.userId, userId),
   });
 
@@ -112,7 +113,7 @@ async function syncAutoFavorites(
   );
   if (toRemove.length > 0) {
     const trackIdsToRemove = toRemove.map((f) => f.trackId);
-    await db
+    await database
       .delete(favorites)
       .where(
         and(
@@ -125,11 +126,11 @@ async function syncAutoFavorites(
   // Add new favorites that are in top tracks but not yet favorited
   const toAdd = topTracks.filter((t) => !currentFavoriteTrackIds.has(t.trackId));
   if (toAdd.length > 0) {
-    await db.insert(favorites).values(
+    await database.insert(favorites).values(
       toAdd.map((t) => ({
         userId,
         trackId: t.trackId,
-        trackData: t.trackData as unknown as Record<string, unknown>,
+        trackData: t.trackData,
       })),
     );
   }
