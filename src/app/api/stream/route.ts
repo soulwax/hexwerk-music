@@ -72,8 +72,8 @@ export async function GET(req: NextRequest) {
       console.error("[Stream API] Response headers:", Object.fromEntries(response.headers.entries()));
       
       // Check for specific upstream error
-      const isUpstreamError = errorData.message?.includes("upstream error") || 
-                              errorData.error === "ServiceUnavailableException";
+      const isUpstreamError = (errorData.message?.includes("upstream error") ?? false) || 
+                              (errorData.error === "ServiceUnavailableException");
       
       return NextResponse.json(
         { 
