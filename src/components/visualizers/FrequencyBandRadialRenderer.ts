@@ -74,7 +74,7 @@ export class FrequencyBandRadialRenderer {
         // Smooth ring radius animation
         const targetRadius = baseRadius + ringSpacing * (index + 1) + bandValue * ringSpacing * 0.8;
         const currentRadius = this.ringHistory[index] ?? baseRadius + ringSpacing * (index + 1);
-        const newRadius = currentRadius + (targetRadius - currentRadius) * 0.2;
+        const newRadius = Math.max(1, currentRadius + (targetRadius - currentRadius) * 0.2);
         this.ringHistory[index] = newRadius;
 
         // Rotate each ring at different speeds
@@ -86,14 +86,16 @@ export class FrequencyBandRadialRenderer {
         const saturation = color.saturation + bandValue * 25;
         const lightness = color.lightness + bandValue * 25;
 
-        // Draw ring with gradient
+        // Draw ring with gradient - ensure inner radius is always positive
+        const innerRadius = Math.max(0.1, newRadius - 8);
+        const outerRadius = Math.max(innerRadius + 0.1, newRadius + 8);
         const ringGradient = ctx.createRadialGradient(
           centerX,
           centerY,
-          newRadius - 8,
+          innerRadius,
           centerX,
           centerY,
-          newRadius + 8
+          outerRadius
         );
         ringGradient.addColorStop(0, `hsla(${color.hue + hueShift}, ${saturation}%, ${lightness + 15}%, 0.8)`);
         ringGradient.addColorStop(0.5, `hsla(${color.hue + hueShift}, ${saturation}%, ${lightness}%, 0.9)`);

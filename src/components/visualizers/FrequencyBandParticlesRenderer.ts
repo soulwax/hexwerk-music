@@ -172,14 +172,15 @@ export class FrequencyBandParticlesRenderer {
         const saturation = color.saturation + bandValue * 20;
         const lightness = color.lightness + bandValue * 25;
 
-        // Particle gradient
+        // Particle gradient - ensure size is positive
+        const particleSize = Math.max(0.1, particle.size);
         const particleGradient = ctx.createRadialGradient(
           particle.x,
           particle.y,
           0,
           particle.x,
           particle.y,
-          particle.size
+          particleSize
         );
         particleGradient.addColorStop(0, `hsla(${color.hue + hueShift}, ${saturation}%, ${lightness + 20}%, ${particle.life * 0.9})`);
         particleGradient.addColorStop(1, `hsla(${color.hue + hueShift}, ${saturation}%, ${lightness}%, ${particle.life * 0.5})`);

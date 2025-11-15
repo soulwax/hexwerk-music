@@ -72,7 +72,7 @@ export class FrequencyBandCircularRenderer {
         // Pulse effect
         this.pulsePhases[index] = (this.pulsePhases[index] ?? 0) + 0.05 * (1 + bandValue);
         const pulse = 1 + Math.sin(this.pulsePhases[index] ?? 0) * bandValue * 0.3;
-        const radius = baseRadius * pulse * (0.5 + newSize * 0.5);
+        const radius = Math.max(1, baseRadius * pulse * (0.5 + newSize * 0.5));
 
         const startAngle = index * segmentAngle + this.rotationOffset;
         const endAngle = (index + 1) * segmentAngle + this.rotationOffset;
@@ -82,14 +82,16 @@ export class FrequencyBandCircularRenderer {
         const saturation = color.saturation + newSize * 25;
         const lightness = color.lightness + newSize * 25;
 
-        // Create radial gradient for segment
+        // Create radial gradient for segment - ensure inner radius is always positive
+        const innerRadius = Math.max(0.1, maxRadius * 0.3);
+        const outerRadius = Math.max(innerRadius + 0.1, radius);
         const segmentGradient = ctx.createRadialGradient(
           centerX,
           centerY,
-          maxRadius * 0.3,
+          innerRadius,
           centerX,
           centerY,
-          radius
+          outerRadius
         );
         segmentGradient.addColorStop(0, `hsla(${color.hue + hueShift}, ${saturation}%, ${lightness + 20}%, 0.9)`);
         segmentGradient.addColorStop(0.5, `hsla(${color.hue + hueShift}, ${saturation}%, ${lightness}%, 0.85)`);
