@@ -224,6 +224,14 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
       }
     },
     onAutoQueueTrigger: handleAutoQueueTrigger,
+    onError: (error, trackId) => {
+      console.error(`[AudioPlayerContext] Playback error for track ${trackId}:`, error);
+      if (error.includes("503") || error.includes("Service Unavailable")) {
+        showToast("Streaming service unavailable. Please try again later.", "error");
+      } else {
+        showToast("Playback failed. Please try again.", "error");
+      }
+    },
     smartQueueSettings: smartQueueSettings ?? undefined,
   });
 

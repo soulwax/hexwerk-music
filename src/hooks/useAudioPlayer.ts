@@ -20,6 +20,7 @@ interface UseAudioPlayerOptions {
     currentTrack: Track,
     currentQueueLength: number
   ) => Promise<Track[]>;
+  onError?: (error: string, trackId?: number) => void;
   smartQueueSettings?: SmartQueueSettings;
 }
 
@@ -29,6 +30,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     onTrackEnd,
     onDuplicateTrack,
     onAutoQueueTrigger,
+    onError,
     smartQueueSettings,
   } = options;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -49,6 +51,9 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const autoQueueTriggeredRef = useRef(false);
   const loadIdRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+  const failedTracksRef = useRef<Set<number>>(new Set());
 
   // Load persisted settings and queue state
   useEffect(() => {
@@ -314,8 +319,27 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
         return;
       }
 
+      // Check for HTTP errors (503, 404, etc.) in error message
+      const errorMessage = error?.message ?? "";
+      const isHttpError = /^\d{3}:/.test(errorMessage) || errorMessage.includes("Service Unavailable") || errorMessage.includes("503");
+      
+      if (isHttpError && currentTrack) {
+        // Mark this track as failed to prevent infinite retries
+        failedTracksRef.current.add(currentTrack.id);
+        console.error(`Audio error for track ${currentTrack.id}:`, errorMessage);
+        setIsLoading(false);
+        setIsPlaying(false);
+        
+        // Notify parent of error
+        onError?.(errorMessage, currentTrack.id);
+        
+        // Reset retry count for this track
+        retryCountRef.current = 0;
+        return;
+      }
+
       // Log other errors for debugging
-      console.error("Audio error:", error?.message ?? "Unknown error");
+      console.error("Audio error:", errorMessage || "Unknown error");
       setIsLoading(false);
       setIsPlaying(false);
     };
@@ -339,11 +363,19 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("error", handleError);
     };
-  }, [handleTrackEnd]);
+  }, [handleTrackEnd, currentTrack, onError]);
 
   const loadTrack = useCallback(
     (track: Track, streamUrl: string) => {
       if (!audioRef.current) return;
+
+      // Check if this track has already failed (prevent infinite retries)
+      if (failedTracksRef.current.has(track.id)) {
+        console.warn(`[useAudioPlayer] Track ${track.id} previously failed, skipping load`);
+        setIsLoading(false);
+        setIsPlaying(false);
+        return;
+      }
 
       // Increment load ID to track this specific load
       const currentLoadId = ++loadIdRef.current;
@@ -352,6 +384,11 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
+      }
+
+      // Reset retry count for new track
+      if (currentTrack?.id !== track.id) {
+        retryCountRef.current = 0;
       }
 
       // Pause and reset current audio to prevent "aborted" errors on rapid track changes
@@ -391,17 +428,33 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
       const applied = applySource();
       if (!applied) {
-        // Retry after a short delay if this load is still current
-        retryTimeoutRef.current = setTimeout(() => {
-          if (currentLoadId === loadIdRef.current && audioRef.current) {
-            applySource();
-          }
-        }, AUDIO_CONSTANTS.AUDIO_LOAD_RETRY_DELAY_MS);
+        // Retry with exponential backoff, but only if we haven't exceeded max retries
+        if (retryCountRef.current < maxRetries) {
+          const delay = AUDIO_CONSTANTS.AUDIO_LOAD_RETRY_DELAY_MS * Math.pow(2, retryCountRef.current);
+          retryCountRef.current++;
+          
+          retryTimeoutRef.current = setTimeout(() => {
+            if (currentLoadId === loadIdRef.current && audioRef.current) {
+              applySource();
+            }
+          }, delay);
+        } else {
+          // Max retries exceeded, mark track as failed
+          console.error(`[useAudioPlayer] Max retries (${maxRetries}) exceeded for track ${track.id}`);
+          failedTracksRef.current.add(track.id);
+          retryCountRef.current = 0;
+          setIsLoading(false);
+          setIsPlaying(false);
+          onError?.(`Failed to load track after ${maxRetries} retries`, track.id);
+        }
+      } else {
+        // Successfully applied, reset retry count
+        retryCountRef.current = 0;
       }
 
       onTrackChange?.(track);
     },
-    [currentTrack, onTrackChange]
+    [currentTrack, onTrackChange, onError]
   );
 
   const play = useCallback(async () => {
@@ -752,6 +805,14 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     };
   }, []);
 
+  const clearFailedTrack = useCallback((trackId: number) => {
+    failedTracksRef.current.delete(trackId);
+  }, []);
+
+  const clearAllFailedTracks = useCallback(() => {
+    failedTracksRef.current.clear();
+  }, []);
+
   return {
     // State
     currentTrack,
@@ -801,6 +862,8 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     adjustVolume,
     skipForward,
     skipBackward,
+    clearFailedTrack,
+    clearAllFailedTracks,
 
     // Ref
     audioRef,
