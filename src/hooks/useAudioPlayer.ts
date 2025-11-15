@@ -321,6 +321,18 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
       // Check for HTTP errors (503, 404, etc.) in error message
       const errorMessage = error?.message ?? "";
+      
+      // Check if this is an aborted fetch (common when skipping tracks quickly)
+      const isAborted = errorMessage.includes("aborted") || 
+                       errorMessage.includes("AbortError") ||
+                       (errorMessage.includes("fetching process") && errorMessage.includes("aborted"));
+      
+      if (isAborted) {
+        // This is expected when switching tracks quickly, not a real error
+        console.debug("[useAudioPlayer] Fetch aborted (normal during rapid track changes)");
+        return;
+      }
+      
       const isHttpError = /^\d{3}:/.test(errorMessage) || errorMessage.includes("Service Unavailable") || errorMessage.includes("503");
       
       if (isHttpError && currentTrack) {
@@ -416,7 +428,11 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
           audioRef.current.src = streamUrl;
           return true;
         } catch (error) {
-          if (error instanceof DOMException && error.name === "AbortError") {
+          // Ignore abort errors - these are normal when switching tracks quickly
+          if (error instanceof DOMException && 
+              (error.name === "AbortError" || 
+               error.message?.includes("aborted") ||
+               error.message?.includes("fetching process"))) {
             console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
             return false;
           } else {
