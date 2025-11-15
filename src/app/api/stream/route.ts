@@ -60,9 +60,9 @@ export async function GET(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Could not read error response');
-      let errorData;
+      let errorData: { message?: string; error?: string } = { message: errorText };
       try {
-        errorData = JSON.parse(errorText);
+        errorData = JSON.parse(errorText) as { message?: string; error?: string };
       } catch {
         errorData = { message: errorText };
       }
