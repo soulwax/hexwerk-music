@@ -177,7 +177,7 @@ export default function PersistentPlayer() {
           width={400}
           height={150}
           barCount={64}
-          type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"}
+          type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings" | "frequency-bands" | "frequency-circular" | "frequency-layered" | "frequency-waterfall" | "frequency-radial" | "frequency-particles") ?? "bars"}
           onTypeChange={(newType) => {
             updatePreferences.mutate({ visualizerType: newType });
           }}

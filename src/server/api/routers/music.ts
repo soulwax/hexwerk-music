@@ -652,7 +652,7 @@ export const musicRouter = createTRPCRouter({
         equalizerBands: z.array(z.number()).optional(),
         equalizerPanelOpen: z.boolean().optional(),
         queuePanelOpen: z.boolean().optional(),
-        visualizerType: z.enum(["bars", "wave", "circular", "oscilloscope", "spectrum", "spectral-waves", "radial-spectrum", "particles", "waveform-mirror", "frequency-rings"]).optional(),
+        visualizerType: z.enum(["bars", "wave", "circular", "oscilloscope", "spectrum", "spectral-waves", "radial-spectrum", "particles", "waveform-mirror", "frequency-rings", "frequency-bands", "frequency-circular", "frequency-layered", "frequency-waterfall", "frequency-radial", "frequency-particles"]).optional(),
         visualizerEnabled: z.boolean().optional(),
         compactMode: z.boolean().optional(),
         theme: z.enum(["dark", "light"]).optional(),

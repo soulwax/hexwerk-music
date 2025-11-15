@@ -177,6 +177,16 @@ export function useAudioVisualizer(
     };
   }, [stopVisualization]);
 
+  // Get audio context sample rate
+  const getSampleRate = useCallback((): number => {
+    return audioContextRef.current?.sampleRate ?? 44100;
+  }, []);
+
+  // Get FFT size
+  const getFFTSize = useCallback((): number => {
+    return analyserRef.current?.fftSize ?? fftSize;
+  }, [fftSize]);
+
   return {
     isInitialized,
     frequencyData,
@@ -184,6 +194,8 @@ export function useAudioVisualizer(
     audioContext: audioContextRef.current,
     getFrequencyData,
     getTimeDomainData,
+    getSampleRate,
+    getFFTSize,
     startVisualization,
     stopVisualization,
     resumeContext,

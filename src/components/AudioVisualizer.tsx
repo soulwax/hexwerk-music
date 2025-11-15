@@ -3,6 +3,7 @@
 "use client";
 
 import { useAudioVisualizer } from "@/hooks/useAudioVisualizer";
+import { analyzeAudio, type AudioAnalysis } from "@/utils/audioAnalysis";
 import { GripVertical, Maximize2, Minimize2, Move } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BarsRenderer } from "./visualizers/BarsRenderer";
@@ -13,6 +14,12 @@ import { SpectralWavesRenderer } from "./visualizers/SpectralWavesRenderer";
 import { RadialSpectrumRenderer } from "./visualizers/RadialSpectrumRenderer";
 import { ParticleRenderer } from "./visualizers/ParticleRenderer";
 import { FrequencyRingsRenderer } from "./visualizers/FrequencyRingsRenderer";
+import { FrequencyBandBarsRenderer } from "./visualizers/FrequencyBandBarsRenderer";
+import { FrequencyBandCircularRenderer } from "./visualizers/FrequencyBandCircularRenderer";
+import { FrequencyBandLayeredRenderer } from "./visualizers/FrequencyBandLayeredRenderer";
+import { FrequencyBandWaterfallRenderer } from "./visualizers/FrequencyBandWaterfallRenderer";
+import { FrequencyBandRadialRenderer } from "./visualizers/FrequencyBandRadialRenderer";
+import { FrequencyBandParticlesRenderer } from "./visualizers/FrequencyBandParticlesRenderer";
 import type { ColorPalette } from "@/utils/colorExtractor";
 
 interface AudioVisualizerProps {
@@ -23,8 +30,8 @@ interface AudioVisualizerProps {
   barCount?: number;
   barColor?: string;
   barGap?: number;
-  type?: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings";
-  onTypeChange?: (type: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") => void;
+  type?: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings" | "frequency-bands" | "frequency-circular" | "frequency-layered" | "frequency-waterfall" | "frequency-radial" | "frequency-particles";
+  onTypeChange?: (type: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings" | "frequency-bands" | "frequency-circular" | "frequency-layered" | "frequency-waterfall" | "frequency-radial" | "frequency-particles") => void;
   colorPalette?: ColorPalette | null;
   isDraggable?: boolean;
   blendWithBackground?: boolean;
@@ -41,6 +48,12 @@ const VISUALIZER_TYPES = [
   "waveform-mirror",
   "particles",
   "frequency-rings",
+  "frequency-bands",
+  "frequency-circular",
+  "frequency-layered",
+  "frequency-waterfall",
+  "frequency-radial",
+  "frequency-particles",
 ] as const;
 
 export function AudioVisualizer({
@@ -79,11 +92,20 @@ export function AudioVisualizer({
   const radialSpectrumRendererRef = useRef<RadialSpectrumRenderer | null>(null);
   const particleRendererRef = useRef<ParticleRenderer | null>(null);
   const frequencyRingsRendererRef = useRef<FrequencyRingsRenderer | null>(null);
+  const frequencyBandBarsRendererRef = useRef<FrequencyBandBarsRenderer | null>(null);
+  const frequencyBandCircularRendererRef = useRef<FrequencyBandCircularRenderer | null>(null);
+  const frequencyBandLayeredRendererRef = useRef<FrequencyBandLayeredRenderer | null>(null);
+  const frequencyBandWaterfallRendererRef = useRef<FrequencyBandWaterfallRenderer | null>(null);
+  const frequencyBandRadialRendererRef = useRef<FrequencyBandRadialRenderer | null>(null);
+  const frequencyBandParticlesRendererRef = useRef<FrequencyBandParticlesRenderer | null>(null);
 
   const visualizer = useAudioVisualizer(audioElement, {
     fftSize: 2048,
     smoothingTimeConstant: 0.75,
   });
+
+  // Enhanced audio analysis state (using ref for immediate access in render loop)
+  const audioAnalysisRef = useRef<AudioAnalysis | null>(null);
 
   // Initialize renderers
   useEffect(() => {
@@ -95,6 +117,12 @@ export function AudioVisualizer({
     radialSpectrumRendererRef.current = new RadialSpectrumRenderer(barCount);
     particleRendererRef.current = new ParticleRenderer(barCount, barGap, barColor);
     frequencyRingsRendererRef.current = new FrequencyRingsRenderer(8);
+    frequencyBandBarsRendererRef.current = new FrequencyBandBarsRenderer();
+    frequencyBandCircularRendererRef.current = new FrequencyBandCircularRenderer();
+    frequencyBandLayeredRendererRef.current = new FrequencyBandLayeredRenderer();
+    frequencyBandWaterfallRendererRef.current = new FrequencyBandWaterfallRenderer();
+    frequencyBandRadialRendererRef.current = new FrequencyBandRadialRenderer();
+    frequencyBandParticlesRendererRef.current = new FrequencyBandParticlesRenderer();
   }, [barCount, barGap, barColor]);
 
   // Sync external type changes
@@ -259,6 +287,17 @@ export function AudioVisualizer({
       void visualizer.resumeContext();
 
       const renderFrame = (data: Uint8Array) => {
+        // Perform enhanced audio analysis
+        let currentAnalysis: AudioAnalysis | null = null;
+        if (visualizer.audioContext && visualizer.analyser) {
+          const sampleRate = visualizer.getSampleRate();
+          const fftSize = visualizer.getFFTSize();
+          currentAnalysis = analyzeAudio(data, sampleRate, fftSize);
+          audioAnalysisRef.current = currentAnalysis;
+        } else {
+          currentAnalysis = audioAnalysisRef.current;
+        }
+
         switch (currentType) {
           case "bars":
             barsRendererRef.current?.render(ctx, data, canvas, barCount, barGap);
@@ -290,6 +329,24 @@ export function AudioVisualizer({
           case "frequency-rings":
             frequencyRingsRendererRef.current?.render(ctx, data, canvas);
             break;
+          case "frequency-bands":
+            frequencyBandBarsRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-circular":
+            frequencyBandCircularRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-layered":
+            frequencyBandLayeredRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-waterfall":
+            frequencyBandWaterfallRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-radial":
+            frequencyBandRadialRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-particles":
+            frequencyBandParticlesRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
           default:
             barsRendererRef.current?.render(ctx, data, canvas, barCount, barGap);
             break;
@@ -318,8 +375,6 @@ export function AudioVisualizer({
     );
   }
 
-  // Calculate effective bar color
-  const effectiveBarColor = colorPalette?.primary ?? barColor;
 
   // Container style
   const containerStyle: React.CSSProperties = isDraggable
