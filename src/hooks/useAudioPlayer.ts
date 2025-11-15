@@ -334,9 +334,21 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       }
       
       const isHttpError = /^\d{3}:/.test(errorMessage) || errorMessage.includes("Service Unavailable") || errorMessage.includes("503");
+      const isUpstreamError = errorMessage.includes("upstream error") || errorMessage.includes("ServiceUnavailableException");
       
       if (isHttpError && currentTrack) {
-        // Mark this track as failed to prevent infinite retries
+        // For upstream errors, don't mark as permanently failed - might be temporary
+        if (isUpstreamError) {
+          console.warn(`[useAudioPlayer] Upstream error for track ${currentTrack.id} - may be temporary:`, errorMessage);
+          setIsLoading(false);
+          setIsPlaying(false);
+          onError?.(errorMessage, currentTrack.id);
+          // Don't add to failed tracks - allow retry later
+          retryCountRef.current = 0;
+          return;
+        }
+        
+        // Mark this track as failed to prevent infinite retries (for other 503 errors)
         failedTracksRef.current.add(currentTrack.id);
         console.error(`Audio error for track ${currentTrack.id}:`, errorMessage);
         setIsLoading(false);

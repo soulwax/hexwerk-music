@@ -226,7 +226,11 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
     onAutoQueueTrigger: handleAutoQueueTrigger,
     onError: (error, trackId) => {
       console.error(`[AudioPlayerContext] Playback error for track ${trackId}:`, error);
-      if (error.includes("503") || error.includes("Service Unavailable")) {
+      
+      // Check for upstream errors (backend can't reach upstream service)
+      if (error.includes("upstream error") || error.includes("ServiceUnavailableException")) {
+        showToast("Music service temporarily unavailable. The backend cannot reach the music source. Please try again in a moment.", "error");
+      } else if (error.includes("503") || error.includes("Service Unavailable")) {
         showToast("Streaming service unavailable. Please try again later.", "error");
       } else {
         showToast("Playback failed. Please try again.", "error");
