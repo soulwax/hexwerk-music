@@ -30,7 +30,12 @@ export function MobilePanesProvider({ children }: { children: ReactNode }) {
 export function useMobilePanes() {
   const context = useContext(MobilePanesContext);
   if (!context) {
-    throw new Error("useMobilePanes must be used within MobilePanesProvider");
+    // Return a no-op function if context is not available (e.g., on desktop)
+    return {
+      currentPane: 2 as PaneIndex,
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      navigateToPane: () => {},
+    };
   }
   return context;
 }

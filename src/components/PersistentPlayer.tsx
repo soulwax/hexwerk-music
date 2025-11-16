@@ -10,7 +10,6 @@ import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import MobilePlayer from "./MobilePlayer";
 import MaturePlayer from "./Player";
 import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
 import { getCoverImage } from "@/utils/images";
@@ -117,7 +116,7 @@ export default function PersistentPlayer() {
     onPlaybackRateChange: player.setPlaybackRate,
     onSkipForward: player.skipForward,
     onSkipBackward: player.skipBackward,
-    onToggleQueue: isMobile
+    onToggleQueue: isMobile && navigateToPane
       ? () => navigateToPane(1) // Navigate to queue pane on mobile
       : () => setShowQueue(!showQueue),
     onToggleEqualizer: () => setShowEqualizer(!showEqualizer),
@@ -125,12 +124,8 @@ export default function PersistentPlayer() {
 
   return (
     <>
-      {/* Adaptive Player - Mobile or Desktop */}
-      {isMobile ? (
-        // On mobile, player is handled by MobileSwipeablePanes
-        // Only render mini player here if needed
-        null
-      ) : (
+      {/* Desktop Player - Always render on desktop, hidden on mobile */}
+      {!isMobile && (
         <>
           <div className="fixed inset-x-0 bottom-0 z-50">
             <div className="player-backdrop">
@@ -168,6 +163,8 @@ export default function PersistentPlayer() {
           )}
         </>
       )}
+      
+      {/* Mobile Player - Handled by MobileSwipeablePanes, nothing to render here */}
 
       {/* Equalizer Panel */}
       {showEqualizer && (
