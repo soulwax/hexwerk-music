@@ -3,6 +3,7 @@
 "use client";
 
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
+import { useMobilePanes } from "@/contexts/MobilePanesContext";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useEqualizer } from "@/hooks/useEqualizer";
 import { api } from "@/trpc/react";
@@ -33,6 +34,7 @@ const EnhancedQueue = dynamic(
 export default function PersistentPlayer() {
   const player = useGlobalPlayer();
   const isMobile = useIsMobile();
+  const { navigateToPane } = useMobilePanes();
 
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
@@ -115,7 +117,9 @@ export default function PersistentPlayer() {
     onPlaybackRateChange: player.setPlaybackRate,
     onSkipForward: player.skipForward,
     onSkipBackward: player.skipBackward,
-    onToggleQueue: () => setShowQueue(!showQueue),
+    onToggleQueue: isMobile
+      ? () => navigateToPane(1) // Navigate to queue pane on mobile
+      : () => setShowQueue(!showQueue),
     onToggleEqualizer: () => setShowEqualizer(!showEqualizer),
   };
 
@@ -123,42 +127,46 @@ export default function PersistentPlayer() {
     <>
       {/* Adaptive Player - Mobile or Desktop */}
       {isMobile ? (
-        <MobilePlayer {...playerProps} />
+        // On mobile, player is handled by MobileSwipeablePanes
+        // Only render mini player here if needed
+        null
       ) : (
-        <div className="fixed inset-x-0 bottom-0 z-50">
-          <div className="player-backdrop">
-            <div className="player-backdrop-inner">
-              <MaturePlayer {...playerProps} />
+        <>
+          <div className="fixed inset-x-0 bottom-0 z-50">
+            <div className="player-backdrop">
+              <div className="player-backdrop-inner">
+                <MaturePlayer {...playerProps} />
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Enhanced Queue Panel */}
-      {showQueue && (
-        <EnhancedQueue
-          queue={player.queue}
-          currentTrack={player.currentTrack}
-          onClose={() => setShowQueue(false)}
-          onRemove={player.removeFromQueue}
-          onClear={player.clearQueue}
-          onReorder={player.reorderQueue}
-          onPlayFrom={player.playFromQueue}
-          onSaveAsPlaylist={player.saveQueueAsPlaylist}
-          onAddSimilarTracks={
-            player.addSimilarTracks ??
-            (() => {
-              /* No similar tracks available */
-            })
-          }
-          onGenerateSmartMix={
-            player.generateSmartMix ??
-            (() => {
-              /* Smart mix not available */
-            })
-          }
-          isAutoQueueing={player.isAutoQueueing ?? false}
-        />
+          {/* Enhanced Queue Panel - Desktop only */}
+          {showQueue && (
+            <EnhancedQueue
+              queue={player.queue}
+              currentTrack={player.currentTrack}
+              onClose={() => setShowQueue(false)}
+              onRemove={player.removeFromQueue}
+              onClear={player.clearQueue}
+              onReorder={player.reorderQueue}
+              onPlayFrom={player.playFromQueue}
+              onSaveAsPlaylist={player.saveQueueAsPlaylist}
+              onAddSimilarTracks={
+                player.addSimilarTracks ??
+                (() => {
+                  /* No similar tracks available */
+                })
+              }
+              onGenerateSmartMix={
+                player.generateSmartMix ??
+                (() => {
+                  /* Smart mix not available */
+                })
+              }
+              isAutoQueueing={player.isAutoQueueing ?? false}
+            />
+          )}
+        </>
       )}
 
       {/* Equalizer Panel */}

@@ -46,6 +46,7 @@ interface MobilePlayerProps {
   onSkipBackward: () => void;
   onToggleQueue?: () => void;
   onToggleEqualizer?: () => void;
+  forceExpanded?: boolean;
 }
 
 export default function MobilePlayer(props: MobilePlayerProps) {
@@ -74,9 +75,10 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     onSkipBackward: _onSkipBackward,
     onToggleQueue,
     onToggleEqualizer,
+    forceExpanded = false,
   } = props;
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(forceExpanded);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [albumColorPalette, setAlbumColorPalette] = useState<ColorPalette | null>(null);
@@ -176,6 +178,10 @@ export default function MobilePlayer(props: MobilePlayerProps) {
   };
 
   const handleExpandedDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (forceExpanded) {
+      // Don't collapse when forceExpanded - navigation is handled by swipeable panes
+      return;
+    }
     const offset = info.offset.y;
     const velocity = info.velocity.y;
 
@@ -190,6 +196,10 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     const target = event.target as HTMLElement;
     if (shouldIgnoreTouch(target)) return;
     hapticLight();
+    if (forceExpanded) {
+      // If forceExpanded, don't handle tap (let parent handle navigation)
+      return;
+    }
     setIsExpanded(true);
   };
 
@@ -306,17 +316,19 @@ export default function MobilePlayer(props: MobilePlayerProps) {
       {isExpanded && (
         <>
           {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[98] bg-black/90"
-            onClick={() => {
-              hapticLight();
-              setIsExpanded(false);
-            }}
-          />
+          {!forceExpanded && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[98] bg-black/90"
+              onClick={() => {
+                hapticLight();
+                setIsExpanded(false);
+              }}
+            />
+          )}
 
           {/* Full Player */}
           <motion.div
@@ -332,28 +344,30 @@ export default function MobilePlayer(props: MobilePlayerProps) {
             className="safe-bottom fixed inset-0 z-[99] flex flex-col bg-[linear-gradient(165deg,rgba(13,20,29,0.98),rgba(8,13,20,0.92))]"
           >
             {/* Header with drag handle */}
-            <div className="flex flex-col items-center pt-4 cursor-grab active:cursor-grabbing">
-              <div className="bottom-sheet-handle mb-4" />
-              <motion.button
-                onClick={() => {
-                  hapticLight();
-                  setIsExpanded(false);
-                }}
-                whileTap={{ scale: 0.9 }}
-                transition={springPresets.immediate}
-                className="touch-target text-[var(--color-subtext)]"
-                aria-label="Collapse player"
-              >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </motion.button>
-            </div>
+            {!forceExpanded && (
+              <div className="flex flex-col items-center pt-4 cursor-grab active:cursor-grabbing">
+                <div className="bottom-sheet-handle mb-4" />
+                <motion.button
+                  onClick={() => {
+                    hapticLight();
+                    setIsExpanded(false);
+                  }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={springPresets.immediate}
+                  className="touch-target text-[var(--color-subtext)]"
+                  aria-label="Collapse player"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </motion.button>
+              </div>
+            )}
 
             {/* Album Art / Visualizer */}
             <div className="flex flex-1 items-center justify-center px-8 py-8">

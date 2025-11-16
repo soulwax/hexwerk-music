@@ -6,11 +6,13 @@ import { Geist } from "next/font/google";
 import { type ReactNode } from "react";
 
 import Header from "@/components/Header";
+import MobileContentWrapper from "@/components/MobileContentWrapper";
 import MobileNavigation from "@/components/MobileNavigation";
 import PersistentPlayer from "@/components/PersistentPlayer";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
+import { MobilePanesProvider } from "@/contexts/MobilePanesContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { TRPCReactProvider } from "@/trpc/react";
 
@@ -83,14 +85,19 @@ export default function RootLayout({
             <TRPCReactProvider>
               <ToastProvider>
                 <AudioPlayerProvider>
-                  {/* Header with hamburger menu */}
-                  <Header />
-                  {/* Main content with bottom padding for player and mobile nav */}
-                  <div className="pb-36 md:pb-24">{children}</div>
-                  {/* Mobile bottom navigation */}
-                  <MobileNavigation />
-                  {/* Persistent player - stays on all pages */}
-                  <PersistentPlayer />
+                  <MobilePanesProvider>
+                    {/* Header with hamburger menu */}
+                    <Header />
+                    {/* Mobile content wrapper with swipeable panes */}
+                    <MobileContentWrapper>
+                      {/* Main content with bottom padding for player and mobile nav */}
+                      <div className="pb-36 md:pb-24">{children}</div>
+                    </MobileContentWrapper>
+                    {/* Mobile bottom navigation */}
+                    <MobileNavigation />
+                    {/* Persistent player - stays on all pages */}
+                    <PersistentPlayer />
+                  </MobilePanesProvider>
                 </AudioPlayerProvider>
               </ToastProvider>
             </TRPCReactProvider>
