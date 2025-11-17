@@ -10,7 +10,7 @@ import type { PanInfo } from "framer-motion";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Heart, ListX, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 export interface SwipeableTrackItemProps {
   track: Track;
