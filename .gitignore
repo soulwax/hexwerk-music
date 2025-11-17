@@ -62,3 +62,11 @@ drizzle.env.js
 
 
 public/**/*.js
+
+# Electron
+/dist
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.snap

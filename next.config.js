@@ -9,6 +9,8 @@ import "./src/env.js";
 /** @type {import("next").NextConfig} */
 const config = {
   reactStrictMode: true,
+  // For Electron: output standalone server for production builds
+  output: process.env.ELECTRON_BUILD === 'true' ? 'standalone' : undefined,
   images: {
     remotePatterns: [
       {
