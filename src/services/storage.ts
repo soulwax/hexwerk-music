@@ -1,3 +1,5 @@
+// File: src/services/storage.ts
+
 /**
  * Storage abstraction layer
  * Provides type-safe, error-handled access to localStorage and sessionStorage

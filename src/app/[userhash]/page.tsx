@@ -1,3 +1,5 @@
+// File: src/app/[userhash]/page.tsx
+
 "use client";
 
 import Button from "@/components/Button";

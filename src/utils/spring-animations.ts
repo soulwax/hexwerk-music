@@ -150,5 +150,3 @@ export const listItemAnimation = {
   },
 };
 
-
-

@@ -1,5 +1,4 @@
-// Feature Flags Configuration
-// Control which features are enabled/disabled
+// File: src/config/features.ts
 
 /**
  * Audio Features Integration (Essentia Microservice)

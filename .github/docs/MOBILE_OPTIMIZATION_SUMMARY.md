@@ -140,8 +140,10 @@ Already implemented:
 ### Technical Implementation:
 1. **Audio Element**: Standard HTML5 `<audio>` element (no iframe needed)
 2. **Media Session API**: Registers metadata and action handlers with the browser
-3. **Service Worker**: Caches audio streams and album covers for offline access
-4. **PWA**: Installed as standalone app, enables background audio
+   - Provides lock screen controls
+   - Enables notification controls
+   - Syncs with system media controls
+   - Works in regular web pages (no PWA required for most browsers)
 
 ### User Experience:
 1. User plays a track
@@ -153,10 +155,15 @@ Already implemented:
    - Control from notification shade → Works seamlessly
 
 ### Supported Platforms:
-- ✅ Chrome/Edge (Android, Desktop)
-- ✅ Safari (iOS 15+, macOS)
-- ✅ Firefox (Android, Desktop)
-- ⚠️ iOS Safari requires PWA installation for background playback
+- ✅ Chrome/Edge (Android, Desktop) - Works without PWA installation
+- ✅ Safari (macOS) - Works without PWA installation
+- ✅ Firefox (Android, Desktop) - Works without PWA installation
+- ⚠️ iOS Safari - Background playback requires the app to be added to home screen (PWA-like behavior), but no service worker is needed
+
+### Note on Offline Functionality:
+- **Offline audio caching is NOT currently implemented**
+- Background playback works through Media Session API alone
+- No service worker or PWA configuration is required for background playback on supported platforms
 
 ---
 

@@ -1,4 +1,4 @@
-// Enhanced audio analysis utilities for frequency band analysis
+// File: src/utils/audioAnalysis.ts
 
 export interface FrequencyBands {
   bass: number;      // 20-250 Hz
@@ -155,4 +155,3 @@ export function detectBeat(
   
   return currentEnergy > averageEnergy * constant * threshold;
 }
-

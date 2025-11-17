@@ -1,6 +1,5 @@
 // File: src/types/index.ts
 
-
 export interface Artist {
   id: number;
   name: string;
@@ -207,4 +206,3 @@ export function isSearchResponse(obj: unknown): obj is SearchResponse {
 export function isRecommendedTrack(obj: unknown): obj is RecommendedTrack {
   return isTrack(obj) && 'recommendationContext' in obj;
 }
-

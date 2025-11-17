@@ -1,3 +1,5 @@
+// File: src/utils/haptics.ts
+
 /**
  * Haptic feedback utility for mobile devices
  * Provides tactile feedback for user interactions

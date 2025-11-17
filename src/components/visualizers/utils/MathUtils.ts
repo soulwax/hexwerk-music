@@ -1,5 +1,4 @@
 // File: src/components/visualizers/utils/MathUtils.ts
-// Advanced mathematical utilities for visual effects
 
 export class MathUtils {
   // Fast inverse square root (Quake III algorithm)

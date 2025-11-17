@@ -77,5 +77,3 @@ export function SnappyButton({
 
 export default SnappyButton;
 
-
-

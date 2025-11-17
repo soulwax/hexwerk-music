@@ -1,4 +1,5 @@
-// Script to populate userHash for existing users
+// File: scripts/populate-userhash.ts
+
 import { Pool } from "pg";
 import { readFileSync } from "fs";
 import path from "path";
