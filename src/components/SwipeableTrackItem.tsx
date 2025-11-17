@@ -33,7 +33,6 @@ export function SwipeableTrackItem({
   showRemove = false,
   showFavorite = true,
 }: SwipeableTrackItemProps) {
-  const [isRevealed, setIsRevealed] = useState<"left" | "right" | null>(null);
   const x = useMotionValue(0);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -54,8 +53,6 @@ export function SwipeableTrackItem({
       if (showFavorite && onFavorite) {
         hapticMedium();
         onFavorite(track);
-        setIsRevealed("right");
-        setTimeout(() => setIsRevealed(null), 500);
       }
     }
     // Swipe left (remove action)
@@ -63,8 +60,6 @@ export function SwipeableTrackItem({
       if (showRemove && onRemove) {
         hapticMedium();
         onRemove(track);
-        setIsRevealed("left");
-        setTimeout(() => setIsRevealed(null), 500);
       }
     }
   };

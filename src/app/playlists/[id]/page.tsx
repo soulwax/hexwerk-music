@@ -136,7 +136,7 @@ export default function PlaylistDetailPage() {
       setDraftTitle(playlist.name ?? "");
       setDraftDescription(playlist.description ?? "");
     }
-  }, [playlist?.isPublic]);
+  }, [playlist]);
 
   const handleToggleVisibility = async (): Promise<void> => {
     if (!playlist) return;

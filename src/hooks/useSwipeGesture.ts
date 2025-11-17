@@ -72,7 +72,7 @@ export function useSwipeGesture(config: SwipeGestureConfig) {
   }, []);
 
   const handleTouchEnd = useCallback(() => {
-    const { startX, startY, distX, distY, startTime } = swipeState.current;
+    const { distX, distY, startTime } = swipeState.current;
     const elapsedTime = Date.now() - startTime;
     
     swipeState.current.elapsedTime = elapsedTime;

@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { ENABLE_AUDIO_FEATURES } from "@/config/features";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
-import { db } from "@/server/db";
+import type { db } from "@/server/db";
 import {
   audioFeatures,
   favorites,

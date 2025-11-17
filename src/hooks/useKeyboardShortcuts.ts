@@ -21,7 +21,6 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
   useEffect(() => {
     // Handle Electron media keys
     if (typeof window !== 'undefined' && window.electron) {
-      const electron = window.electron;
       const handleMediaKey = (key: string) => {
         switch (key) {
           case 'play-pause':
@@ -36,10 +35,12 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
         }
       };
 
-      electron.onMediaKey(handleMediaKey);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      window.electron.onMediaKey(handleMediaKey);
 
       return () => {
-        electron.removeMediaKeyListener();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        window.electron.removeMediaKeyListener();
       };
     }
   }, [handlers]);
