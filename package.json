@@ -51,7 +51,7 @@
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.548.0",
     "next": "^15.5.6",
-    "next-auth": "5.0.0-beta.25",
+    "next-auth": "^5.0.0-beta.30",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "react": "^19.2.0",
@@ -73,8 +73,11 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
     "dotenv": "^17.2.3",
-    "drizzle-kit": "^0.31.5",
+    "drizzle-kit": "^0.18.1",
+    "electron": "^39.2.1",
+    "electron-builder": "^25.1.8",
     "eslint": "^9.38.0",
     "eslint-config-next": "^15.5.6",
     "eslint-plugin-drizzle": "^0.2.3",
@@ -86,11 +89,8 @@
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
-    "webpack": "^5.102.1",
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8",
-    "concurrently": "^9.1.2",
-    "wait-on": "^8.0.1"
+    "wait-on": "^8.0.1",
+    "webpack": "^5.102.1"
   },
   "build": {
     "appId": "com.starchild.music",
@@ -104,16 +104,23 @@
       "package.json"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "public/icon.ico"
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "public/icon.icns",
       "category": "public.app-category.music"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "public/icon.png",
       "category": "Audio"
     },
