@@ -12,7 +12,7 @@ export interface AnimatedListProps {
   staggerDelay?: number;
 }
 
-export function AnimatedList({ children, className = "", staggerDelay = 0.04 }: AnimatedListProps) {
+export function AnimatedList({ children, className = "" }: AnimatedListProps) {
   return (
     <motion.div
       variants={listAnimation}

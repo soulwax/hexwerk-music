@@ -21,6 +21,7 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
   useEffect(() => {
     // Handle Electron media keys
     if (typeof window !== 'undefined' && window.electron) {
+      const electron = window.electron;
       const handleMediaKey = (key: string) => {
         switch (key) {
           case 'play-pause':
@@ -35,10 +36,10 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
         }
       };
 
-      window.electron.onMediaKey(handleMediaKey);
+      electron.onMediaKey(handleMediaKey);
 
       return () => {
-        window.electron?.removeMediaKeyListener();
+        electron.removeMediaKeyListener();
       };
     }
   }, [handlers]);

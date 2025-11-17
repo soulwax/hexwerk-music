@@ -66,13 +66,13 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     onNext,
     onPrevious,
     onSeek,
-    onVolumeChange: _onVolumeChange,
+    onVolumeChange,
     onToggleMute,
     onToggleShuffle,
     onCycleRepeat,
     onPlaybackRateChange,
-    onSkipForward: _onSkipForward,
-    onSkipBackward: _onSkipBackward,
+    onSkipForward,
+    onSkipBackward,
     onToggleQueue,
     onToggleEqualizer,
     forceExpanded = false,
@@ -192,7 +192,7 @@ export default function MobilePlayer(props: MobilePlayerProps) {
     }
   };
 
-  const handleMiniTap = (event: PointerEvent | MouseEvent | TouchEvent, info?: TapInfo) => {
+  const handleMiniTap = (event: PointerEvent | MouseEvent | TouchEvent) => {
     const target = event.target as HTMLElement;
     if (shouldIgnoreTouch(target)) return;
     hapticLight();

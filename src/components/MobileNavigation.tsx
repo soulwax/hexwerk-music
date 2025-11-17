@@ -130,7 +130,7 @@ export default function MobileNavigation() {
           )}
         </AnimatePresence>
 
-        {visibleTabs.map((tab, index) => {
+        {visibleTabs.map((tab) => {
           const active = isActive(tab.path);
           return (
             <Link

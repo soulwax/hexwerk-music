@@ -291,7 +291,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
         navigator.mediaSession.setActionHandler("seekbackward", null);
         navigator.mediaSession.setActionHandler("seekforward", null);
         navigator.mediaSession.setActionHandler("seekto", null);
-      } catch (error) {
+      } catch {
         // Ignore cleanup errors
       }
     };
