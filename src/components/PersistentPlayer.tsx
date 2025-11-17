@@ -70,11 +70,7 @@ export default function PersistentPlayer() {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(STORAGE_KEYS.VISUALIZER_ENABLED);
     if (stored !== null) {
-      try {
-        setVisualizerEnabled(JSON.parse(stored));
-      } catch {
-        setVisualizerEnabled(stored === "true");
-      }
+      setVisualizerEnabled(stored === "true");
     }
   }, [isAuthenticated]);
 
