@@ -8,7 +8,7 @@ import drizzleEnv from "./drizzle.env";
 export default {
   schema: "./src/server/db/schema.ts",
   out: "./drizzle",
-  driver: "pg",
+  dialect: "postgresql",
   dbCredentials: {
     host: drizzleEnv.DB_HOST ?? "localhost",
     port: parseInt(drizzleEnv.DB_PORT ?? "5432", 10),

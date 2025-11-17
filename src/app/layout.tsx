@@ -27,21 +27,10 @@ export const metadata = {
   applicationName: "Starchild Music",
   icons: [
     { rel: "icon", url: "/favicon.ico" },
-    {
-      rel: "apple-touch-icon",
-      url: "/AppIcons/Assets.xcassets/AppIcon.appiconset/180.png",
-    },
   ],
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Starchild Music",
-  },
   other: {
-    "mobile-web-app-capable": "yes",
     // Enhanced mobile meta tags
     "format-detection": "telephone=no", // Prevent auto-linking phone numbers
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
   },
 };
 
@@ -50,7 +39,6 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: "#f4b266",
 };
 
 export default function RootLayout({
@@ -62,22 +50,6 @@ export default function RootLayout({
         {/* Preconnect to external resources for faster loading */}
         <link rel="preconnect" href="https://cdn-images.dzcdn.net" />
         <link rel="dns-prefetch" href="https://api.deezer.com" />
-        {/* Enhanced mobile touch icons for better home screen experience */}
-        <link
-          rel="apple-touch-icon"
-          sizes="180x180"
-          href="/AppIcons/Assets.xcassets/AppIcon.appiconset/180.png"
-        />
-        <link
-          rel="apple-touch-icon"
-          sizes="152x152"
-          href="/AppIcons/Assets.xcassets/AppIcon.appiconset/152.png"
-        />
-        <link
-          rel="apple-touch-icon"
-          sizes="144x144"
-          href="/AppIcons/Assets.xcassets/AppIcon.appiconset/144.png"
-        />
       </head>
       <body>
         <ErrorBoundary>
