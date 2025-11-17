@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('electron', {
   getPlatform: () => ipcRenderer.invoke('get-platform'),
   
   // Media keys
+  /**
+   * @param {(key: string) => void} callback
+   */
   onMediaKey: (callback) => {
     ipcRenderer.on('media-key', (_, key) => callback(key));
   },

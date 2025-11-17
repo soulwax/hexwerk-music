@@ -35,12 +35,10 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
         }
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       window.electron.onMediaKey(handleMediaKey);
 
       return () => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        window.electron.removeMediaKeyListener();
+        window.electron?.removeMediaKeyListener();
       };
     }
   }, [handlers]);
