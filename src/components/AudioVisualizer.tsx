@@ -3,6 +3,7 @@
 "use client";
 
 import {
+  VISUALIZER_DIMENSIONS,
   VISUALIZER_TYPES,
   type VisualizerLayoutState,
   type VisualizerType,
@@ -26,7 +27,6 @@ import { RadialSpectrumRenderer } from "./visualizers/RadialSpectrumRenderer";
 import { SpectralWavesRenderer } from "./visualizers/SpectralWavesRenderer";
 import { SpectrumRenderer } from "./visualizers/SpectrumRenderer";
 import { WaveRenderer } from "./visualizers/WaveRenderer";
-
 interface AudioVisualizerProps {
   audioElement: HTMLAudioElement | null;
   isPlaying: boolean;
@@ -55,6 +55,14 @@ const FREQUENCY_ANALYSIS_TYPES = new Set<VisualizerType>([
   "frequency-particles",
 ]);
 const ANALYSIS_INTERVAL_MS = 80;
+const {
+  MIN_WIDTH,
+  MIN_HEIGHT,
+  VIEWPORT_PADDING,
+  PLAYER_STACK_HEIGHT,
+  MAX_EXPANDED_WIDTH,
+  MAX_EXPANDED_HEIGHT,
+} = VISUALIZER_DIMENSIONS;
 type VisualizerDimensions = { width: number; height: number };
 type VisualizerPosition = { x: number; y: number };
 
@@ -121,13 +129,13 @@ export function AudioVisualizer({
   const positionRef = useRef(position);
   const renderParamsRef = useRef({ currentType: persistedState?.type ?? type, barCount, barGap });
   const collapsedDimensionsRef = useRef(initialCollapsedDimensions);
-  const persistLayoutState = useCallback(
-    (patch: Partial<VisualizerLayoutState>) => {
-      if (!onStateChange) return;
-      onStateChange(patch);
-    },
-    [onStateChange],
-  );
+  const onStateChangeRef = useRef<AudioVisualizerProps["onStateChange"]>(onStateChange);
+  useEffect(() => {
+    onStateChangeRef.current = onStateChange;
+  }, [onStateChange]);
+  const persistLayoutState = useCallback((patch: Partial<VisualizerLayoutState>) => {
+    onStateChangeRef.current?.(patch);
+  }, []);
   const clampPositionWithDimensions = useCallback(
     (
       nextPosition: VisualizerPosition,
@@ -178,9 +186,7 @@ export function AudioVisualizer({
   useEffect(() => {
     if (!persistedState) return;
 
-    setIsExpanded((prev) =>
-      persistedState.isExpanded === undefined ? prev : persistedState.isExpanded,
-    );
+    setIsExpanded((prev) => persistedState.isExpanded ?? prev);
 
     setDimensions((prev) => {
       const next = {
@@ -209,14 +215,8 @@ export function AudioVisualizer({
     });
 
     collapsedDimensionsRef.current = {
-      width: Math.max(
-        MIN_WIDTH,
-        persistedState.collapsedWidth ?? collapsedDimensionsRef.current.width,
-      ),
-      height: Math.max(
-        MIN_HEIGHT,
-        persistedState.collapsedHeight ?? collapsedDimensionsRef.current.height,
-      ),
+      width: Math.max(MIN_WIDTH, persistedState.collapsedWidth ?? collapsedDimensionsRef.current.width),
+      height: Math.max(MIN_HEIGHT, persistedState.collapsedHeight ?? collapsedDimensionsRef.current.height),
     };
   }, [persistedState, clampPositionWithDimensions]);
 
