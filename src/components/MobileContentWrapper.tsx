@@ -48,4 +48,3 @@ export default function MobileContentWrapper({ children }: MobileContentWrapperP
 
   return <>{children}</>;
 }
-

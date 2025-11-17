@@ -1,3 +1,5 @@
+// File: scripts/set-profile-public.ts
+
 // Script to set user profile to public
 import { Pool } from "pg";
 import { readFileSync } from "fs";

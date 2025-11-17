@@ -1,3 +1,5 @@
+// File: src/config/features.ts
+
 // Feature Flags Configuration
 // Control which features are enabled/disabled
 

@@ -1,3 +1,5 @@
+// File: src/hooks/useWebShare.ts
+
 import { useState, useCallback } from "react";
 
 interface ShareData {

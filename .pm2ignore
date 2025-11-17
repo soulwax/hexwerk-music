@@ -1,3 +1,5 @@
+# File: .pm2ignore
+
 # PM2 Ignore File - Improves watch performance
 # Prevents PM2 from watching unnecessary files
 

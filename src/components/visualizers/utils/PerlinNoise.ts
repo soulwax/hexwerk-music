@@ -1,5 +1,4 @@
 // File: src/components/visualizers/utils/PerlinNoise.ts
-// Perlin noise implementation for organic, natural-looking randomness
 
 export class PerlinNoise {
   private permutation: number[] = [];

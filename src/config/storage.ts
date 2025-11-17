@@ -1,3 +1,5 @@
+// File: src/config/storage.ts
+
 /**
  * localStorage and sessionStorage key constants
  * Centralizes all storage keys to prevent typos and enable easy refactoring

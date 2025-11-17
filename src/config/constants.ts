@@ -1,3 +1,5 @@
+// File: src/config/constants.ts
+
 /**
  * Application-wide constants
  * Replaces magic numbers with named constants for better maintainability
@@ -123,4 +125,3 @@ export const VISUALIZER_CONSTANTS = {
   /** Maximum decibels for audio analysis */
   MAX_DECIBELS: -10,
 } as const;
-

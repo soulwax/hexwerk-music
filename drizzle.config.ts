@@ -1,11 +1,10 @@
 // File: drizzle.config.ts
 
-import { defineConfig } from "drizzle-kit";
 import { readFileSync } from "fs";
 import path from "path";
 import drizzleEnv from "./drizzle.env";
 
-export default defineConfig({
+const config = {
   schema: "./src/server/db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
@@ -20,4 +19,6 @@ export default defineConfig({
       ca: readFileSync(path.join(process.cwd(), "certs/ca.pem")).toString(),
     },
   },
-});
+};
+
+export default config;

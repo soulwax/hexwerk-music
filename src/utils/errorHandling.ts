@@ -1,3 +1,5 @@
+// File: src/utils/errorHandling.ts
+
 /**
  * Error handling utilities
  * Provides consistent error handling and user-friendly error messages

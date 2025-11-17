@@ -1,3 +1,5 @@
+// File: src/utils/audioAnalysis.ts
+
 // Enhanced audio analysis utilities for frequency band analysis
 
 export interface FrequencyBands {
@@ -155,4 +157,3 @@ export function detectBeat(
   
   return currentEnergy > averageEnergy * constant * threshold;
 }
-

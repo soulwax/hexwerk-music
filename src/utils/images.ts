@@ -1,3 +1,5 @@
+// File: src/utils/images.ts
+
 /**
  * Image utility functions for album covers and artist pictures
  */

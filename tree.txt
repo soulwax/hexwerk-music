@@ -1,5 +1,6 @@
 starchild-music-frontend
 ├───.env.example
+├───.env.local
 ├───.env.production
 ├───.gitignore
 ├───.markdownlint-cli2.jsonc
@@ -22,19 +23,29 @@ starchild-music-frontend
 ├───tailwind.config.js
 ├───tree.txt
 ├───tsconfig.json
+├───tsconfig.tsbuildinfo
 ├───.claude/
 │   └───settings.local.json
 ├───.github/
+│   ├───copilot-instructions.md
 │   ├───assets/
+│   │   ├───AppIcons.zip
 │   │   └───emily-the-strange_vivid.png
 │   └───docs/
+│       ├───DATABASE_CONNECTION_FIX.md
 │       ├───DATABASE_MIGRATION_GUIDE.md
 │       ├───IMPLEMENTATION_GUIDE.md
 │       ├───IMPLEMENTATION_SUMMARY.md
+│       ├───MOBILE_ENHANCEMENTS.md
+│       ├───MOBILE_OPTIMIZATION_SUMMARY.md
 │       ├───PM2_GUIDE.md
 │       ├───PM2_QUICK_REFERENCE.md
+│       ├───SIMILARITY_MODE_INTEGRATION.md
 │       ├───SMART_QUEUE_DOCUMENTATION.md
-│       └───SMART_QUEUE_QUICKSTART.md
+│       ├───SMART_QUEUE_IMPROVEMENTS.md
+│       ├───SMART_QUEUE_QUICKSTART.md
+│       ├───SMART_QUEUE_ROADMAP.md
+│       └───UNAUTHORIZED_ERRORS_FIX.md
 ├───certs/
 │   └───ca.pem
 ├───drizzle/
@@ -42,35 +53,110 @@ starchild-music-frontend
 │   ├───0001_strange_warlock.sql
 │   ├───0002_stiff_the_phantom.sql
 │   ├───0003_chemical_mastermind.sql
+│   ├───0004_bizarre_violations.sql
+│   ├───0005_shocking_korath.sql
+│   ├───0006_good_zaran.sql
+│   ├───0007_thankful_purifiers.sql
+│   ├───0008_luxuriant_smasher.sql
+│   ├───0009_tidy_the_call.sql
+│   ├───0010_nostalgic_human_cannonball.sql
+│   ├───0011_populate_user_hash.sql
+│   ├───0011_useful_the_enforcers.sql
 │   └───meta/
 │       ├───0000_snapshot.json
 │       ├───0001_snapshot.json
 │       ├───0002_snapshot.json
 │       ├───0003_snapshot.json
+│       ├───0004_snapshot.json
+│       ├───0005_snapshot.json
+│       ├───0006_snapshot.json
+│       ├───0007_snapshot.json
+│       ├───0008_snapshot.json
+│       ├───0009_snapshot.json
+│       ├───0010_snapshot.json
+│       ├───0011_snapshot.json
 │       └───_journal.json
+├───electron/
+│   ├───main.js
+│   ├───preload.js
+│   └───README.md
 ├───logs/
 │   └───pm2/
 │       ├───.gitkeep
 │       ├───combined.log
-│       ├───combined__2025-11-05_00-00-00.log
-│       ├───dev-error-14.log
-│       ├───dev-error-5.log
-│       ├───dev-error-9.log
-│       ├───dev-out-14.log
-│       ├───dev-out-5.log
-│       ├───dev-out-9.log
 │       ├───error.log
-│       ├───error__2025-11-05_00-00-00.log
-│       ├───out.log
-│       └───out__2025-11-05_00-00-00.log
+│       └───out.log
 ├───public/
-│   └───favicon.ico
+│   ├───fallback--Myq0giLLeocuJSFLu_Ct.js
+│   ├───favicon.ico
+│   ├───AppIcons/
+│   │   ├───appstore.png
+│   │   ├───playstore.png
+│   │   ├───android/
+│   │   │   ├───mipmap-hdpi/
+│   │   │   │   └───ic_launcher.png
+│   │   │   ├───mipmap-mdpi/
+│   │   │   │   └───ic_launcher.png
+│   │   │   ├───mipmap-xhdpi/
+│   │   │   │   └───ic_launcher.png
+│   │   │   ├───mipmap-xxhdpi/
+│   │   │   │   └───ic_launcher.png
+│   │   │   └───mipmap-xxxhdpi/
+│   │   │       └───ic_launcher.png
+│   │   └───Assets.xcassets/
+│   │       └───AppIcon.appiconset/
+│   │           ├───100.png
+│   │           ├───102.png
+│   │           ├───1024.png
+│   │           ├───108.png
+│   │           ├───114.png
+│   │           ├───120.png
+│   │           ├───128.png
+│   │           ├───144.png
+│   │           ├───152.png
+│   │           ├───16.png
+│   │           ├───167.png
+│   │           ├───172.png
+│   │           ├───180.png
+│   │           ├───196.png
+│   │           ├───20.png
+│   │           ├───216.png
+│   │           ├───234.png
+│   │           ├───256.png
+│   │           ├───258.png
+│   │           ├───29.png
+│   │           ├───32.png
+│   │           ├───40.png
+│   │           ├───48.png
+│   │           ├───50.png
+│   │           ├───512.png
+│   │           ├───55.png
+│   │           ├───57.png
+│   │           ├───58.png
+│   │           ├───60.png
+│   │           ├───64.png
+│   │           ├───66.png
+│   │           ├───72.png
+│   │           ├───76.png
+│   │           ├───80.png
+│   │           ├───87.png
+│   │           ├───88.png
+│   │           ├───92.png
+│   │           └───Contents.json
+│   └───images/
+│       └───placeholder-cover.svg
+├───scripts/
+│   ├───check-users.ts
+│   ├───populate-userhash.ts
+│   └───set-profile-public.ts
 └───src/
     ├───env.js
     ├───global.d.ts
     ├───app/
     │   ├───layout.tsx
     │   ├───page.tsx
+    │   ├───[userhash]/
+    │   │   └───page.tsx
     │   ├───_components/
     │   │   └───post.tsx
     │   ├───api/
@@ -84,41 +170,94 @@ starchild-music-frontend
     │   │           └───route.ts
     │   ├───library/
     │   │   └───page.tsx
+    │   ├───license/
+    │   │   └───page.tsx
     │   └───playlists/
     │       ├───page.tsx
     │       └───[id]/
     │           └───page.tsx
     ├───components/
+    │   ├───AnimatedList.tsx
     │   ├───AudioVisualizer.tsx
+    │   ├───BottomSheet.tsx
+    │   ├───Button.tsx
+    │   ├───EmptyState.tsx
     │   ├───EnhancedPlayer.tsx
     │   ├───EnhancedQueue.tsx
     │   ├───EnhancedTrackCard.tsx
     │   ├───Equalizer.tsx
-    │   ├───Footer.tsx
+    │   ├───ErrorBoundary.tsx
+    │   ├───Header.tsx
+    │   ├───LoadingSpinner.tsx
+    │   ├───MicroInteractions.tsx
+    │   ├───MiniPlayer.tsx
+    │   ├───MobileContentWrapper.tsx
+    │   ├───MobileNavigation.tsx
+    │   ├───MobilePlayer.tsx
+    │   ├───MobileSwipeablePanes.tsx
+    │   ├───OptimizedTrackList.tsx
     │   ├───PersistentPlayer.tsx
     │   ├───Player.tsx
+    │   ├───ProfileHeader.tsx
+    │   ├───PullToRefreshWrapper.tsx
     │   ├───Queue.tsx
+    │   ├───Section.tsx
     │   ├───SessionProvider.tsx
+    │   ├───SkeletonGrid.tsx
+    │   ├───SnappyButton.tsx
+    │   ├───SwipeableTrackItem.tsx
     │   ├───Toast.tsx
-    │   └───TrackCard.tsx
+    │   ├───TrackCard.tsx
+    │   └───visualizers/
+    │       ├───BarsRenderer.ts
+    │       ├───CircularRenderer.ts
+    │       ├───FrequencyBandBarsRenderer.ts
+    │       ├───FrequencyBandCircularRenderer.ts
+    │       ├───FrequencyBandLayeredRenderer.ts
+    │       ├───FrequencyBandParticlesRenderer.ts
+    │       ├───FrequencyBandRadialRenderer.ts
+    │       ├───FrequencyBandWaterfallRenderer.ts
+    │       ├───FrequencyRingsRenderer.ts
+    │       ├───ParticleRenderer.ts
+    │       ├───RadialSpectrumRenderer.ts
+    │       ├───SpectralWavesRenderer.ts
+    │       ├───SpectrumRenderer.ts
+    │       ├───WaveRenderer.ts
+    │       └───utils/
+    │           ├───MathUtils.ts
+    │           └───PerlinNoise.ts
     ├───config/
-    │   └───features.ts
+    │   ├───audioDefaults.ts
+    │   ├───constants.ts
+    │   ├───features.ts
+    │   ├───player.ts
+    │   └───storage.ts
     ├───contexts/
     │   ├───AudioPlayerContext.tsx
+    │   ├───MobilePanesContext.tsx
     │   └───ToastContext.tsx
     ├───hooks/
     │   ├───useAudioPlayer.ts
     │   ├───useAudioVisualizer.ts
     │   ├───useEqualizer.ts
+    │   ├───useHapticCallbacks.ts
     │   ├───useKeyboardShortcuts.ts
-    │   └───useQueuePersistence.ts
+    │   ├───useMediaQuery.ts
+    │   ├───usePullToRefresh.ts
+    │   ├───useQueuePersistence.ts
+    │   ├───useSwipeGesture.ts
+    │   └───useWebShare.ts
+    ├───lib/
+    │   └───utils.ts
     ├───server/
     │   ├───api/
     │   │   ├───root.ts
     │   │   ├───trpc.ts
     │   │   └───routers/
+    │   │       ├───equalizer.ts
     │   │       ├───music.ts
-    │   │       └───post.ts
+    │   │       ├───post.ts
+    │   │       └───preferences.ts
     │   ├───auth/
     │   │   ├───config.ts
     │   │   └───index.ts
@@ -127,6 +266,9 @@ starchild-music-frontend
     │   │   └───schema.ts
     │   └───services/
     │       └───recommendations.ts
+    ├───services/
+    │   ├───smartQueue.ts
+    │   └───storage.ts
     ├───styles/
     │   └───globals.css
     ├───trpc/
@@ -134,6 +276,15 @@ starchild-music-frontend
     │   ├───react.tsx
     │   └───server.ts
     ├───types/
-    │   └───index.ts
+    │   ├───index.ts
+    │   └───player.ts
     └───utils/
-        └───api.ts
+        ├───api.ts
+        ├───audioAnalysis.ts
+        ├───colorExtractor.ts
+        ├───errorHandling.ts
+        ├───haptics.ts
+        ├───images.ts
+        ├───logger.ts
+        ├───spring-animations.ts
+        └───time.ts

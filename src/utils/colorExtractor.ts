@@ -1,3 +1,5 @@
+// File: src/utils/colorExtractor.ts
+
 /**
  * Extract dominant colors from an image for visualizer theming
  */
@@ -190,4 +192,3 @@ export function createGradientFromPalette(
   gradient.addColorStop(1, palette.accent);
   return gradient;
 }
-

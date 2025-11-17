@@ -1,3 +1,5 @@
+// File: src/lib/utils.ts
+
 /**
  * Utility functions for the application
  */

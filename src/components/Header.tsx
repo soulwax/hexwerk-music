@@ -1,3 +1,5 @@
+// File: src/components/Header.tsx
+
 "use client";
 
 import { LogOut, User } from "lucide-react";

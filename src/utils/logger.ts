@@ -1,3 +1,5 @@
+// File: src/utils/logger.ts
+
 /**
  * Production-safe logger that only logs in development
  * Replaces console.log to prevent performance overhead in production
@@ -59,4 +61,3 @@ export const logger = {
     }
   },
 };
-

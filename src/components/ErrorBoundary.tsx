@@ -1,3 +1,5 @@
+// File: src/components/ErrorBoundary.tsx
+
 "use client";
 
 /**

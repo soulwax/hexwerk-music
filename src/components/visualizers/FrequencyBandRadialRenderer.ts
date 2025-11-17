@@ -166,4 +166,3 @@ export class FrequencyBandRadialRenderer {
     }
   }
 }
-

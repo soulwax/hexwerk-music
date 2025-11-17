@@ -1,4 +1,6 @@
 #!/bin/bash
+# File: pm2-setup.sh
+
 # PM2 Setup Script for Starchild Music
 # This script sets up PM2 with optimal configuration for production
 

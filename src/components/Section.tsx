@@ -1,3 +1,5 @@
+// File: src/components/Section.tsx
+
 import type { ReactNode } from "react";
 import SkeletonGrid from "./SkeletonGrid";
 

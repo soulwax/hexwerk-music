@@ -1,3 +1,5 @@
+// File: src/components/LoadingSpinner.tsx
+
 /**
  * Loading spinner component
  * Provides a consistent loading indicator across the app
