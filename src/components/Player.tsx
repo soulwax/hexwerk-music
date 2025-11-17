@@ -162,8 +162,13 @@ export default function MaturePlayer({
           style={{ width: `${progress}%` }}
         />
         <div
-          className="absolute top-1/2 h-3 w-3 rounded-full bg-white opacity-70 shadow-lg transition-all group-hover:scale-125 group-hover:opacity-100"
-          style={{ left: `${progress}%`, transform: "translate(-50%, -50%)", zIndex: 10 }}
+          className="absolute h-3 w-3 rounded-full bg-white opacity-70 shadow-lg transition-all group-hover:scale-125 group-hover:opacity-100"
+          style={{ 
+            left: `${progress}%`, 
+            top: "50%",
+            transform: "translate(-50%, -50%)", 
+            zIndex: 10 
+          }}
         />
       </div>
 
