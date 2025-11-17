@@ -841,6 +841,13 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     failedTracksRef.current.clear();
   }, []);
 
+  // Wrapper for setVolume with validation to prevent crashes
+  const setVolumeWithValidation = useCallback((newVolume: number) => {
+    // Clamp volume between 0 and 1 to prevent crashes
+    const clampedVolume = Math.max(0, Math.min(1, newVolume));
+    setVolume(clampedVolume);
+  }, []);
+
   return {
     // State
     currentTrack,
@@ -884,7 +891,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     playFromQueue,
     toggleShuffle,
     cycleRepeatMode,
-    setVolume,
+    setVolume: setVolumeWithValidation,
     setIsMuted,
     setPlaybackRate,
     adjustVolume,
