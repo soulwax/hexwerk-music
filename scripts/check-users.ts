@@ -1,6 +1,5 @@
 // File: scripts/check-users.ts
 
-// Script to check user data
 import { Pool } from "pg";
 import { readFileSync } from "fs";
 import path from "path";

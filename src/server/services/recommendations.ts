@@ -1,8 +1,5 @@
 // File: src/server/services/recommendations.ts
 
-// Recommendations Service
-// Handles fetching recommendations from various sources (Deezer, custom algorithms, etc.)
-
 import { ENABLE_AUDIO_FEATURES, RECOMMENDATION_CACHE_HOURS } from "@/config/features";
 import type { Track } from "@/types";
 

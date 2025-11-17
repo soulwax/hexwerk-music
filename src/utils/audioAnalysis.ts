@@ -1,7 +1,5 @@
 // File: src/utils/audioAnalysis.ts
 
-// Enhanced audio analysis utilities for frequency band analysis
-
 export interface FrequencyBands {
   bass: number;      // 20-250 Hz
   lowMid: number;    // 250-500 Hz
