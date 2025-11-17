@@ -2,18 +2,18 @@
 
 "use client";
 
+import { STORAGE_KEYS } from "@/config/storage";
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
 import { useMobilePanes } from "@/contexts/MobilePanesContext";
-import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useEqualizer } from "@/hooks/useEqualizer";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import { api } from "@/trpc/react";
-import dynamic from "next/dynamic";
-import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
-import MaturePlayer from "./Player";
-import { STORAGE_KEYS } from "@/config/storage";
 import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
 import { getCoverImage } from "@/utils/images";
+import { useSession } from "next-auth/react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useState } from "react";
+import MaturePlayer from "./Player";
 
 // Dynamic imports to prevent SSR issues with Web Audio API
 const AudioVisualizer = dynamic(
@@ -55,6 +55,7 @@ export default function PersistentPlayer() {
   const [showEqualizer, setShowEqualizer] = useState(false);
   const [albumColorPalette, setAlbumColorPalette] = useState<ColorPalette | null>(null);
   const [visualizerEnabled, setVisualizerEnabled] = useState(true);
+  const [visualizerEnsureToken, setVisualizerEnsureToken] = useState(0);
 
   // Sync state with database preferences when they load
   useEffect(() => {
@@ -118,7 +119,11 @@ export default function PersistentPlayer() {
   );
 
   const handleVisualizerToggle = useCallback(() => {
-    persistVisualizerPreference(!visualizerEnabled);
+    const next = !visualizerEnabled;
+    persistVisualizerPreference(next);
+    if (next) {
+      setVisualizerEnsureToken(Date.now());
+    }
   }, [persistVisualizerPreference, visualizerEnabled]);
 
   const playerProps = {
@@ -222,6 +227,7 @@ export default function PersistentPlayer() {
           colorPalette={albumColorPalette}
           isDraggable={true}
           blendWithBackground={true}
+          ensureVisibleSignal={visualizerEnsureToken}
         />
       )}
     </>

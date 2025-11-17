@@ -43,6 +43,7 @@ interface AudioVisualizerProps {
   onClose?: () => void;
   persistedState?: VisualizerLayoutState;
   onStateChange?: (patch: Partial<VisualizerLayoutState>) => void;
+  ensureVisibleSignal?: number;
 }
 
 const TIME_DOMAIN_TYPES = new Set<VisualizerType>(["wave", "oscilloscope", "waveform-mirror"]);
@@ -82,6 +83,7 @@ export function AudioVisualizer({
   onClose,
   persistedState,
   onStateChange,
+  ensureVisibleSignal,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -153,6 +155,45 @@ export function AudioVisualizer({
     },
     [],
   );
+  const resetToDefaultPosition = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const defaultDimensions = {
+      width: collapsedDimensionsRef.current.width,
+      height: collapsedDimensionsRef.current.height,
+    };
+    const defaultPosition = {
+      x: VIEWPORT_PADDING,
+      y: Math.max(
+        VIEWPORT_PADDING,
+        window.innerHeight - (defaultDimensions.height + PLAYER_STACK_HEIGHT),
+      ),
+    };
+    setDimensions(defaultDimensions);
+    setPosition(defaultPosition);
+    setIsExpanded(false);
+    persistLayoutState({
+      width: defaultDimensions.width,
+      height: defaultDimensions.height,
+      collapsedWidth: defaultDimensions.width,
+      collapsedHeight: defaultDimensions.height,
+      x: defaultPosition.x,
+      y: defaultPosition.y,
+      isExpanded: false,
+    });
+  }, [persistLayoutState]);
+  const ensureVisible = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const outOfBounds =
+      rect.right < VIEWPORT_PADDING ||
+      rect.left > window.innerWidth - VIEWPORT_PADDING ||
+      rect.bottom < VIEWPORT_PADDING ||
+      rect.top > window.innerHeight - VIEWPORT_PADDING;
+    if (outOfBounds) {
+      resetToDefaultPosition();
+    }
+  }, [resetToDefaultPosition]);
 
   useEffect(() => {
     dimensionsRef.current = dimensions;
@@ -219,6 +260,9 @@ export function AudioVisualizer({
       height: Math.max(MIN_HEIGHT, persistedState.collapsedHeight ?? collapsedDimensionsRef.current.height),
     };
   }, [persistedState, clampPositionWithDimensions]);
+  useEffect(() => {
+    ensureVisible();
+  }, [ensureVisible, ensureVisibleSignal]);
 
   // Fade in animation
   useEffect(() => {
@@ -645,7 +689,7 @@ export function AudioVisualizer({
       {isDraggable && (
         <div
           onMouseDown={handleDragStart}
-          className={`absolute left-2 top-2 cursor-grab rounded-lg bg-[rgba(244,178,102,0.15)] p-2 text-[var(--color-accent)] transition-all hover:bg-[rgba(244,178,102,0.25)] hover:shadow-[0_0_12px_rgba(244,178,102,0.3)] active:cursor-grabbing ${
+          className={`absolute left-2 top-2 z-30 cursor-grab rounded-lg bg-[rgba(244,178,102,0.15)] p-2 text-[var(--color-accent)] transition-all hover:bg-[rgba(244,178,102,0.25)] hover:shadow-[0_0_12px_rgba(244,178,102,0.3)] active:cursor-grabbing ${
             showControls ? 'opacity-100' : 'opacity-0'
           }`}
           title="Drag to move"
