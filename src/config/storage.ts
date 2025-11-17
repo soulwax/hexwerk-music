@@ -38,6 +38,7 @@ export const STORAGE_KEYS = {
   QUEUE_PANEL_OPEN: `${STORAGE_PREFIX}queue_panel_open`,
   VISUALIZER_ENABLED: `${STORAGE_PREFIX}visualizer_enabled`,
   VISUALIZER_TYPE: `${STORAGE_PREFIX}visualizer_type`,
+  VISUALIZER_STATE: `${STORAGE_PREFIX}visualizer_state`,
   LYRICS_ENABLED: `${STORAGE_PREFIX}lyrics_enabled`,
 
   // Session/auth (consider moving to sessionStorage)

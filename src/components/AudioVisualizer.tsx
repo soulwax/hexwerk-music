@@ -2,11 +2,16 @@
 
 "use client";
 
+import {
+  VISUALIZER_TYPES,
+  type VisualizerLayoutState,
+  type VisualizerType,
+} from "@/constants/visualizer";
 import { useAudioVisualizer } from "@/hooks/useAudioVisualizer";
 import { analyzeAudio, type AudioAnalysis } from "@/utils/audioAnalysis";
 import type { ColorPalette } from "@/utils/colorExtractor";
 import { GripVertical, Maximize2, Minimize2, Move, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BarsRenderer } from "./visualizers/BarsRenderer";
 import { CircularRenderer } from "./visualizers/CircularRenderer";
 import { FrequencyBandBarsRenderer } from "./visualizers/FrequencyBandBarsRenderer";
@@ -36,28 +41,9 @@ interface AudioVisualizerProps {
   isDraggable?: boolean;
   blendWithBackground?: boolean;
   onClose?: () => void;
+  persistedState?: VisualizerLayoutState;
+  onStateChange?: (patch: Partial<VisualizerLayoutState>) => void;
 }
-
-const VISUALIZER_TYPES = [
-  "bars",
-  "spectrum",
-  "oscilloscope",
-  "spectral-waves",
-  "radial-spectrum",
-  "wave",
-  "circular",
-  "waveform-mirror",
-  "particles",
-  "frequency-rings",
-  "frequency-bands",
-  "frequency-circular",
-  "frequency-layered",
-  "frequency-waterfall",
-  "frequency-radial",
-  "frequency-particles",
-] as const;
-
-type VisualizerType = (typeof VISUALIZER_TYPES)[number];
 
 const TIME_DOMAIN_TYPES = new Set<VisualizerType>(["wave", "oscilloscope", "waveform-mirror"]);
 const FREQUENCY_ANALYSIS_TYPES = new Set<VisualizerType>([
@@ -69,6 +55,8 @@ const FREQUENCY_ANALYSIS_TYPES = new Set<VisualizerType>([
   "frequency-particles",
 ]);
 const ANALYSIS_INTERVAL_MS = 80;
+type VisualizerDimensions = { width: number; height: number };
+type VisualizerPosition = { x: number; y: number };
 
 export function AudioVisualizer({
   audioElement,
@@ -84,54 +72,79 @@ export function AudioVisualizer({
   isDraggable = false,
   blendWithBackground = false,
   onClose,
+  persistedState,
+  onStateChange,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [currentType, setCurrentType] = useState<VisualizerType>(type);
+  const [currentType, setCurrentType] = useState<VisualizerType>(persistedState?.type ?? type);
   const [showTypeLabel, setShowTypeLabel] = useState(false);
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const dragStartRef = useRef({ x: 0, y: 0, initialX: 0, initialY: 0 });
   const typeLabelTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  
-  // Initialize position and dimensions from localStorage or defaults
-  const getInitialDimensions = () => {
-    if (typeof window === 'undefined') return { width, height };
-    const saved = localStorage.getItem('visualizer-dimensions');
-    if (saved) {
-      try {
-        return JSON.parse(saved) as { width: number; height: number };
-      } catch {
-        return { width, height };
-      }
-    }
-    return { width, height };
+  const initialDimensions = {
+    width: Math.max(MIN_WIDTH, persistedState?.width ?? width),
+    height: Math.max(MIN_HEIGHT, persistedState?.height ?? height),
   };
-
+  const initialCollapsedDimensions = {
+    width: Math.max(MIN_WIDTH, persistedState?.collapsedWidth ?? initialDimensions.width),
+    height: Math.max(MIN_HEIGHT, persistedState?.collapsedHeight ?? initialDimensions.height),
+  };
   const getInitialPosition = () => {
-    if (typeof window === 'undefined') return { x: 16, y: 16 };
-    const saved = localStorage.getItem('visualizer-position');
-    if (saved) {
-      try {
-        return JSON.parse(saved) as { x: number; y: number };
-      } catch {
-        // Position at bottom left, above player (player is ~100px tall)
-        return { x: 16, y: window.innerHeight - height - 140 };
-      }
+    const defaultPosition = { x: VIEWPORT_PADDING, y: VIEWPORT_PADDING };
+    if (persistedState) {
+      return {
+        x: persistedState.x ?? defaultPosition.x,
+        y: persistedState.y ?? defaultPosition.y,
+      };
     }
-    // Default: bottom left, above player
-    return { x: 16, y: window.innerHeight - height - 140 };
+    if (typeof window === "undefined") {
+      return defaultPosition;
+    }
+    return {
+      x: defaultPosition.x,
+      y: Math.max(
+        VIEWPORT_PADDING,
+        window.innerHeight - (initialDimensions.height + PLAYER_STACK_HEIGHT),
+      ),
+    };
   };
 
-  const [dimensions, setDimensions] = useState(getInitialDimensions);
+  const [dimensions, setDimensions] = useState(initialDimensions);
   const [position, setPosition] = useState(getInitialPosition);
   const [isVisible, setIsVisible] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const dimensionsRef = useRef(dimensions);
   const positionRef = useRef(position);
-  const renderParamsRef = useRef({ currentType: type, barCount, barGap });
+  const renderParamsRef = useRef({ currentType: persistedState?.type ?? type, barCount, barGap });
+  const collapsedDimensionsRef = useRef(initialCollapsedDimensions);
+  const persistLayoutState = useCallback(
+    (patch: Partial<VisualizerLayoutState>) => {
+      if (!onStateChange) return;
+      onStateChange(patch);
+    },
+    [onStateChange],
+  );
+  const clampPositionWithDimensions = useCallback(
+    (
+      nextPosition: VisualizerPosition,
+      nextDimensions: VisualizerDimensions = dimensionsRef.current,
+    ): VisualizerPosition => {
+      if (typeof window === "undefined") {
+        return nextPosition;
+      }
+      const maxX = Math.max(0, window.innerWidth - nextDimensions.width);
+      const maxY = Math.max(0, window.innerHeight - nextDimensions.height);
+      return {
+        x: Math.max(0, Math.min(maxX, nextPosition.x)),
+        y: Math.max(0, Math.min(maxY, nextPosition.y)),
+      };
+    },
+    [],
+  );
 
   useEffect(() => {
     dimensionsRef.current = dimensions;
@@ -149,15 +162,63 @@ export function AudioVisualizer({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleResize = () => {
-      setPosition(prev => ({
-        x: Math.max(0, Math.min(window.innerWidth - dimensionsRef.current.width, prev.x)),
-        y: Math.max(0, Math.min(window.innerHeight - dimensionsRef.current.height, prev.y)),
-      }));
+      setPosition((prev) => {
+        const clamped = clampPositionWithDimensions(prev);
+        if (clamped.x === prev.x && clamped.y === prev.y) {
+          return prev;
+        }
+        return clamped;
+      });
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [clampPositionWithDimensions]);
+
+  useEffect(() => {
+    if (!persistedState) return;
+
+    setIsExpanded((prev) =>
+      persistedState.isExpanded === undefined ? prev : persistedState.isExpanded,
+    );
+
+    setDimensions((prev) => {
+      const next = {
+        width: Math.max(MIN_WIDTH, persistedState.width ?? prev.width),
+        height: Math.max(MIN_HEIGHT, persistedState.height ?? prev.height),
+      };
+      if (prev.width === next.width && prev.height === next.height) {
+        return prev;
+      }
+      return next;
+    });
+
+    setPosition((prev) => {
+      const desired = {
+        x: persistedState.x ?? prev.x,
+        y: persistedState.y ?? prev.y,
+      };
+      const next = clampPositionWithDimensions(desired, {
+        width: Math.max(MIN_WIDTH, persistedState.width ?? dimensionsRef.current.width),
+        height: Math.max(MIN_HEIGHT, persistedState.height ?? dimensionsRef.current.height),
+      });
+      if (prev.x === next.x && prev.y === next.y) {
+        return prev;
+      }
+      return next;
+    });
+
+    collapsedDimensionsRef.current = {
+      width: Math.max(
+        MIN_WIDTH,
+        persistedState.collapsedWidth ?? collapsedDimensionsRef.current.width,
+      ),
+      height: Math.max(
+        MIN_HEIGHT,
+        persistedState.collapsedHeight ?? collapsedDimensionsRef.current.height,
+      ),
+    };
+  }, [persistedState, clampPositionWithDimensions]);
 
   // Fade in animation
   useEffect(() => {
@@ -243,6 +304,7 @@ export function AudioVisualizer({
     const nextType = VISUALIZER_TYPES[nextIndex]!;
 
     setCurrentType(nextType);
+    persistLayoutState({ type: nextType });
 
     // Notify parent component of type change
     onTypeChange?.(nextType);
@@ -278,16 +340,25 @@ export function AudioVisualizer({
       const deltaY = e.clientY - resizeStartRef.current.y;
 
       const newDimensions = {
-        width: Math.max(200, resizeStartRef.current.width + deltaX),
-        height: Math.max(80, resizeStartRef.current.height + deltaY),
+        width: Math.max(MIN_WIDTH, resizeStartRef.current.width + deltaX),
+        height: Math.max(MIN_HEIGHT, resizeStartRef.current.height + deltaY),
       };
       setDimensions(newDimensions);
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      // Persist dimensions to localStorage
-      localStorage.setItem('visualizer-dimensions', JSON.stringify(dimensionsRef.current));
+      const next = dimensionsRef.current;
+      const patch: Partial<VisualizerLayoutState> = {
+        width: next.width,
+        height: next.height,
+      };
+      if (!isExpanded) {
+        collapsedDimensionsRef.current = { ...next };
+        patch.collapsedWidth = next.width;
+        patch.collapsedHeight = next.height;
+      }
+      persistLayoutState(patch);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -297,7 +368,7 @@ export function AudioVisualizer({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing]);
+  }, [isResizing, isExpanded, persistLayoutState]);
 
   // Toggle expanded mode
   const toggleExpanded = () => {
