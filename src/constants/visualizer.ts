@@ -50,3 +50,12 @@ export const DEFAULT_VISUALIZER_STATE: VisualizerSerializedState = {
   enabled: true,
 };
 
+export const VISUALIZER_DIMENSIONS = {
+  MIN_WIDTH: 220,
+  MIN_HEIGHT: 110,
+  VIEWPORT_PADDING: 16,
+  PLAYER_STACK_HEIGHT: 190,
+  MAX_EXPANDED_WIDTH: 960,
+  MAX_EXPANDED_HEIGHT: 520,
+} as const;
+
