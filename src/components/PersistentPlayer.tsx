@@ -8,9 +8,10 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useEqualizer } from "@/hooks/useEqualizer";
 import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import MaturePlayer from "./Player";
+import { STORAGE_KEYS } from "@/config/storage";
 import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
 import { getCoverImage } from "@/utils/images";
 
@@ -53,14 +54,29 @@ export default function PersistentPlayer() {
   const [showQueue, setShowQueue] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
   const [albumColorPalette, setAlbumColorPalette] = useState<ColorPalette | null>(null);
+  const [visualizerEnabled, setVisualizerEnabled] = useState(true);
 
   // Sync state with database preferences when they load
   useEffect(() => {
     if (preferences) {
       setShowQueue(preferences.queuePanelOpen ?? false);
       setShowEqualizer(preferences.equalizerPanelOpen ?? false);
+      setVisualizerEnabled(preferences.visualizerEnabled ?? true);
     }
   }, [preferences]);
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(STORAGE_KEYS.VISUALIZER_ENABLED);
+    if (stored !== null) {
+      try {
+        setVisualizerEnabled(JSON.parse(stored));
+      } catch {
+        setVisualizerEnabled(stored === "true");
+      }
+    }
+  }, [isAuthenticated]);
 
   // Extract colors from album art when track changes
   useEffect(() => {
@@ -93,6 +109,22 @@ export default function PersistentPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showEqualizer]);
 
+  const persistVisualizerPreference = useCallback(
+    (next: boolean) => {
+      setVisualizerEnabled(next);
+      if (isAuthenticated) {
+        updatePreferences.mutate({ visualizerEnabled: next });
+      } else if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEYS.VISUALIZER_ENABLED, JSON.stringify(next));
+      }
+    },
+    [isAuthenticated, updatePreferences],
+  );
+
+  const handleVisualizerToggle = useCallback(() => {
+    persistVisualizerPreference(!visualizerEnabled);
+  }, [persistVisualizerPreference, visualizerEnabled]);
+
   const playerProps = {
     currentTrack: player.currentTrack,
     queue: player.queue,
@@ -120,6 +152,8 @@ export default function PersistentPlayer() {
       ? () => navigateToPane(1) // Navigate to queue pane on mobile
       : () => setShowQueue(!showQueue),
     onToggleEqualizer: () => setShowEqualizer(!showEqualizer),
+    onToggleVisualizer: !isMobile ? handleVisualizerToggle : undefined,
+    visualizerEnabled,
   };
 
   return (
@@ -175,7 +209,7 @@ export default function PersistentPlayer() {
       )}
 
       {/* Audio Visualizer - Draggable on Desktop, small by default, with album colors */}
-      {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && !isMobile && (
+      {player.audioElement && player.currentTrack && visualizerEnabled && !isMobile && (
         <AudioVisualizer
           audioElement={player.audioElement}
           isPlaying={player.isPlaying}
@@ -187,7 +221,7 @@ export default function PersistentPlayer() {
             updatePreferences.mutate({ visualizerType: newType });
           }}
           onClose={() => {
-            updatePreferences.mutate({ visualizerEnabled: false });
+            persistVisualizerPreference(false);
           }}
           colorPalette={albumColorPalette}
           isDraggable={true}

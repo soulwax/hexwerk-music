@@ -35,6 +35,8 @@ interface PlayerProps {
   onSkipBackward: () => void;
   onToggleQueue?: () => void;
   onToggleEqualizer?: () => void;
+  onToggleVisualizer?: () => void;
+  visualizerEnabled?: boolean;
 }
 
 export default function MaturePlayer({
@@ -62,6 +64,8 @@ export default function MaturePlayer({
   onSkipBackward,
   onToggleQueue,
   onToggleEqualizer,
+  onToggleVisualizer,
+  visualizerEnabled,
 }: PlayerProps) {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
@@ -508,6 +512,30 @@ export default function MaturePlayer({
                   strokeWidth={2}
                   d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
                 />
+              </svg>
+            </button>
+          )}
+
+          {/* Visualizer Toggle */}
+          {onToggleVisualizer && (
+            <button
+              onClick={onToggleVisualizer}
+              className={`rounded p-2 transition ${
+                visualizerEnabled
+                  ? "bg-[rgba(244,178,102,0.16)] text-[var(--color-accent)] shadow-[0_0_16px_rgba(244,178,102,0.2)]"
+                  : "text-[var(--color-subtext)] hover:text-[var(--color-text)]"
+              }`}
+              title={visualizerEnabled ? "Hide visualizer (V)" : "Show visualizer (V)"}
+              aria-pressed={visualizerEnabled}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"
+                />
+                <path strokeLinecap="round" strokeWidth={2} d="M3 16c2-4 4-4 6 0s4 4 6 0 4-4 6 0" />
               </svg>
             </button>
           )}
