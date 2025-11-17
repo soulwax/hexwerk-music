@@ -1,4 +1,6 @@
-/**
+/* File: ecosystem.config.cjs */
+/* * */
+
  * PM2 Ecosystem Configuration for HexMusic
  *
  * Optimized for Next.js 15 with:

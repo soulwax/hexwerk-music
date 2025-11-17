@@ -1,10 +1,11 @@
 // File: src/server/api/routers/music.ts
 
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { ENABLE_AUDIO_FEATURES } from "@/config/features";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
+import type { db } from "@/server/db";
 import {
   audioFeatures,
   favorites,
@@ -69,6 +70,71 @@ const trackSchema = z.object({
   }),
   type: z.literal("track"),
 });
+
+/**
+ * Automatically sync favorites based on play count
+ * Keeps top 8-16 most played tracks as favorites
+ */
+async function syncAutoFavorites(
+  database: typeof db,
+  userId: string,
+) {
+  // Get top tracks by play count (excluding skipped plays, requiring at least 50% completion)
+  const topTracks = await database
+    .select({
+      trackId: listeningAnalytics.trackId,
+      trackData: listeningAnalytics.trackData,
+      playCount: sql<number>`COUNT(*) FILTER (WHERE ${listeningAnalytics.skipped} = false AND ${listeningAnalytics.completionPercentage} >= 50)`,
+    })
+    .from(listeningAnalytics)
+    .where(eq(listeningAnalytics.userId, userId))
+    .groupBy(listeningAnalytics.trackId, listeningAnalytics.trackData)
+    .having(sql`COUNT(*) FILTER (WHERE ${listeningAnalytics.skipped} = false AND ${listeningAnalytics.completionPercentage} >= 50) >= 3`) // Minimum 3 plays
+    .orderBy(desc(sql`COUNT(*) FILTER (WHERE ${listeningAnalytics.skipped} = false AND ${listeningAnalytics.completionPercentage} >= 50)`))
+    .limit(16); // Top 16 tracks
+
+  if (topTracks.length === 0) {
+    return;
+  }
+
+  // Get current favorites
+  const currentFavorites = await database.query.favorites.findMany({
+    where: eq(favorites.userId, userId),
+  });
+
+  const currentFavoriteTrackIds = new Set(
+    currentFavorites.map((f) => f.trackId),
+  );
+  const topTrackIds = new Set(topTracks.map((t) => t.trackId));
+
+  // Remove favorites that are no longer in top tracks
+  const toRemove = currentFavorites.filter(
+    (f) => !topTrackIds.has(f.trackId),
+  );
+  if (toRemove.length > 0) {
+    const trackIdsToRemove = toRemove.map((f) => f.trackId);
+    await database
+      .delete(favorites)
+      .where(
+        and(
+          eq(favorites.userId, userId),
+          inArray(favorites.trackId, trackIdsToRemove),
+        ),
+      );
+  }
+
+  // Add new favorites that are in top tracks but not yet favorited
+  const toAdd = topTracks.filter((t) => !currentFavoriteTrackIds.has(t.trackId));
+  if (toAdd.length > 0) {
+    await database.insert(favorites).values(
+      toAdd.map((t) => ({
+        userId,
+        trackId: t.trackId,
+        trackData: t.trackData,
+      })),
+    );
+  }
+}
 
 export const musicRouter = createTRPCRouter({
   // ============================================
@@ -147,6 +213,11 @@ export const musicRouter = createTRPCRouter({
 
       return { isFavorite: !!item };
     }),
+
+  syncAutoFavorites: protectedProcedure.mutation(async ({ ctx }) => {
+    await syncAutoFavorites(ctx.db, ctx.session.user.id);
+    return { success: true };
+  }),
 
   // ============================================
   // PLAYLISTS
@@ -581,7 +652,7 @@ export const musicRouter = createTRPCRouter({
         equalizerBands: z.array(z.number()).optional(),
         equalizerPanelOpen: z.boolean().optional(),
         queuePanelOpen: z.boolean().optional(),
-        visualizerType: z.enum(["bars", "wave", "circular", "oscilloscope", "spectrum", "spectral-waves", "radial-spectrum", "particles", "waveform-mirror", "frequency-rings"]).optional(),
+        visualizerType: z.enum(["bars", "wave", "circular", "oscilloscope", "spectrum", "spectral-waves", "radial-spectrum", "particles", "waveform-mirror", "frequency-rings", "frequency-bands", "frequency-circular", "frequency-layered", "frequency-waterfall", "frequency-radial", "frequency-particles"]).optional(),
         visualizerEnabled: z.boolean().optional(),
         compactMode: z.boolean().optional(),
         theme: z.enum(["dark", "light"]).optional(),
@@ -820,6 +891,16 @@ export const musicRouter = createTRPCRouter({
         contextId: input.contextId,
         deviceId: input.deviceId,
       });
+
+      // Sync auto-favorites periodically (every 5th play or when track completes)
+      // This ensures favorites stay up-to-date without running on every single play
+      const shouldSync = (input.track.id % 5 === 0) || (completionPercentage >= 80 && !input.skipped);
+      if (shouldSync) {
+        // Run in background without blocking
+        syncAutoFavorites(ctx.db, ctx.session.user.id).catch((error) => {
+          console.error("[logPlay] Error syncing auto-favorites:", error);
+        });
+      }
 
       return { success: true };
     }),

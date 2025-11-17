@@ -1,3 +1,5 @@
+// File: src/components/EmptyState.tsx
+
 /**
  * Empty state component
  * Provides a consistent UI for empty or zero-state scenarios

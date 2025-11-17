@@ -82,9 +82,11 @@ export default function EnhancedPlayer({
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const vol = parseFloat(e.target.value);
-    setVolume(vol);
+    // Clamp volume between 0 and 1 to prevent crashes
+    const clampedVol = Math.max(0, Math.min(1, vol));
+    setVolume(clampedVol);
     if (audioRef.current) {
-      audioRef.current.volume = vol;
+      audioRef.current.volume = clampedVol;
     }
   };
 

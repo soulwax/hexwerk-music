@@ -1,3 +1,5 @@
+// File: src/hooks/useHapticCallbacks.ts
+
 /**
  * Custom hook for wrapping callbacks with haptic feedback
  * Eliminates code duplication across player components

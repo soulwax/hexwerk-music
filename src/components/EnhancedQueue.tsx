@@ -113,9 +113,10 @@ function SortableQueueItem({
             src={coverImage}
             alt={altText}
             fill
-            sizes="48px"
+            sizes="(max-width: 768px) 48px, 64px"
             className="object-cover"
-            unoptimized
+            quality={75}
+            loading="lazy"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[var(--color-muted)]">

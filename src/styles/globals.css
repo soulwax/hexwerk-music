@@ -601,8 +601,16 @@ input, button { outline: none; }
 }
 
 /* ------------------------------------------------------------
-   📱 Mobile-First Touch Utilities
+   📱 Mobile-First Touch Utilities & Performance
 ------------------------------------------------------------- */
+
+/* Force GPU acceleration for all animated elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform;
+}
 
 /* Minimum touch target size (44x44px iOS, 48x48px Android) */
 .touch-target {
@@ -611,6 +619,9 @@ input, button { outline: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* GPU acceleration for better performance */
+  transform: translateZ(0);
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Larger touch target for primary actions */
@@ -620,13 +631,15 @@ input, button { outline: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transform: translateZ(0);
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Active state feedback for touch */
+/* Active state feedback for touch - optimized for 60fps */
 .touch-active:active {
-  transform: scale(0.95);
+  transform: scale(0.95) translateZ(0);
   opacity: 0.8;
-  transition: all 0.1s ease;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.1s ease;
 }
 
 /* Prevent text selection on touch interfaces */
@@ -834,10 +847,185 @@ input, button { outline: none; }
 /* Smooth transitions for all interactive elements */
 button, a, input, select, textarea {
   -webkit-tap-highlight-color: transparent;
+  /* GPU acceleration for interactive elements */
+  transform: translateZ(0);
 }
 
 /* Improved focus states */
 *:focus-visible {
   outline: none;
   box-shadow: var(--ring);
+}
+
+/* ------------------------------------------------------------
+   🚀 60fps Mobile Performance Optimizations
+------------------------------------------------------------- */
+
+/* Only animate transform and opacity for best performance */
+.animate-smooth {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Optimize repaints - use transform instead of top/left */
+.animate-position {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Contain layout changes to prevent reflows */
+.contain-layout {
+  contain: layout style paint;
+}
+
+/* Optimize scrolling performance on mobile */
+.scroll-optimized {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  /* Enable GPU-accelerated scrolling */
+  transform: translateZ(0);
+}
+
+/* Optimize list rendering */
+.list-optimized {
+  contain: layout style paint;
+  content-visibility: auto;
+}
+
+/* Reduce paint on hover/active states */
+.interactive-optimized {
+  /* Only animate GPU-accelerated properties */
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0.15s;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize images for mobile */
+img {
+  content-visibility: auto;
+}
+
+/* Prevent layout shifts on mobile */
+@media (max-width: 768px) {
+  /* Force hardware acceleration on mobile */
+  .card,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  button,
+  a {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Optimize animations for mobile */
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.15s !important;
+  }
+
+  /* Reduce motion on low-end devices */
+  @media (prefers-reduced-motion: no-preference) {
+    /* Enable smooth animations only on capable devices */
+    .smooth-animation {
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  }
+}
+
+/* Optimize touch feedback */
+@media (hover: none) and (pointer: coarse) {
+  /* Touch device optimizations */
+  button:active,
+  a:active,
+  .touch-target:active,
+  .touch-target-lg:active {
+    transform: scale(0.96) translateZ(0);
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Layer promotion for frequently animated elements */
+.layer-promote {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* ------------------------------------------------------------
+   📱 Landscape Mode Optimizations for Mobile
+------------------------------------------------------------- */
+
+/* Mobile landscape - reduce vertical spacing */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Reduce padding in expanded mobile player */
+  .mobile-player-expanded {
+    padding: 0.5rem 1rem;
+  }
+
+  /* Make artwork smaller to fit vertically */
+  .mobile-player-artwork {
+    max-height: 35vh;
+    max-width: 35vh;
+  }
+
+  /* Reduce spacing in controls */
+  .mobile-player-controls {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  /* Make button sizes smaller */
+  .mobile-player-controls button {
+    padding: 0.5rem;
+  }
+
+  /* Hide secondary controls if needed to save space */
+  .mobile-player-secondary-controls {
+    display: none;
+  }
+
+  /* Reduce header/footer heights */
+  .mobile-player-header {
+    padding: 0.5rem;
+  }
+
+  /* Reduce bottom padding for main content */
+  .pb-36 {
+    padding-bottom: 5rem;
+  }
+
+  /* Make mini player more compact */
+  .safe-bottom {
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Tablet landscape - use horizontal space better */
+@media (min-width: 768px) and (max-height: 600px) and (orientation: landscape) {
+  /* Use 2-column layout for expanded player */
+  .mobile-player-expanded {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  /* Artwork on left side */
+  .mobile-player-artwork {
+    align-self: center;
+    justify-self: center;
+  }
+
+  /* Info and controls on right side */
+  .mobile-player-info-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+  }
 }

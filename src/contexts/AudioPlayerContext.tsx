@@ -224,6 +224,18 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
       }
     },
     onAutoQueueTrigger: handleAutoQueueTrigger,
+    onError: (error, trackId) => {
+      console.error(`[AudioPlayerContext] Playback error for track ${trackId}:`, error);
+      
+      // Check for upstream errors (backend can't reach upstream service)
+      if (error.includes("upstream error") || error.includes("ServiceUnavailableException")) {
+        showToast("Music service temporarily unavailable. The backend cannot reach the music source. Please try again in a moment.", "error");
+      } else if (error.includes("503") || error.includes("Service Unavailable")) {
+        showToast("Streaming service unavailable. Please try again later.", "error");
+      } else {
+        showToast("Playback failed. Please try again.", "error");
+      }
+    },
     smartQueueSettings: smartQueueSettings ?? undefined,
   });
 
@@ -231,9 +243,20 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
     (track: Track) => {
       const streamUrl = getStreamUrlById(track.id.toString());
       player.loadTrack(track, streamUrl);
-      void player.play();
+      player.play().catch((error) => {
+        // Ignore abort errors - these are normal when switching tracks quickly
+        if (error instanceof DOMException && 
+            (error.name === "AbortError" || 
+             error.message?.includes("aborted") ||
+             error.message?.includes("fetching process"))) {
+          console.debug('[AudioPlayerContext] Playback aborted (normal during rapid track changes)');
+          return;
+        }
+        console.error('Playback failed:', error);
+        showToast('Playback failed. Please try again.', 'error');
+      });
     },
-    [player],
+    [player, showToast],
   );
 
   const playNext = useCallback(() => {
@@ -241,18 +264,40 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
     if (nextTrack) {
       const streamUrl = getStreamUrlById(nextTrack.id.toString());
       player.loadTrack(nextTrack, streamUrl);
-      void player.play();
+      player.play().catch((error) => {
+        // Ignore abort errors - these are normal when switching tracks quickly
+        if (error instanceof DOMException && 
+            (error.name === "AbortError" || 
+             error.message?.includes("aborted") ||
+             error.message?.includes("fetching process"))) {
+          console.debug('[AudioPlayerContext] Playback aborted (normal during rapid track changes)');
+          return;
+        }
+        console.error('Playback failed:', error);
+        showToast('Playback failed. Please try again.', 'error');
+      });
     }
-  }, [player]);
+  }, [player, showToast]);
 
   const playPrevious = useCallback(() => {
     const prevTrack = player.playPrevious();
     if (prevTrack) {
       const streamUrl = getStreamUrlById(prevTrack.id.toString());
       player.loadTrack(prevTrack, streamUrl);
-      void player.play();
+      player.play().catch((error) => {
+        // Ignore abort errors - these are normal when switching tracks quickly
+        if (error instanceof DOMException && 
+            (error.name === "AbortError" || 
+             error.message?.includes("aborted") ||
+             error.message?.includes("fetching process"))) {
+          console.debug('[AudioPlayerContext] Playback aborted (normal during rapid track changes)');
+          return;
+        }
+        console.error('Playback failed:', error);
+        showToast('Playback failed. Please try again.', 'error');
+      });
     }
-  }, [player]);
+  }, [player, showToast]);
 
   const playFromQueue = useCallback(
     (index: number) => {
@@ -260,10 +305,21 @@ const hasCompleteTrackData = (track: Track | null | undefined): boolean => {
       if (track) {
         const streamUrl = getStreamUrlById(track.id.toString());
         player.loadTrack(track, streamUrl);
-        void player.play();
+        player.play().catch((error) => {
+          // Ignore abort errors - these are normal when switching tracks quickly
+          if (error instanceof DOMException && 
+              (error.name === "AbortError" || 
+               error.message?.includes("aborted") ||
+               error.message?.includes("fetching process"))) {
+            console.debug('[AudioPlayerContext] Playback aborted (normal during rapid track changes)');
+            return;
+          }
+          console.error('Playback failed:', error);
+          showToast('Playback failed. Please try again.', 'error');
+        });
       }
     },
-    [player],
+    [player, showToast],
   );
 
   // Smart Queue Functions

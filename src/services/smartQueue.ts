@@ -1,3 +1,5 @@
+// File: src/services/smartQueue.ts
+
 /**
  * Smart Queue Service
  * Integrates with the Starchild Music backend for intelligent track recommendations

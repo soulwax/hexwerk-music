@@ -1,3 +1,5 @@
+// File: src/types/player.ts
+
 /**
  * Shared player type definitions
  * Centralizes player-related types to reduce duplication across player components

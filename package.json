@@ -1,5 +1,5 @@
 {
-  "name": "hexmusic-stream",
+  "name": "starchild-music-frontend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,14 +13,14 @@
     "db:studio": "drizzle-kit studio",
     "dev": "next dev --turbo --port 3222",
     "pm2:start": "npm run build && pm2 start ecosystem.config.cjs --env production",
-    "pm2:dev": "pm2 start ecosystem.config.cjs --only hexmusic-dev",
+    "pm2:dev": "pm2 start ecosystem.config.cjs --only starchild-music-frontend-dev",
     "pm2:reload": "pm2 reload ecosystem.config.cjs --env production",
     "pm2:restart": "pm2 restart ecosystem.config.cjs --update-env",
     "pm2:stop": "pm2 stop ecosystem.config.cjs",
     "pm2:delete": "pm2 delete ecosystem.config.cjs",
-    "pm2:logs": "pm2 logs hexmusic-prod",
-    "pm2:logs:dev": "pm2 logs hexmusic-dev",
-    "pm2:logs:error": "pm2 logs hexmusic-prod --err",
+    "pm2:logs": "pm2 logs starchild-music-frontend-prod",
+    "pm2:logs:dev": "pm2 logs starchild-music-frontend-dev",
+    "pm2:logs:error": "pm2 logs starchild-music-frontend-prod --err",
     "pm2:status": "pm2 status",
     "pm2:monit": "pm2 monit",
     "pm2:flush": "pm2 flush",
@@ -31,7 +31,12 @@
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "start": "next start --port 3222",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3222 && electron .\"",
+    "electron:build": "next build && electron-builder",
+    "electron:build:win": "next build && electron-builder --win",
+    "electron:build:mac": "next build && electron-builder --mac",
+    "electron:build:linux": "next build && electron-builder --linux"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
@@ -39,36 +44,42 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@t3-oss/env-nextjs": "^0.12.0",
-    "@tanstack/react-query": "^5.90.5",
+    "@tanstack/react-query": "^5.90.10",
     "@trpc/client": "^11.0.0",
-    "@trpc/react-query": "^11.7.0",
+    "@trpc/react-query": "^11.7.1",
     "@trpc/server": "^11.0.0",
     "drizzle-orm": "^0.41.0",
+    "framer-motion": "^12.23.24",
     "lucide-react": "^0.548.0",
     "next": "^15.5.6",
-    "next-auth": "5.0.0-beta.25",
+    "next-auth": "^5.0.0-beta.30",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "react": "^19.2.0",
+    "react-audio-visualize": "^1.2.0",
     "react-dom": "^19.2.0",
     "server-only": "^0.0.1",
-    "superjson": "^2.2.3",
+    "superjson": "^2.2.5",
+    "tone": "^15.1.22",
     "zod": "^3.25.76"
   },
+  "main": "electron/main.js",
   "devDependencies": {
-    "@ducanh2912/next-pwa": "^8.7.0",
     "@eslint/eslintrc": "^3.3.1",
-    "@next/bundle-analyzer": "^16.0.1",
+    "@next/bundle-analyzer": "^16.0.3",
     "@svgr/cli": "^8.1.0",
-    "@tailwindcss/postcss": "^4.1.16",
-    "@types/node": "^20.19.23",
-    "@types/pg": "^8.15.5",
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
-    "autoprefixer": "^10.4.21",
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/node": "^20.19.25",
+    "@types/pg": "^8.15.6",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.22",
+    "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
-    "drizzle-kit": "^0.31.5",
-    "eslint": "^9.38.0",
+    "drizzle-kit": "^0.18.1",
+    "electron": "^39.2.1",
+    "electron-builder": "^25.1.8",
+    "eslint": "^9.39.1",
     "eslint-config-next": "^15.5.6",
     "eslint-plugin-drizzle": "^0.2.3",
     "postcss": "^8.5.6",
@@ -76,10 +87,48 @@
     "prettier-plugin-tailwindcss": "^0.6.14",
     "svgo": "^4.0.0",
     "tailwindcss": "^4.1.16",
-    "tsup": "^8.5.0",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.2",
+    "typescript-eslint": "^8.46.4",
+    "wait-on": "^8.0.5",
     "webpack": "^5.102.1"
+  },
+  "build": {
+    "appId": "com.starchild.music",
+    "productName": "Starchild Music",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/icon.icns",
+      "category": "public.app-category.music"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "public/icon.png",
+      "category": "Audio"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "ct3aMetadata": {
     "initVersion": "7.39.3"

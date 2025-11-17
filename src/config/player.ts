@@ -1,3 +1,5 @@
+// File: src/config/player.ts
+
 /**
  * Player configuration constants
  */

@@ -3,6 +3,7 @@
 "use client";
 
 import { STORAGE_KEYS } from "@/config/storage";
+import { AUDIO_CONSTANTS } from "@/config/constants";
 import { localStorage } from "@/services/storage";
 import type { SmartQueueSettings, Track } from "@/types";
 import { getStreamUrlById } from "@/utils/api";
@@ -19,6 +20,7 @@ interface UseAudioPlayerOptions {
     currentTrack: Track,
     currentQueueLength: number
   ) => Promise<Track[]>;
+  onError?: (error: string, trackId?: number) => void;
   smartQueueSettings?: SmartQueueSettings;
 }
 
@@ -28,6 +30,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     onTrackEnd,
     onDuplicateTrack,
     onAutoQueueTrigger,
+    onError,
     smartQueueSettings,
   } = options;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -46,6 +49,11 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
   const [originalQueueOrder, setOriginalQueueOrder] = useState<Track[]>([]);
   const [isAutoQueueing, setIsAutoQueueing] = useState(false);
   const autoQueueTriggeredRef = useRef(false);
+  const loadIdRef = useRef(0);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+  const failedTracksRef = useRef<Set<number>>(new Set());
 
   // Load persisted settings and queue state
   useEffect(() => {
@@ -143,7 +151,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     }
   }, [currentTrack, queue, repeatMode, history, onTrackEnd]);
 
-  // Media Session API integration
+  // Media Session API integration for background playback
   useEffect(() => {
     if (
       !currentTrack ||
@@ -152,6 +160,7 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     )
       return;
 
+    // Set metadata for lock screen and notification controls
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.artist.name,
@@ -190,7 +199,103 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
           artwork !== undefined
       ),
     });
-  }, [currentTrack]);
+
+    // Set playback state
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [currentTrack, isPlaying]);
+
+  // Media Session action handlers for background controls
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator))
+      return;
+
+    const togglePlayPause = () => {
+      if (audioRef.current) {
+        if (isPlaying) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play().catch((error) => {
+            console.error("Playback failed:", error);
+          });
+        }
+      }
+    };
+
+    const handleNextTrack = () => {
+      if (queue.length > 0) {
+        const nextTrack = queue[0];
+        if (nextTrack && currentTrack) {
+          setHistory((prev) => [...prev, currentTrack]);
+        }
+        setQueue((prev) => prev.slice(1));
+      }
+    };
+
+    const handlePreviousTrack = () => {
+      // If more than 3 seconds in, restart current track
+      if (audioRef.current && audioRef.current.currentTime > 3) {
+        audioRef.current.currentTime = 0;
+      } else if (history.length > 0) {
+        // Go to previous track
+        const prevTrack = history[history.length - 1];
+        if (prevTrack && currentTrack) {
+          setQueue((prev) => [currentTrack, ...prev]);
+        }
+        setHistory((prev) => prev.slice(0, -1));
+      }
+    };
+
+    const handleSeekBackward = (details: MediaSessionActionDetails) => {
+      if (audioRef.current) {
+        const seekTime = details.seekOffset ?? 10;
+        audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - seekTime);
+      }
+    };
+
+    const handleSeekForward = (details: MediaSessionActionDetails) => {
+      if (audioRef.current) {
+        const seekTime = details.seekOffset ?? 10;
+        audioRef.current.currentTime = Math.min(
+          audioRef.current.duration,
+          audioRef.current.currentTime + seekTime
+        );
+      }
+    };
+
+    const handleSeekTo = (details: MediaSessionActionDetails) => {
+      if (audioRef.current && details.seekTime !== undefined) {
+        audioRef.current.currentTime = details.seekTime;
+      }
+    };
+
+    // Register action handlers
+    try {
+      navigator.mediaSession.setActionHandler("play", togglePlayPause);
+      navigator.mediaSession.setActionHandler("pause", togglePlayPause);
+      navigator.mediaSession.setActionHandler("nexttrack", handleNextTrack);
+      navigator.mediaSession.setActionHandler("previoustrack", handlePreviousTrack);
+      navigator.mediaSession.setActionHandler("seekbackward", handleSeekBackward);
+      navigator.mediaSession.setActionHandler("seekforward", handleSeekForward);
+      navigator.mediaSession.setActionHandler("seekto", handleSeekTo);
+    } catch (error) {
+      console.error("Failed to set media session handlers:", error);
+    }
+
+    // Cleanup - remove handlers on unmount
+    return () => {
+      try {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+        navigator.mediaSession.setActionHandler("seekbackward", null);
+        navigator.mediaSession.setActionHandler("seekforward", null);
+        navigator.mediaSession.setActionHandler("seekto", null);
+      } catch {
+        // Ignore cleanup errors
+      }
+    };
+  }, [currentTrack, queue, history, isPlaying]);
 
   // Audio event listeners
   useEffect(() => {
@@ -214,8 +319,51 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
         return;
       }
 
+      // Check for HTTP errors (503, 404, etc.) in error message
+      const errorMessage = error?.message ?? "";
+      
+      // Check if this is an aborted fetch (common when skipping tracks quickly)
+      const isAborted = errorMessage.includes("aborted") || 
+                       errorMessage.includes("AbortError") ||
+                       (errorMessage.includes("fetching process") && errorMessage.includes("aborted"));
+      
+      if (isAborted) {
+        // This is expected when switching tracks quickly, not a real error
+        console.debug("[useAudioPlayer] Fetch aborted (normal during rapid track changes)");
+        return;
+      }
+      
+      const isHttpError = /^\d{3}:/.test(errorMessage) || errorMessage.includes("Service Unavailable") || errorMessage.includes("503");
+      const isUpstreamError = errorMessage.includes("upstream error") || errorMessage.includes("ServiceUnavailableException");
+      
+      if (isHttpError && currentTrack) {
+        // For upstream errors, don't mark as permanently failed - might be temporary
+        if (isUpstreamError) {
+          console.warn(`[useAudioPlayer] Upstream error for track ${currentTrack.id} - may be temporary:`, errorMessage);
+          setIsLoading(false);
+          setIsPlaying(false);
+          onError?.(errorMessage, currentTrack.id);
+          // Don't add to failed tracks - allow retry later
+          retryCountRef.current = 0;
+          return;
+        }
+        
+        // Mark this track as failed to prevent infinite retries (for other 503 errors)
+        failedTracksRef.current.add(currentTrack.id);
+        console.error(`Audio error for track ${currentTrack.id}:`, errorMessage);
+        setIsLoading(false);
+        setIsPlaying(false);
+        
+        // Notify parent of error
+        onError?.(errorMessage, currentTrack.id);
+        
+        // Reset retry count for this track
+        retryCountRef.current = 0;
+        return;
+      }
+
       // Log other errors for debugging
-      console.error("Audio error:", error?.message ?? "Unknown error");
+      console.error("Audio error:", errorMessage || "Unknown error");
       setIsLoading(false);
       setIsPlaying(false);
     };
@@ -239,27 +387,40 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("error", handleError);
     };
-  }, [handleTrackEnd]);
+  }, [handleTrackEnd, currentTrack, onError]);
 
   const loadTrack = useCallback(
     (track: Track, streamUrl: string) => {
       if (!audioRef.current) return;
 
+      // Check if this track has already failed (prevent infinite retries)
+      if (failedTracksRef.current.has(track.id)) {
+        console.warn(`[useAudioPlayer] Track ${track.id} previously failed, skipping load`);
+        setIsLoading(false);
+        setIsPlaying(false);
+        return;
+      }
+
+      // Increment load ID to track this specific load
+      const currentLoadId = ++loadIdRef.current;
+
+      // Cancel any pending retry
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+
+      // Reset retry count for new track
+      if (currentTrack?.id !== track.id) {
+        retryCountRef.current = 0;
+      }
+
       // Pause and reset current audio to prevent "aborted" errors on rapid track changes
       try {
         audioRef.current.pause();
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          console.debug("[useAudioPlayer] Audio pause aborted (ignored).");
-        } else {
-          console.warn("[useAudioPlayer] Failed to pause audio element:", error);
-        }
-      }
-
-      try {
         audioRef.current.currentTime = 0;
       } catch (error) {
-        console.debug("[useAudioPlayer] Unable to reset currentTime:", error);
+        console.debug("[useAudioPlayer] Error resetting audio:", error);
       }
 
       setHistory((prev) => (currentTrack ? [...prev, currentTrack] : prev));
@@ -267,30 +428,61 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
 
       // Set new source and load
       const applySource = () => {
+        // Check if this load is still current
+        if (currentLoadId !== loadIdRef.current) {
+          console.debug("[useAudioPlayer] Load cancelled, newer load in progress");
+          return false;
+        }
+
+        if (!audioRef.current) return false;
+
         try {
-          audioRef.current!.src = streamUrl;
+          audioRef.current.src = streamUrl;
+          return true;
         } catch (error) {
-          if (error instanceof DOMException && error.name === "AbortError") {
+          // Ignore abort errors - these are normal when switching tracks quickly
+          if (error instanceof DOMException && 
+              (error.name === "AbortError" || 
+               error.message?.includes("aborted") ||
+               error.message?.includes("fetching process"))) {
             console.debug("[useAudioPlayer] Loading aborted for new source (ignored).");
             return false;
           } else {
             console.error("[useAudioPlayer] Failed to load new audio source:", error);
+            return false;
           }
         }
-        return true;
       };
 
       const applied = applySource();
       if (!applied) {
-        setTimeout(() => {
-          if (!audioRef.current) return;
-          applySource();
-        }, 50);
+        // Retry with exponential backoff, but only if we haven't exceeded max retries
+        if (retryCountRef.current < maxRetries) {
+          const delay = AUDIO_CONSTANTS.AUDIO_LOAD_RETRY_DELAY_MS * Math.pow(2, retryCountRef.current);
+          retryCountRef.current++;
+          
+          retryTimeoutRef.current = setTimeout(() => {
+            if (currentLoadId === loadIdRef.current && audioRef.current) {
+              applySource();
+            }
+          }, delay);
+        } else {
+          // Max retries exceeded, mark track as failed
+          console.error(`[useAudioPlayer] Max retries (${maxRetries}) exceeded for track ${track.id}`);
+          failedTracksRef.current.add(track.id);
+          retryCountRef.current = 0;
+          setIsLoading(false);
+          setIsPlaying(false);
+          onError?.(`Failed to load track after ${maxRetries} retries`, track.id);
+        }
+      } else {
+        // Successfully applied, reset retry count
+        retryCountRef.current = 0;
       }
 
       onTrackChange?.(track);
     },
-    [currentTrack, onTrackChange]
+    [currentTrack, onTrackChange, onError]
   );
 
   const play = useCallback(async () => {
@@ -632,6 +824,30 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     addToQueue,
   ]);
 
+  // Cleanup retry timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const clearFailedTrack = useCallback((trackId: number) => {
+    failedTracksRef.current.delete(trackId);
+  }, []);
+
+  const clearAllFailedTracks = useCallback(() => {
+    failedTracksRef.current.clear();
+  }, []);
+
+  // Wrapper for setVolume with validation to prevent crashes
+  const setVolumeWithValidation = useCallback((newVolume: number) => {
+    // Clamp volume between 0 and 1 to prevent crashes
+    const clampedVolume = Math.max(0, Math.min(1, newVolume));
+    setVolume(clampedVolume);
+  }, []);
+
   return {
     // State
     currentTrack,
@@ -675,12 +891,14 @@ export function useAudioPlayer(options: UseAudioPlayerOptions = {}) {
     playFromQueue,
     toggleShuffle,
     cycleRepeatMode,
-    setVolume,
+    setVolume: setVolumeWithValidation,
     setIsMuted,
     setPlaybackRate,
     adjustVolume,
     skipForward,
     skipBackward,
+    clearFailedTrack,
+    clearAllFailedTracks,
 
     // Ref
     audioRef,

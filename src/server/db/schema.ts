@@ -228,7 +228,7 @@ export const userPreferences = createTable(
     equalizerBands: d.jsonb().$type<number[]>().default(sql`'[]'::jsonb`),
     equalizerPanelOpen: d.boolean().default(false).notNull(),
     queuePanelOpen: d.boolean().default(false).notNull(),
-    visualizerType: d.varchar({ length: 30 }).default("bars"), // 'bars' | 'wave' | 'circular' | 'oscilloscope' | 'spectrum' | 'spectral-waves' | 'radial-spectrum' | 'particles' | 'waveform-mirror' | 'frequency-rings'
+    visualizerType: d.varchar({ length: 30 }).default("bars"), // 'bars' | 'wave' | 'circular' | 'oscilloscope' | 'spectrum' | 'spectral-waves' | 'radial-spectrum' | 'particles' | 'waveform-mirror' | 'frequency-rings' | 'frequency-bands' | 'frequency-circular' | 'frequency-layered' | 'frequency-waterfall' | 'frequency-radial' | 'frequency-particles'
     visualizerEnabled: d.boolean().default(true).notNull(),
     compactMode: d.boolean().default(false).notNull(),
     theme: d.varchar({ length: 20 }).default("dark"), // 'dark' | 'light'

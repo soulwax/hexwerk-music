@@ -1,3 +1,5 @@
+// File: src/components/ProfileHeader.tsx
+
 import Image from "next/image";
 
 interface ProfileStats {

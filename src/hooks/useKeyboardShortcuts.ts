@@ -19,6 +19,31 @@ interface KeyboardShortcutHandlers {
 
 export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
   useEffect(() => {
+    // Handle Electron media keys
+    if (typeof window !== 'undefined' && window.electron) {
+      const handleMediaKey = (key: string) => {
+        switch (key) {
+          case 'play-pause':
+            handlers.onPlayPause?.();
+            break;
+          case 'next':
+            handlers.onNext?.();
+            break;
+          case 'previous':
+            handlers.onPrevious?.();
+            break;
+        }
+      };
+
+      window.electron.onMediaKey(handleMediaKey);
+
+      return () => {
+        window.electron?.removeMediaKeyListener();
+      };
+    }
+  }, [handlers]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input
       const target = e.target as HTMLElement;

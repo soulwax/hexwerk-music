@@ -1,3 +1,5 @@
+// File: src/app/[userhash]/page.tsx
+
 "use client";
 
 import Button from "@/components/Button";
@@ -132,7 +134,7 @@ export default function PublicProfilePage({
               </div>
             </div>
           )}
-          gridColumns={3}
+          gridColumns={2}
           emptyMessage="No top tracks yet"
         />
 
@@ -178,15 +180,15 @@ export default function PublicProfilePage({
           title="⭐ Favorite Tracks"
           loading={favoritesLoading}
           items={favorites}
-          renderItem={(track, idx) => (
+          renderItem={(item, idx) => (
             <EnhancedTrackCard
               key={`fav-${idx}`}
-              track={track as Track}
+              track={item as Track}
               onPlay={(track) => play(track)}
               onAddToQueue={(track) => addToQueue(track)}
             />
           )}
-          gridColumns={3}
+          gridColumns={2}
           emptyIcon="💫"
           emptyMessage="No favorites yet"
         />
@@ -223,9 +225,10 @@ export default function PublicProfilePage({
                               src={cover}
                               alt={`${playlist.name} track ${i + 1}`}
                               fill
-                              sizes="100px"
+                              sizes="(max-width: 768px) 100px, 125px"
                               className="object-cover transition-transform group-hover:scale-110"
-                              unoptimized
+                              quality={80}
+                              loading="lazy"
                             />
                           </div>
                         ))}

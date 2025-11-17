@@ -3,14 +3,16 @@
 "use client";
 
 import { useGlobalPlayer } from "@/contexts/AudioPlayerContext";
+import { useMobilePanes } from "@/contexts/MobilePanesContext";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useEqualizer } from "@/hooks/useEqualizer";
 import { api } from "@/trpc/react";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import MobilePlayer from "./MobilePlayer";
 import MaturePlayer from "./Player";
+import { extractColorsFromImage, type ColorPalette } from "@/utils/colorExtractor";
+import { getCoverImage } from "@/utils/images";
 
 // Dynamic imports to prevent SSR issues with Web Audio API
 const AudioVisualizer = dynamic(
@@ -31,6 +33,7 @@ const EnhancedQueue = dynamic(
 export default function PersistentPlayer() {
   const player = useGlobalPlayer();
   const isMobile = useIsMobile();
+  const { navigateToPane } = useMobilePanes();
 
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
@@ -49,6 +52,7 @@ export default function PersistentPlayer() {
   // Initialize state from database preferences, with fallback to false
   const [showQueue, setShowQueue] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
+  const [albumColorPalette, setAlbumColorPalette] = useState<ColorPalette | null>(null);
 
   // Sync state with database preferences when they load
   useEffect(() => {
@@ -57,6 +61,21 @@ export default function PersistentPlayer() {
       setShowEqualizer(preferences.equalizerPanelOpen ?? false);
     }
   }, [preferences]);
+
+  // Extract colors from album art when track changes
+  useEffect(() => {
+    if (player.currentTrack) {
+      const coverUrl = getCoverImage(player.currentTrack, "medium");
+      extractColorsFromImage(coverUrl)
+        .then(setAlbumColorPalette)
+        .catch((error) => {
+          console.error("Failed to extract colors from album art:", error);
+          setAlbumColorPalette(null);
+        });
+    } else {
+      setAlbumColorPalette(null);
+    }
+  }, [player.currentTrack]);
 
   // Persist queue panel state to database
   useEffect(() => {
@@ -97,51 +116,55 @@ export default function PersistentPlayer() {
     onPlaybackRateChange: player.setPlaybackRate,
     onSkipForward: player.skipForward,
     onSkipBackward: player.skipBackward,
-    onToggleQueue: () => setShowQueue(!showQueue),
+    onToggleQueue: isMobile && navigateToPane
+      ? () => navigateToPane(1) // Navigate to queue pane on mobile
+      : () => setShowQueue(!showQueue),
     onToggleEqualizer: () => setShowEqualizer(!showEqualizer),
   };
 
   return (
     <>
-      {/* Adaptive Player - Mobile or Desktop */}
-      {isMobile ? (
-        <MobilePlayer {...playerProps} />
-      ) : (
-        <div className="fixed inset-x-0 bottom-0 z-50">
-          <div className="player-backdrop">
-            <div className="player-backdrop-inner">
-              <MaturePlayer {...playerProps} />
+      {/* Desktop Player - Always render on desktop, hidden on mobile */}
+      {!isMobile && (
+        <>
+          <div className="fixed inset-x-0 bottom-0 z-50">
+            <div className="player-backdrop">
+              <div className="player-backdrop-inner">
+                <MaturePlayer {...playerProps} />
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Enhanced Queue Panel */}
-      {showQueue && (
-        <EnhancedQueue
-          queue={player.queue}
-          currentTrack={player.currentTrack}
-          onClose={() => setShowQueue(false)}
-          onRemove={player.removeFromQueue}
-          onClear={player.clearQueue}
-          onReorder={player.reorderQueue}
-          onPlayFrom={player.playFromQueue}
-          onSaveAsPlaylist={player.saveQueueAsPlaylist}
-          onAddSimilarTracks={
-            player.addSimilarTracks ??
-            (() => {
-              /* No similar tracks available */
-            })
-          }
-          onGenerateSmartMix={
-            player.generateSmartMix ??
-            (() => {
-              /* Smart mix not available */
-            })
-          }
-          isAutoQueueing={player.isAutoQueueing ?? false}
-        />
+          {/* Enhanced Queue Panel - Desktop only */}
+          {showQueue && (
+            <EnhancedQueue
+              queue={player.queue}
+              currentTrack={player.currentTrack}
+              onClose={() => setShowQueue(false)}
+              onRemove={player.removeFromQueue}
+              onClear={player.clearQueue}
+              onReorder={player.reorderQueue}
+              onPlayFrom={player.playFromQueue}
+              onSaveAsPlaylist={player.saveQueueAsPlaylist}
+              onAddSimilarTracks={
+                player.addSimilarTracks ??
+                (() => {
+                  /* No similar tracks available */
+                })
+              }
+              onGenerateSmartMix={
+                player.generateSmartMix ??
+                (() => {
+                  /* Smart mix not available */
+                })
+              }
+              isAutoQueueing={player.isAutoQueueing ?? false}
+            />
+          )}
+        </>
       )}
+      
+      {/* Mobile Player - Handled by MobileSwipeablePanes, nothing to render here */}
 
       {/* Equalizer Panel */}
       {showEqualizer && (
@@ -151,23 +174,22 @@ export default function PersistentPlayer() {
         />
       )}
 
-      {/* Audio Visualizer (embedded in player or as overlay) */}
-      {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && (
-        <div className="fixed left-4 z-40 hidden lg:block bottom-[162px]">
-          <div className="rounded-lg bg-black/80 p-2 backdrop-blur-lg">
-            <AudioVisualizer
-              audioElement={player.audioElement}
-              isPlaying={player.isPlaying}
-              width={200}
-              height={60}
-              barCount={24}
-              type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") ?? "bars"}
-              onTypeChange={(newType) => {
-                updatePreferences.mutate({ visualizerType: newType });
-              }}
-            />
-          </div>
-        </div>
+      {/* Audio Visualizer - Draggable on Desktop, bigger, with album colors */}
+      {player.audioElement && player.currentTrack && preferences?.visualizerEnabled && !isMobile && (
+        <AudioVisualizer
+          audioElement={player.audioElement}
+          isPlaying={player.isPlaying}
+          width={400}
+          height={150}
+          barCount={64}
+          type={(preferences?.visualizerType as "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings" | "frequency-bands" | "frequency-circular" | "frequency-layered" | "frequency-waterfall" | "frequency-radial" | "frequency-particles") ?? "bars"}
+          onTypeChange={(newType) => {
+            updatePreferences.mutate({ visualizerType: newType });
+          }}
+          colorPalette={albumColorPalette}
+          isDraggable={true}
+          blendWithBackground={true}
+        />
       )}
     </>
   );

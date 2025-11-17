@@ -1,3 +1,5 @@
+// File: src/components/SkeletonGrid.tsx
+
 interface SkeletonGridProps {
   rows: number;
   columns?: 1 | 2 | 3 | 4 | 6;

@@ -1,3 +1,5 @@
+// File: src/services/storage.ts
+
 /**
  * Storage abstraction layer
  * Provides type-safe, error-handled access to localStorage and sessionStorage
@@ -109,10 +111,28 @@ class StorageService {
           error.name === "QuotaExceededError" ||
           error.name === "NS_ERROR_DOM_QUOTA_REACHED")
       ) {
-        return {
-          success: false,
-          error: `${this.storageType} quota exceeded`,
-        };
+        console.warn(`${this.storageType} quota exceeded, attempting to free space...`);
+        
+        // Try to free up space by removing old history data
+        // This is a safe item to remove as it's not critical
+        try {
+          this.storage.removeItem("queue_history");
+        } catch {
+          // Ignore cleanup errors lol
+        }
+
+        // Try again after cleanup
+        try {
+          const serialized = JSON.stringify(value);
+          this.storage.setItem(key, serialized);
+          console.log(`${this.storageType} write succeeded after cleanup`);
+          return { success: true, data: undefined };
+        } catch {
+          return {
+            success: false,
+            error: `${this.storageType} quota exceeded. Please clear browser data.`,
+          };
+        }
       }
 
       return {
@@ -214,6 +234,41 @@ class StorageService {
     } catch {
       return 0;
     }
+  }
+
+  /**
+   * Get storage usage information
+   * Returns estimated usage based on StorageEstimate API when available
+   */
+  async getStorageInfo(): Promise<{
+    used: number;
+    total: number;
+    percentage: number;
+  }> {
+    // Try to use Storage Estimate API first (more accurate)
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        const used = estimate.usage ?? 0;
+        const total = estimate.quota ?? 0;
+        const percentage = total > 0 ? (used / total) * 100 : 0;
+        
+        return { used, total, percentage };
+      } catch {
+        // Fall back to basic size estimation
+      }
+    }
+
+    // Fallback: estimate based on localStorage contents
+    const estimatedUsed = this.getSize();
+    const estimatedTotal = 5 * 1024 * 1024; // Assume 5MB typical quota
+    const percentage = (estimatedUsed / estimatedTotal) * 100;
+
+    return {
+      used: estimatedUsed,
+      total: estimatedTotal,
+      percentage,
+    };
   }
 }
 

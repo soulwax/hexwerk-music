@@ -1,3 +1,5 @@
+// File: src/utils/time.ts
+
 /**
  * Time formatting utilities for audio playback
  */

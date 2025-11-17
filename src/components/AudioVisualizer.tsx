@@ -3,7 +3,8 @@
 "use client";
 
 import { useAudioVisualizer } from "@/hooks/useAudioVisualizer";
-import { GripVertical, Maximize2, Minimize2 } from "lucide-react";
+import { analyzeAudio, type AudioAnalysis } from "@/utils/audioAnalysis";
+import { GripVertical, Maximize2, Minimize2, Move } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BarsRenderer } from "./visualizers/BarsRenderer";
 import { SpectrumRenderer } from "./visualizers/SpectrumRenderer";
@@ -13,6 +14,13 @@ import { SpectralWavesRenderer } from "./visualizers/SpectralWavesRenderer";
 import { RadialSpectrumRenderer } from "./visualizers/RadialSpectrumRenderer";
 import { ParticleRenderer } from "./visualizers/ParticleRenderer";
 import { FrequencyRingsRenderer } from "./visualizers/FrequencyRingsRenderer";
+import { FrequencyBandBarsRenderer } from "./visualizers/FrequencyBandBarsRenderer";
+import { FrequencyBandCircularRenderer } from "./visualizers/FrequencyBandCircularRenderer";
+import { FrequencyBandLayeredRenderer } from "./visualizers/FrequencyBandLayeredRenderer";
+import { FrequencyBandWaterfallRenderer } from "./visualizers/FrequencyBandWaterfallRenderer";
+import { FrequencyBandRadialRenderer } from "./visualizers/FrequencyBandRadialRenderer";
+import { FrequencyBandParticlesRenderer } from "./visualizers/FrequencyBandParticlesRenderer";
+import type { ColorPalette } from "@/utils/colorExtractor";
 
 interface AudioVisualizerProps {
   audioElement: HTMLAudioElement | null;
@@ -22,8 +30,11 @@ interface AudioVisualizerProps {
   barCount?: number;
   barColor?: string;
   barGap?: number;
-  type?: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings";
-  onTypeChange?: (type: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings") => void;
+  type?: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings" | "frequency-bands" | "frequency-circular" | "frequency-layered" | "frequency-waterfall" | "frequency-radial" | "frequency-particles";
+  onTypeChange?: (type: "bars" | "wave" | "circular" | "oscilloscope" | "spectrum" | "spectral-waves" | "radial-spectrum" | "particles" | "waveform-mirror" | "frequency-rings" | "frequency-bands" | "frequency-circular" | "frequency-layered" | "frequency-waterfall" | "frequency-radial" | "frequency-particles") => void;
+  colorPalette?: ColorPalette | null;
+  isDraggable?: boolean;
+  blendWithBackground?: boolean;
 }
 
 const VISUALIZER_TYPES = [
@@ -37,6 +48,12 @@ const VISUALIZER_TYPES = [
   "waveform-mirror",
   "particles",
   "frequency-rings",
+  "frequency-bands",
+  "frequency-circular",
+  "frequency-layered",
+  "frequency-waterfall",
+  "frequency-radial",
+  "frequency-particles",
 ] as const;
 
 export function AudioVisualizer({
@@ -49,15 +66,21 @@ export function AudioVisualizer({
   barGap = 2,
   type = "bars",
   onTypeChange,
+  colorPalette = null,
+  isDraggable = false,
+  blendWithBackground = false,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [dimensions, setDimensions] = useState({ width, height });
+  const [position, setPosition] = useState({ x: 16, y: window.innerHeight - height - 180 });
   const [currentType, setCurrentType] = useState(type);
   const [showTypeLabel, setShowTypeLabel] = useState(false);
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0, initialX: 0, initialY: 0 });
   const typeLabelTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Renderer instances
@@ -69,11 +92,20 @@ export function AudioVisualizer({
   const radialSpectrumRendererRef = useRef<RadialSpectrumRenderer | null>(null);
   const particleRendererRef = useRef<ParticleRenderer | null>(null);
   const frequencyRingsRendererRef = useRef<FrequencyRingsRenderer | null>(null);
+  const frequencyBandBarsRendererRef = useRef<FrequencyBandBarsRenderer | null>(null);
+  const frequencyBandCircularRendererRef = useRef<FrequencyBandCircularRenderer | null>(null);
+  const frequencyBandLayeredRendererRef = useRef<FrequencyBandLayeredRenderer | null>(null);
+  const frequencyBandWaterfallRendererRef = useRef<FrequencyBandWaterfallRenderer | null>(null);
+  const frequencyBandRadialRendererRef = useRef<FrequencyBandRadialRenderer | null>(null);
+  const frequencyBandParticlesRendererRef = useRef<FrequencyBandParticlesRenderer | null>(null);
 
   const visualizer = useAudioVisualizer(audioElement, {
     fftSize: 2048,
     smoothingTimeConstant: 0.75,
   });
+
+  // Enhanced audio analysis state (using ref for immediate access in render loop)
+  const audioAnalysisRef = useRef<AudioAnalysis | null>(null);
 
   // Initialize renderers
   useEffect(() => {
@@ -85,6 +117,12 @@ export function AudioVisualizer({
     radialSpectrumRendererRef.current = new RadialSpectrumRenderer(barCount);
     particleRendererRef.current = new ParticleRenderer(barCount, barGap, barColor);
     frequencyRingsRendererRef.current = new FrequencyRingsRenderer(8);
+    frequencyBandBarsRendererRef.current = new FrequencyBandBarsRenderer();
+    frequencyBandCircularRendererRef.current = new FrequencyBandCircularRenderer();
+    frequencyBandLayeredRendererRef.current = new FrequencyBandLayeredRenderer();
+    frequencyBandWaterfallRendererRef.current = new FrequencyBandWaterfallRenderer();
+    frequencyBandRadialRendererRef.current = new FrequencyBandRadialRenderer();
+    frequencyBandParticlesRendererRef.current = new FrequencyBandParticlesRenderer();
   }, [barCount, barGap, barColor]);
 
   // Sync external type changes
@@ -186,6 +224,47 @@ export function AudioVisualizer({
     setIsExpanded(!isExpanded);
   };
 
+  // Handle drag start
+  const handleDragStart = (e: React.MouseEvent) => {
+    if (!isDraggable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      initialX: position.x,
+      initialY: position.y,
+    };
+  };
+
+  // Handle dragging
+  useEffect(() => {
+    if (!isDragging || !isDraggable) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaY = e.clientY - dragStartRef.current.y;
+
+      setPosition({
+        x: dragStartRef.current.initialX + deltaX,
+        y: dragStartRef.current.initialY + deltaY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, isDraggable]);
+
 
 
 
@@ -208,6 +287,17 @@ export function AudioVisualizer({
       void visualizer.resumeContext();
 
       const renderFrame = (data: Uint8Array) => {
+        // Perform enhanced audio analysis
+        let currentAnalysis: AudioAnalysis | null = null;
+        if (visualizer.audioContext && visualizer.analyser) {
+          const sampleRate = visualizer.getSampleRate();
+          const fftSize = visualizer.getFFTSize();
+          currentAnalysis = analyzeAudio(data, sampleRate, fftSize);
+          audioAnalysisRef.current = currentAnalysis;
+        } else {
+          currentAnalysis = audioAnalysisRef.current;
+        }
+
         switch (currentType) {
           case "bars":
             barsRendererRef.current?.render(ctx, data, canvas, barCount, barGap);
@@ -239,6 +329,24 @@ export function AudioVisualizer({
           case "frequency-rings":
             frequencyRingsRendererRef.current?.render(ctx, data, canvas);
             break;
+          case "frequency-bands":
+            frequencyBandBarsRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-circular":
+            frequencyBandCircularRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-layered":
+            frequencyBandLayeredRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-waterfall":
+            frequencyBandWaterfallRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-radial":
+            frequencyBandRadialRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
+          case "frequency-particles":
+            frequencyBandParticlesRendererRef.current?.render(ctx, data, canvas, currentAnalysis);
+            break;
           default:
             barsRendererRef.current?.render(ctx, data, canvas, barCount, barGap);
             break;
@@ -267,28 +375,71 @@ export function AudioVisualizer({
     );
   }
 
+
+  // Container style
+  const containerStyle: React.CSSProperties = isDraggable
+    ? {
+        position: "fixed",
+        left: position.x,
+        top: position.y,
+        width: dimensions.width,
+        height: dimensions.height,
+        zIndex: 40,
+        cursor: isDragging ? "grabbing" : "auto",
+      }
+    : {
+        width: dimensions.width,
+        height: dimensions.height,
+      };
+
+  // Background style with blend mode
+  const backgroundStyle = blendWithBackground && colorPalette
+    ? {
+        backgroundColor: `hsla(${colorPalette.hue}, ${colorPalette.saturation}%, ${colorPalette.lightness}%, 0.15)`,
+        backdropFilter: "blur(12px)",
+      }
+    : {
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(4px)",
+      };
+
   return (
     <div
       ref={containerRef}
-      className="relative rounded-lg border border-gray-700 bg-black/50 backdrop-blur-sm"
-      style={{ width: dimensions.width, height: dimensions.height }}
+      className="relative rounded-lg border border-[rgba(244,178,102,0.16)] shadow-lg"
+      style={{ ...containerStyle, ...backgroundStyle }}
     >
+      {/* Drag Handle (only visible when draggable) */}
+      {isDraggable && (
+        <div
+          onMouseDown={handleDragStart}
+          className="absolute left-2 top-2 cursor-grab rounded-md bg-[rgba(244,178,102,0.12)] p-1.5 text-[var(--color-accent)] transition-colors hover:bg-[rgba(244,178,102,0.18)] active:cursor-grabbing"
+          title="Drag to move"
+        >
+          <Move className="h-4 w-4" />
+        </div>
+      )}
+
       {/* Canvas */}
       <canvas
         ref={canvasRef}
         width={dimensions.width}
         height={dimensions.height}
         onClick={cycleVisualizerType}
-        className="rounded-lg cursor-pointer"
-        style={{ width: dimensions.width, height: dimensions.height }}
+        className="cursor-pointer rounded-lg"
+        style={{
+          width: dimensions.width,
+          height: dimensions.height,
+          mixBlendMode: blendWithBackground ? "screen" : "normal",
+        }}
         title="Click to cycle visualizer type"
       />
 
       {/* Type Label Overlay */}
       {showTypeLabel && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="rounded-lg bg-black/80 px-4 py-2 backdrop-blur-sm">
-            <p className="text-sm font-medium text-white capitalize">
+            <p className="text-sm font-medium capitalize text-white">
               {currentType.replace(/-/g, " ")}
             </p>
           </div>
@@ -296,10 +447,10 @@ export function AudioVisualizer({
       )}
 
       {/* Controls Overlay */}
-      <div className="absolute top-2 right-2 flex gap-2">
+      <div className="absolute right-2 top-2 flex gap-2">
         <button
           onClick={toggleExpanded}
-          className="rounded-md bg-gray-900/80 p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+          className="rounded-md bg-[rgba(12,18,27,0.8)] p-1.5 text-[var(--color-subtext)] transition-colors hover:bg-[rgba(12,18,27,0.95)] hover:text-[var(--color-text)]"
           title={isExpanded ? "Minimize" : "Maximize"}
         >
           {isExpanded ? (
@@ -313,7 +464,7 @@ export function AudioVisualizer({
       {/* Resize Handle */}
       <div
         onMouseDown={handleResizeStart}
-        className="absolute bottom-0 right-0 cursor-nwse-resize rounded-tl-lg bg-gray-900/50 p-1 text-gray-500 transition-colors hover:bg-gray-800 hover:text-gray-300"
+        className="absolute bottom-0 right-0 cursor-nwse-resize rounded-tl-lg bg-[rgba(244,178,102,0.12)] p-1 text-[var(--color-accent)] transition-colors hover:bg-[rgba(244,178,102,0.18)]"
         title="Drag to resize"
       >
         <GripVertical className="h-4 w-4 rotate-45" />

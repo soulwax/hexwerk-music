@@ -6,31 +6,11 @@
  */
 import "./src/env.js";
 
-import withPWAInit from "@ducanh2912/next-pwa";
-
-
-/** @type {import("next").NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-};
-
-const withPWA = withPWAInit({
-  dest: "public",
-  register: true,
-  disable: process.env.NODE_ENV === "development",
-  fallbacks: {
-    document: "/offline.html",
-  },
-  // Use default workbox configuration which uses NetworkFirst for navigation
-  // This prevents aggressive caching that can cause loading loops
-  workboxOptions: {
-    disableDevLogs: true,
-  },
-});
-
 /** @type {import("next").NextConfig} */
 const config = {
-  ...nextConfig,
+  reactStrictMode: true,
+  // For Electron: output standalone server for production builds
+  output: process.env.ELECTRON_BUILD === 'true' ? 'standalone' : undefined,
   images: {
     remotePatterns: [
       {
@@ -52,4 +32,4 @@ const config = {
   },
 };
 
-export default withPWA(config);
+export default config;
