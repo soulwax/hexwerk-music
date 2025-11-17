@@ -372,13 +372,49 @@ export function AudioVisualizer({
 
   // Toggle expanded mode
   const toggleExpanded = () => {
-    const newDimensions = !isExpanded 
-      ? { width: Math.min(800, window.innerWidth - 32), height: Math.min(400, window.innerHeight - 200) }
-      : getInitialDimensions();
-    setDimensions(newDimensions);
-    setIsExpanded(!isExpanded);
-    // Persist to localStorage
-    localStorage.setItem('visualizer-dimensions', JSON.stringify(newDimensions));
+    if (typeof window === "undefined") {
+      setIsExpanded((prev) => !prev);
+      return;
+    }
+
+    if (!isExpanded) {
+      collapsedDimensionsRef.current = { ...dimensionsRef.current };
+      const expandedSize: VisualizerDimensions = {
+        width: Math.max(
+          MIN_WIDTH,
+          Math.min(MAX_EXPANDED_WIDTH, window.innerWidth - VIEWPORT_PADDING * 2),
+        ),
+        height: Math.max(
+          MIN_HEIGHT,
+          Math.min(
+            MAX_EXPANDED_HEIGHT,
+            window.innerHeight - PLAYER_STACK_HEIGHT - VIEWPORT_PADDING * 2,
+          ),
+        ),
+      };
+      setDimensions(expandedSize);
+      setPosition((prev) => clampPositionWithDimensions(prev, expandedSize));
+      setIsExpanded(true);
+      persistLayoutState({
+        isExpanded: true,
+        width: expandedSize.width,
+        height: expandedSize.height,
+        collapsedWidth: collapsedDimensionsRef.current.width,
+        collapsedHeight: collapsedDimensionsRef.current.height,
+      });
+    } else {
+      const restored = collapsedDimensionsRef.current;
+      setDimensions(restored);
+      setPosition((prev) => clampPositionWithDimensions(prev, restored));
+      setIsExpanded(false);
+      persistLayoutState({
+        isExpanded: false,
+        width: restored.width,
+        height: restored.height,
+        collapsedWidth: restored.width,
+        collapsedHeight: restored.height,
+      });
+    }
   };
 
   // Handle drag start
@@ -403,23 +439,20 @@ export function AudioVisualizer({
       const deltaX = e.clientX - dragStartRef.current.x;
       const deltaY = e.clientY - dragStartRef.current.y;
 
-      const newPosition = {
-        x: Math.max(
-          0,
-          Math.min(window.innerWidth - dimensionsRef.current.width, dragStartRef.current.initialX + deltaX),
-        ),
-        y: Math.max(
-          0,
-          Math.min(window.innerHeight - dimensionsRef.current.height, dragStartRef.current.initialY + deltaY),
-        ),
+      const desiredPosition = {
+        x: dragStartRef.current.initialX + deltaX,
+        y: dragStartRef.current.initialY + deltaY,
       };
-      setPosition(newPosition);
+      const clamped = clampPositionWithDimensions(desiredPosition);
+      setPosition(clamped);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      // Persist position to localStorage
-      localStorage.setItem('visualizer-position', JSON.stringify(positionRef.current));
+      persistLayoutState({
+        x: positionRef.current.x,
+        y: positionRef.current.y,
+      });
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -429,7 +462,7 @@ export function AudioVisualizer({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, isDraggable]);
+  }, [isDragging, isDraggable, clampPositionWithDimensions, persistLayoutState]);
 
 
 
