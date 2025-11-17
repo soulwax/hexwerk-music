@@ -587,7 +587,7 @@ export function AudioVisualizer({
       {isDraggable && (
         <div
           onMouseDown={handleDragStart}
-          className="absolute left-2 top-2 cursor-grab rounded-md bg-white/10 p-1.5 text-white/70 backdrop-blur active:cursor-grabbing"
+          className="absolute left-2 top-2 z-20 cursor-grab rounded-md bg-white/10 p-1.5 text-white/70 backdrop-blur active:cursor-grabbing"
           title="Drag to move"
         >
           <Move className="h-4 w-4" />
