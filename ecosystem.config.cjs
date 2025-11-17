@@ -1,19 +1,5 @@
 /* File: ecosystem.config.cjs */
 /* * */
-
- * PM2 Ecosystem Configuration for HexMusic
- *
- * Optimized for Next.js 15 with:
- * - Cluster mode for horizontal scaling
- * - Automatic restarts and health monitoring
- * - Memory management and leak prevention
- * - Log rotation and error tracking
- * - Environment-specific configurations
- *
- * System example: 6 CPU cores, 23GB RAM
- * Stack: Next.js 15, tRPC, PostgreSQL, NextAuth
- */
-
 module.exports = {
   apps: [
     {
