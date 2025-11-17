@@ -4,7 +4,8 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
-let mainWindow;
+/** @type {BrowserWindow | null} */
+let mainWindow = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -19,7 +20,6 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
       webSecurity: true,
     },
     icon: path.join(__dirname, '../public/icon.png'),
@@ -28,9 +28,9 @@ function createWindow() {
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+    mainWindow?.show();
     if (isDev) {
-      mainWindow.webContents.openDevTools();
+      mainWindow?.webContents.openDevTools();
     }
   });
 
