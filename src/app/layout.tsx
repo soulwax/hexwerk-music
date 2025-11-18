@@ -5,12 +5,13 @@ import "@/styles/globals.css";
 import { Geist } from "next/font/google";
 import { type ReactNode } from "react";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Header from "@/components/Header";
 import MobileContentWrapper from "@/components/MobileContentWrapper";
 import MobileNavigation from "@/components/MobileNavigation";
 import PersistentPlayer from "@/components/PersistentPlayer";
 import { SessionProvider } from "@/components/SessionProvider";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import SuppressExtensionErrors from "@/components/SuppressExtensionErrors";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { MobilePanesProvider } from "@/contexts/MobilePanesContext";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -52,6 +53,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.deezer.com" />
       </head>
       <body>
+        <SuppressExtensionErrors />
         <ErrorBoundary>
           <SessionProvider>
             <TRPCReactProvider>
